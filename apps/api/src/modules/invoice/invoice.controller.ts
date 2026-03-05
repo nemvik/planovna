@@ -1,4 +1,13 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '../../common/auth.guard';
+import type { AuthenticatedRequest } from '../../common/auth.guard';
 import { CreateInvoiceSchema, MarkPaidSchema } from './dto/invoice.dto';
 import type { CreateInvoiceDto, MarkPaidDto } from './dto/invoice.dto';
 import { InvoiceService } from './invoice.service';
@@ -12,8 +21,16 @@ export class InvoiceController {
     return this.service.issue(CreateInvoiceSchema.parse(body));
   }
 
+  @UseGuards(AuthGuard)
   @Post('paid')
-  paid(@Body() body: MarkPaidDto) {
-    return this.service.markPaid(MarkPaidSchema.parse(body));
+  paid(@Req() request: AuthenticatedRequest, @Body() body: MarkPaidDto) {
+    const result = this.service.markPaid(
+      request.auth.tenantId,
+      MarkPaidSchema.parse(body),
+    );
+    if (!result) {
+      throw new ForbiddenException('Invoice access denied');
+    }
+    return result;
   }
 }

@@ -1,13 +1,13 @@
 # REPOMAP
 
-- Generated: 2026-03-05 17:40:07 CET
+- Generated: 2026-03-05 18:26:41 CET
 - Branch: main
-- HEAD: 2e473d6
-- Tracked files: 72
-- Last commit changed files: 2
+- HEAD: 6f63237
+- Tracked files: 73
+- Last commit changed files: 7
 
 ## Architecture index (top dirs)
-- apps (59 files)
+- apps (60 files)
 - docs (5 files)
 - scripts (2 files)
 - .repomap (2 files)
@@ -17,7 +17,7 @@
 - .gitignore (1 files)
 
 ## Language summary
-- .ts (34)
+- .ts (35)
 - .json (10)
 - .md (9)
 - .svg (5)
@@ -37,11 +37,19 @@
 - package.json
 
 ## Last commit impact
-- apps/web/package.json
-- package.json
+- .repomap/REPOMAP.md
+- .repomap/repomap.json
+- apps/api/src/modules/cashflow/cashflow.service.ts
+- apps/api/src/modules/customer/customer.service.ts
+- apps/api/src/modules/operation/operation.service.ts
+- apps/api/src/modules/order/order.service.ts
+- apps/api/test/tenant-isolation.e2e-spec.ts
 
 ## Symbols (changed files only)
-- (no symbols detected in changed files or unsupported language)
+- apps/api/src/modules/cashflow/cashflow.service.ts:16:export class CashflowService {
+- apps/api/src/modules/customer/customer.service.ts:9:export class CustomerService {
+- apps/api/src/modules/operation/operation.service.ts:9:export class OperationService {
+- apps/api/src/modules/order/order.service.ts:9:export class OrderService {
 
 ## Compact tree (depth<=4, token-saver)
 - .gitignore
@@ -71,6 +79,7 @@
 - apps/api/test
 - apps/api/test/app.e2e-spec.ts
 - apps/api/test/jest-e2e.json
+- apps/api/test/tenant-isolation.e2e-spec.ts
 - apps/api/tsconfig.build.json
 - apps/api/tsconfig.json
 - apps/web

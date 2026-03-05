@@ -36,8 +36,7 @@ describe('InvoiceService', () => {
     });
 
     const paidAt = new Date('2026-04-01').toISOString();
-    const paid = service.markPaid({
-      tenantId: 't1',
+    const paid = service.markPaid('t1', {
       invoiceId: invoice.id,
       paidAt,
       version: invoice.version,

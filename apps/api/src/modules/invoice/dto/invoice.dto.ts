@@ -11,10 +11,10 @@ export const CreateInvoiceSchema = z.object({
 });
 
 export const MarkPaidSchema = z.object({
-  tenantId: z.string().min(1),
   invoiceId: z.string().min(1),
   paidAt: z.string().datetime(),
   version: z.number().int().positive(),
+  tenantId: z.string().min(1).optional(),
 });
 
 export type CreateInvoiceDto = z.infer<typeof CreateInvoiceSchema>;

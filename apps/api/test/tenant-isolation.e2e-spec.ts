@@ -7,7 +7,10 @@ import { OrderService } from '../src/modules/order/order.service';
 describe('Tenant isolation mutations', () => {
   it('prevents cross-tenant customer update', () => {
     const customers = new CustomerService();
-    const customerA = customers.create({ tenantId: 'tenant-a', name: 'A Corp' });
+    const customerA = customers.create({
+      tenantId: 'tenant-a',
+      name: 'A Corp',
+    });
 
     const result = customers.update({
       id: customerA.id,
@@ -76,11 +79,11 @@ describe('Tenant isolation mutations', () => {
       dueAt: new Date('2026-03-31').toISOString(),
     });
 
-    const markPaidResult = invoices.markPaid({
-      tenantId: 'tenant-b',
+    const markPaidResult = invoices.markPaid('tenant-b', {
       invoiceId: invoiceA.id,
       paidAt: new Date('2026-04-01').toISOString(),
       version: invoiceA.version,
+      tenantId: 'tenant-a',
     });
 
     expect(markPaidResult).toBeNull();
@@ -106,8 +109,7 @@ describe('Tenant isolation mutations', () => {
       dueAt: new Date('2026-03-31').toISOString(),
     });
 
-    const paid = invoices.markPaid({
-      tenantId: 'tenant-a',
+    const paid = invoices.markPaid('tenant-a', {
       invoiceId: invoiceA.id,
       paidAt: new Date('2026-04-01').toISOString(),
       version: invoiceA.version,

@@ -33,13 +33,18 @@ export class InvoiceService {
     return row;
   }
 
-  markPaid(input: MarkPaidDto) {
+  markPaid(actorTenantId: string, input: MarkPaidDto) {
     const row = this.db.get(input.invoiceId);
-    if (!row || row.tenantId !== input.tenantId) return null;
+    if (!row || row.tenantId !== actorTenantId) return null;
 
     assertVersion('Invoice', row.id, input.version, row.version);
 
-    const next: Invoice = { ...row, status: 'PAID', paidAt: input.paidAt, version: row.version + 1 };
+    const next: Invoice = {
+      ...row,
+      status: 'PAID',
+      paidAt: input.paidAt,
+      version: row.version + 1,
+    };
     this.db.set(row.id, next);
 
     this.cashflow.upsertActualIn({
