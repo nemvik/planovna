@@ -1,6 +1,6 @@
 # REPOMAP
 
-Generated: 2026-03-05T11:04:40.746882Z
+Generated: 2026-03-05T14:25:10.892670Z
 
 ## Tree (depth<=4)
 - ./
@@ -31,11 +31,17 @@ Generated: 2026-03-05T11:04:40.746882Z
 - apps/api/prisma/
   - schema.prisma
 - apps/api/src/
+  - common/
+  - modules/
   - app.controller.spec.ts
   - app.controller.ts
   - app.module.ts
   - app.service.ts
   - main.ts
+- apps/api/src/common/
+  - conflict.error.ts
+  - tenant-context.ts
+- apps/api/src/modules/
 - apps/api/test/
   - app.e2e-spec.ts
   - jest-e2e.json

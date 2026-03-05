@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-05T11:04:40.746882Z",
+  "generatedAt": "2026-03-05T14:25:10.892670Z",
   "root": "/mnt/w/Projects/planovna",
   "maxDepth": 4,
   "entries": [
@@ -54,7 +54,10 @@
     },
     {
       "path": "apps/api/src",
-      "dirs": [],
+      "dirs": [
+        "common",
+        "modules"
+      ],
       "files": [
         "app.controller.spec.ts",
         "app.controller.ts",
@@ -62,6 +65,19 @@
         "app.service.ts",
         "main.ts"
       ]
+    },
+    {
+      "path": "apps/api/src/common",
+      "dirs": [],
+      "files": [
+        "conflict.error.ts",
+        "tenant-context.ts"
+      ]
+    },
+    {
+      "path": "apps/api/src/modules",
+      "dirs": [],
+      "files": []
     },
     {
       "path": "apps/api/test",
