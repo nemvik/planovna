@@ -7,8 +7,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "npm --workspace @planovna/web run dev",
-    "dev:api": "npm --workspace @planovna/api run start:dev",
+    "dev:web": "npm -w apps/web run dev",
+    "dev:api": "npm -w apps/api run start:dev",
     "build": "npm run -ws build",
     "test": "npm run -ws test",
     "gate:local": "bash ./scripts/ci_local_gate.sh"
