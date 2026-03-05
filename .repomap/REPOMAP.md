@@ -1,13 +1,13 @@
 # REPOMAP
 
-- Generated: 2026-03-05 15:25:11 CET
+- Generated: 2026-03-05 15:47:04 CET
 - Branch: master
-- HEAD: d626239
-- Tracked files: 62
-- Last commit changed files: 22
+- HEAD: 5e27fb4
+- Tracked files: 68
+- Last commit changed files: 9
 
 ## Architecture index (top dirs)
-- apps (52 files)
+- apps (58 files)
 - docs (3 files)
 - .repomap (2 files)
 - scripts (1 files)
@@ -17,7 +17,7 @@
 - .gitignore (1 files)
 
 ## Language summary
-- .ts (27)
+- .ts (33)
 - .json (10)
 - .md (7)
 - .svg (5)
@@ -40,41 +40,20 @@
 - .repomap/REPOMAP.md
 - .repomap/repomap.json
 - apps/api/src/app.module.ts
-- apps/api/src/common/conflict.error.ts
-- apps/api/src/common/errors/conflict.error.ts
-- apps/api/src/common/optimistic-lock/assert-version.ts
-- apps/api/src/common/tenant-context.ts
-- apps/api/src/modules/customer/customer.controller.ts
-- apps/api/src/modules/customer/customer.dto.ts
-- apps/api/src/modules/customer/customer.module.ts
-- apps/api/src/modules/customer/customer.service.ts
-- apps/api/src/modules/customer/dto/customer.dto.ts
-- apps/api/src/modules/operation/dto/operation.dto.ts
-- apps/api/src/modules/operation/operation.controller.ts
-- apps/api/src/modules/operation/operation.dto.ts
-- apps/api/src/modules/operation/operation.module.ts
-- apps/api/src/modules/operation/operation.service.ts
-- apps/api/src/modules/order/dto/order.dto.ts
-- apps/api/src/modules/order/order.controller.ts
-- apps/api/src/modules/order/order.dto.ts
-- apps/api/src/modules/order/order.module.ts
-- apps/api/src/modules/order/order.service.ts
+- apps/api/src/modules/cashflow/cashflow.module.ts
+- apps/api/src/modules/cashflow/cashflow.service.ts
+- apps/api/src/modules/invoice/dto/invoice.dto.ts
+- apps/api/src/modules/invoice/invoice.controller.ts
+- apps/api/src/modules/invoice/invoice.module.ts
+- apps/api/src/modules/invoice/invoice.service.ts
 
 ## Symbols (changed files only)
-- apps/api/src/app.module.ts:13:export class AppModule {}
-- apps/api/src/common/conflict.error.ts:10:export class VersionConflictError extends Error {
-- apps/api/src/common/errors/conflict.error.ts:1:export class VersionConflictError extends Error {
-- apps/api/src/common/optimistic-lock/assert-version.ts:3:export function assertVersion(
-- apps/api/src/common/tenant-context.ts:3:export function requireTenantId(tenantId?: string): string {
-- apps/api/src/modules/customer/customer.controller.ts:11:export class CustomerController {
-- apps/api/src/modules/customer/customer.module.ts:10:export class CustomerModule {}
-- apps/api/src/modules/customer/customer.service.ts:9:export class CustomerService {
-- apps/api/src/modules/operation/operation.controller.ts:11:export class OperationController {
-- apps/api/src/modules/operation/operation.module.ts:10:export class OperationModule {}
-- apps/api/src/modules/operation/operation.service.ts:9:export class OperationService {
-- apps/api/src/modules/order/order.controller.ts:11:export class OrderController {
-- apps/api/src/modules/order/order.module.ts:10:export class OrderModule {}
-- apps/api/src/modules/order/order.service.ts:9:export class OrderService {
+- apps/api/src/app.module.ts:15:export class AppModule {}
+- apps/api/src/modules/cashflow/cashflow.module.ts:8:export class CashflowModule {}
+- apps/api/src/modules/cashflow/cashflow.service.ts:16:export class CashflowService {
+- apps/api/src/modules/invoice/invoice.controller.ts:11:export class InvoiceController {
+- apps/api/src/modules/invoice/invoice.module.ts:12:export class InvoiceModule {}
+- apps/api/src/modules/invoice/invoice.service.ts:15:export class InvoiceService {
 
 ## Compact tree (depth<=4, token-saver)
 - .gitignore
