@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { CustomerService } from '../src/modules/customer/customer.service';
+import { InvoiceService } from '../src/modules/invoice/invoice.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
@@ -22,7 +23,8 @@ describe('tRPC auth + customer (e2e)', () => {
 
     const authService = app.get(AuthService);
     const customerService = app.get(CustomerService);
-    const appRouter = createAppRouter(authService, customerService);
+    const invoiceService = app.get(InvoiceService);
+    const appRouter = createAppRouter(authService, customerService, invoiceService);
 
     app.use(
       '/trpc',

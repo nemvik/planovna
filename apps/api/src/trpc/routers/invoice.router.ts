@@ -1,0 +1,31 @@
+import { TRPCError } from '@trpc/server';
+import { InvoiceService } from '../../modules/invoice/invoice.service';
+import {
+  CreateInvoiceSchema,
+  MarkPaidSchema,
+} from '../../modules/invoice/dto/invoice.dto';
+import { roleProtectedProcedure, router } from '../trpc';
+
+const invoiceWriteProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
+
+export const createInvoiceRouter = (invoiceService: InvoiceService) =>
+  router({
+    issue: invoiceWriteProcedure
+      .input(CreateInvoiceSchema)
+      .mutation(({ ctx, input }) => {
+        return invoiceService.issue(ctx.auth.tenantId, input);
+      }),
+    paid: invoiceWriteProcedure
+      .input(MarkPaidSchema)
+      .mutation(({ ctx, input }) => {
+        const result = invoiceService.markPaid(ctx.auth.tenantId, input);
+        if (!result) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Invoice access denied',
+          });
+        }
+
+        return result;
+      }),
+  });

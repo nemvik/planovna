@@ -1,5 +1,6 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import { ZodError } from 'zod';
+import type { AuthRole } from '../modules/auth/auth.service';
 import type { TrpcContext } from './context';
 
 const t = initTRPC.context<TrpcContext>().create({
@@ -26,6 +27,21 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   });
 });
 
+const requireRole = (roles: AuthRole[]) =>
+  t.middleware(({ ctx, next }) => {
+    if (!ctx.auth) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+    }
+
+    if (!roles.includes(ctx.auth.role)) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Insufficient role' });
+    }
+
+    return next({ ctx: { auth: ctx.auth } });
+  });
+
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(isAuthed);
+export const roleProtectedProcedure = (roles: AuthRole[]) =>
+  protectedProcedure.use(requireRole(roles));
