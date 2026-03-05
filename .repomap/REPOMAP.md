@@ -1,13 +1,13 @@
 # REPOMAP
 
-- Generated: 2026-03-05 18:26:41 CET
+- Generated: 2026-03-05 20:29:17 CET
 - Branch: main
-- HEAD: 6f63237
-- Tracked files: 73
-- Last commit changed files: 7
+- HEAD: 08a8268
+- Tracked files: 82
+- Last commit changed files: 12
 
 ## Architecture index (top dirs)
-- apps (60 files)
+- apps (69 files)
 - docs (5 files)
 - scripts (2 files)
 - .repomap (2 files)
@@ -17,7 +17,7 @@
 - .gitignore (1 files)
 
 ## Language summary
-- .ts (35)
+- .ts (44)
 - .json (10)
 - .md (9)
 - .svg (5)
@@ -37,19 +37,27 @@
 - package.json
 
 ## Last commit impact
-- .repomap/REPOMAP.md
-- .repomap/repomap.json
-- apps/api/src/modules/cashflow/cashflow.service.ts
-- apps/api/src/modules/customer/customer.service.ts
-- apps/api/src/modules/operation/operation.service.ts
-- apps/api/src/modules/order/order.service.ts
+- apps/api/src/common/roles.decorator.ts
+- apps/api/src/common/roles.guard.ts
+- apps/api/src/modules/auth/auth.controller.ts
+- apps/api/src/modules/auth/auth.service.ts
+- apps/api/src/modules/auth/dto/auth.dto.ts
+- apps/api/src/modules/invoice/invoice.controller.ts
+- apps/api/src/modules/invoice/invoice.module.ts
+- apps/api/src/modules/invoice/invoice.service.spec.ts
+- apps/api/src/modules/invoice/invoice.service.ts
+- apps/api/test/auth-invoice-paid.e2e-spec.ts
+- apps/api/test/auth-magic-link-role.e2e-spec.ts
 - apps/api/test/tenant-isolation.e2e-spec.ts
 
 ## Symbols (changed files only)
-- apps/api/src/modules/cashflow/cashflow.service.ts:16:export class CashflowService {
-- apps/api/src/modules/customer/customer.service.ts:9:export class CustomerService {
-- apps/api/src/modules/operation/operation.service.ts:9:export class OperationService {
-- apps/api/src/modules/order/order.service.ts:9:export class OrderService {
+- apps/api/src/common/roles.decorator.ts:6:export const Roles = (...roles: AuthRole[]) =>
+- apps/api/src/common/roles.guard.ts:13:export class RolesGuard implements CanActivate {
+- apps/api/src/modules/auth/auth.controller.ts:20:export class AuthController {
+- apps/api/src/modules/auth/auth.service.ts:39:export class AuthService {
+- apps/api/src/modules/invoice/invoice.controller.ts:18:export class InvoiceController {
+- apps/api/src/modules/invoice/invoice.module.ts:15:export class InvoiceModule {}
+- apps/api/src/modules/invoice/invoice.service.ts:15:export class InvoiceService {
 
 ## Compact tree (depth<=4, token-saver)
 - .gitignore
@@ -78,6 +86,8 @@
 - apps/api/src/modules
 - apps/api/test
 - apps/api/test/app.e2e-spec.ts
+- apps/api/test/auth-invoice-paid.e2e-spec.ts
+- apps/api/test/auth-magic-link-role.e2e-spec.ts
 - apps/api/test/jest-e2e.json
 - apps/api/test/tenant-isolation.e2e-spec.ts
 - apps/api/tsconfig.build.json
