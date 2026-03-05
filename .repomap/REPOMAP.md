@@ -1,16 +1,16 @@
 # REPOMAP
 
-- Generated: 2026-03-05 15:54:57 CET
-- Branch: master
-- HEAD: 63e38d9
-- Tracked files: 71
-- Last commit changed files: 5
+- Generated: 2026-03-05 17:40:07 CET
+- Branch: main
+- HEAD: 2e473d6
+- Tracked files: 72
+- Last commit changed files: 2
 
 ## Architecture index (top dirs)
 - apps (59 files)
 - docs (5 files)
+- scripts (2 files)
 - .repomap (2 files)
-- scripts (1 files)
 - package.json (1 files)
 - package-lock.json (1 files)
 - README.md (1 files)
@@ -24,7 +24,7 @@
 - .mjs (3)
 - .gitignore (3)
 - .tsx (2)
-- .sh (1)
+- .sh (2)
 - .prisma (1)
 - .prettierrc (1)
 - .ico (1)
@@ -37,11 +37,8 @@
 - package.json
 
 ## Last commit impact
-- .repomap/REPOMAP.md
-- .repomap/repomap.json
-- README.md
-- docs/DECISIONS_LOG.md
-- docs/PROJECT_BRIEF_FULL.md
+- apps/web/package.json
+- package.json
 
 ## Symbols (changed files only)
 - (no symbols detected in changed files or unsupported language)
@@ -101,4 +98,5 @@
 - package-lock.json
 - package.json
 - scripts
+- scripts/ci_local_gate.sh
 - scripts/update_repomap.sh

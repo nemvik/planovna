@@ -26,7 +26,8 @@ export class OrderService {
 
     assertVersion('Order', row.id, input.version, row.version);
 
-    const next = { ...row, ...input, version: row.version + 1 };
+    const { tenantId: _ignoredTenantId, ...patch } = input;
+    const next = { ...row, ...patch, tenantId: row.tenantId, version: row.version + 1 };
     this.db.set(row.id, next);
     return next;
   }

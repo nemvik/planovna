@@ -17,7 +17,9 @@ export class CashflowService {
   private readonly db = new Map<string, CashflowItem>();
 
   upsertPlannedIn(input: Omit<CashflowItem, 'id' | 'kind'>) {
-    const existing = Array.from(this.db.values()).find((x) => x.invoiceId === input.invoiceId && x.kind === 'PLANNED_IN');
+    const existing = Array.from(this.db.values()).find(
+      (x) => x.invoiceId === input.invoiceId && x.tenantId === input.tenantId && x.kind === 'PLANNED_IN',
+    );
     if (existing) {
       const next = { ...existing, ...input };
       this.db.set(existing.id, next);
@@ -29,7 +31,9 @@ export class CashflowService {
   }
 
   upsertActualIn(input: Omit<CashflowItem, 'id' | 'kind'>) {
-    const existing = Array.from(this.db.values()).find((x) => x.invoiceId === input.invoiceId && x.kind === 'ACTUAL_IN');
+    const existing = Array.from(this.db.values()).find(
+      (x) => x.invoiceId === input.invoiceId && x.tenantId === input.tenantId && x.kind === 'ACTUAL_IN',
+    );
     if (existing) {
       const next = { ...existing, ...input };
       this.db.set(existing.id, next);
