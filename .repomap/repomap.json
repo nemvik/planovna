@@ -1,9 +1,9 @@
 {
-  "generated": "2026-03-05 15:53:09 CET",
+  "generated": "2026-03-05 15:54:57 CET",
   "branch": "master",
-  "head": "f8fae0a",
-  "trackedFiles": 69,
-  "changedFiles": 3,
+  "head": "63e38d9",
+  "trackedFiles": 71,
+  "changedFiles": 5,
   "limits": {
     "maxChanged": 80,
     "maxSymbols": 120,
@@ -11,7 +11,7 @@
   },
   "topDirs": [
     "     59 apps",
-    "      3 docs",
+    "      5 docs",
     "      2 .repomap",
     "      1 scripts",
     "      1 package.json",
@@ -22,7 +22,7 @@
   "languages": [
     "34 ts",
     "10 json",
-    "7 md",
+    "9 md",
     "5 svg",
     "3 mjs",
     "3 gitignore",
@@ -42,7 +42,9 @@
   "lastCommitFiles": [
     ".repomap/REPOMAP.md",
     ".repomap/repomap.json",
-    "apps/api/src/modules/invoice/invoice.service.spec.ts"
+    "README.md",
+    "docs/DECISIONS_LOG.md",
+    "docs/PROJECT_BRIEF_FULL.md"
   ],
   "symbols": []
 }

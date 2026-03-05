@@ -1,10 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import {
-  CreateInvoiceDto,
-  CreateInvoiceSchema,
-  MarkPaidDto,
-  MarkPaidSchema,
-} from './dto/invoice.dto';
+import { CreateInvoiceSchema, MarkPaidSchema } from './dto/invoice.dto';
+import type { CreateInvoiceDto, MarkPaidDto } from './dto/invoice.dto';
 import { InvoiceService } from './invoice.service';
 
 @Controller('invoices')

@@ -1,14 +1,14 @@
 # REPOMAP
 
-- Generated: 2026-03-05 15:53:09 CET
+- Generated: 2026-03-05 15:54:57 CET
 - Branch: master
-- HEAD: f8fae0a
-- Tracked files: 69
-- Last commit changed files: 3
+- HEAD: 63e38d9
+- Tracked files: 71
+- Last commit changed files: 5
 
 ## Architecture index (top dirs)
 - apps (59 files)
-- docs (3 files)
+- docs (5 files)
 - .repomap (2 files)
 - scripts (1 files)
 - package.json (1 files)
@@ -19,7 +19,7 @@
 ## Language summary
 - .ts (34)
 - .json (10)
-- .md (7)
+- .md (9)
 - .svg (5)
 - .mjs (3)
 - .gitignore (3)
@@ -39,7 +39,9 @@
 ## Last commit impact
 - .repomap/REPOMAP.md
 - .repomap/repomap.json
-- apps/api/src/modules/invoice/invoice.service.spec.ts
+- README.md
+- docs/DECISIONS_LOG.md
+- docs/PROJECT_BRIEF_FULL.md
 
 ## Symbols (changed files only)
 - (no symbols detected in changed files or unsupported language)
@@ -93,7 +95,9 @@
 - docs
 - docs/ARCHITECTURE_MVP.md
 - docs/BACKLOG_M1.md
+- docs/DECISIONS_LOG.md
 - docs/EXECUTION_PLAN.md
+- docs/PROJECT_BRIEF_FULL.md
 - package-lock.json
 - package.json
 - scripts
