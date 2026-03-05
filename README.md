@@ -23,3 +23,9 @@ MVP SaaS pro zakázkovou výrobu: plánování operací (board), fakturace a cas
 - `apps/api` — NestJS backend
 - `packages/shared` — shared types/contracts
 - `docs` — product + architecture + runbooks
+
+## Persistent source docs (important)
+- `docs/PROJECT_BRIEF_FULL.md` — full persisted assignment (not chat-context dependent)
+- `docs/DECISIONS_LOG.md` — locked product/tech decisions
+- `docs/EXECUTION_PLAN.md` — CEO-level delivery plan
+- `docs/ARCHITECTURE_MVP.md` — implementation architecture

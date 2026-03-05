@@ -1,16 +1,16 @@
 {
-  "generated": "2026-03-05 15:47:04 CET",
+  "generated": "2026-03-05 15:53:09 CET",
   "branch": "master",
-  "head": "5e27fb4",
-  "trackedFiles": 68,
-  "changedFiles": 9,
+  "head": "f8fae0a",
+  "trackedFiles": 69,
+  "changedFiles": 3,
   "limits": {
     "maxChanged": 80,
     "maxSymbols": 120,
     "maxTreeLines": 200
   },
   "topDirs": [
-    "     58 apps",
+    "     59 apps",
     "      3 docs",
     "      2 .repomap",
     "      1 scripts",
@@ -20,7 +20,7 @@
     "      1 .gitignore"
   ],
   "languages": [
-    "33 ts",
+    "34 ts",
     "10 json",
     "7 md",
     "5 svg",
@@ -42,20 +42,7 @@
   "lastCommitFiles": [
     ".repomap/REPOMAP.md",
     ".repomap/repomap.json",
-    "apps/api/src/app.module.ts",
-    "apps/api/src/modules/cashflow/cashflow.module.ts",
-    "apps/api/src/modules/cashflow/cashflow.service.ts",
-    "apps/api/src/modules/invoice/dto/invoice.dto.ts",
-    "apps/api/src/modules/invoice/invoice.controller.ts",
-    "apps/api/src/modules/invoice/invoice.module.ts",
-    "apps/api/src/modules/invoice/invoice.service.ts"
+    "apps/api/src/modules/invoice/invoice.service.spec.ts"
   ],
-  "symbols": [
-    "- apps/api/src/app.module.ts:15:export class AppModule {}",
-    "- apps/api/src/modules/cashflow/cashflow.module.ts:8:export class CashflowModule {}",
-    "- apps/api/src/modules/cashflow/cashflow.service.ts:16:export class CashflowService {",
-    "- apps/api/src/modules/invoice/invoice.controller.ts:11:export class InvoiceController {",
-    "- apps/api/src/modules/invoice/invoice.module.ts:12:export class InvoiceModule {}",
-    "- apps/api/src/modules/invoice/invoice.service.ts:15:export class InvoiceService {"
-  ]
+  "symbols": []
 }

@@ -1,13 +1,13 @@
 # REPOMAP
 
-- Generated: 2026-03-05 15:47:04 CET
+- Generated: 2026-03-05 15:53:09 CET
 - Branch: master
-- HEAD: 5e27fb4
-- Tracked files: 68
-- Last commit changed files: 9
+- HEAD: f8fae0a
+- Tracked files: 69
+- Last commit changed files: 3
 
 ## Architecture index (top dirs)
-- apps (58 files)
+- apps (59 files)
 - docs (3 files)
 - .repomap (2 files)
 - scripts (1 files)
@@ -17,7 +17,7 @@
 - .gitignore (1 files)
 
 ## Language summary
-- .ts (33)
+- .ts (34)
 - .json (10)
 - .md (7)
 - .svg (5)
@@ -39,21 +39,10 @@
 ## Last commit impact
 - .repomap/REPOMAP.md
 - .repomap/repomap.json
-- apps/api/src/app.module.ts
-- apps/api/src/modules/cashflow/cashflow.module.ts
-- apps/api/src/modules/cashflow/cashflow.service.ts
-- apps/api/src/modules/invoice/dto/invoice.dto.ts
-- apps/api/src/modules/invoice/invoice.controller.ts
-- apps/api/src/modules/invoice/invoice.module.ts
-- apps/api/src/modules/invoice/invoice.service.ts
+- apps/api/src/modules/invoice/invoice.service.spec.ts
 
 ## Symbols (changed files only)
-- apps/api/src/app.module.ts:15:export class AppModule {}
-- apps/api/src/modules/cashflow/cashflow.module.ts:8:export class CashflowModule {}
-- apps/api/src/modules/cashflow/cashflow.service.ts:16:export class CashflowService {
-- apps/api/src/modules/invoice/invoice.controller.ts:11:export class InvoiceController {
-- apps/api/src/modules/invoice/invoice.module.ts:12:export class InvoiceModule {}
-- apps/api/src/modules/invoice/invoice.service.ts:15:export class InvoiceService {
+- (no symbols detected in changed files or unsupported language)
 
 ## Compact tree (depth<=4, token-saver)
 - .gitignore
