@@ -17,13 +17,19 @@ export class InvoiceService {
 
   constructor(private readonly cashflow: CashflowService) {}
 
-  issue(input: CreateInvoiceDto) {
+  issue(actorTenantId: string, input: CreateInvoiceDto) {
     const id = randomUUID();
-    const row: Invoice = { ...input, id, status: 'ISSUED', version: 1 };
+    const row: Invoice = {
+      ...input,
+      tenantId: actorTenantId,
+      id,
+      status: 'ISSUED',
+      version: 1,
+    };
     this.db.set(id, row);
 
     this.cashflow.upsertPlannedIn({
-      tenantId: input.tenantId,
+      tenantId: row.tenantId,
       invoiceId: id,
       amount: input.amountGross,
       currency: input.currency,

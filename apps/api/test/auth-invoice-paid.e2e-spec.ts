@@ -20,13 +20,26 @@ describe('Auth + invoice paid (e2e)', () => {
     await app.close();
   });
 
-  it('logs in and allows same-tenant invoice markPaid while denying cross-tenant token', async () => {
+  it('allows same-tenant invoice markPaid while denying cross-tenant token', async () => {
     const appServer = app.getHttpServer();
+
+    const tenantALogin = await request(appServer).post('/auth/login').send({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    expect(tenantALogin.status).toBe(201);
+
+    const tenantBLogin = await request(appServer).post('/auth/login').send({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+    expect(tenantBLogin.status).toBe(201);
 
     const issueResponse = await request(appServer)
       .post('/invoices/issue')
+      .set('authorization', `Bearer ${tenantALogin.body.accessToken as string}`)
       .send({
-        tenantId: 'tenant-a',
+        tenantId: 'tenant-b',
         orderId: 'order-1',
         number: '2026-0100',
         currency: 'CZK',
@@ -35,22 +48,7 @@ describe('Auth + invoice paid (e2e)', () => {
       });
 
     expect(issueResponse.status).toBe(201);
-
-    const tenantALogin = await request(appServer).post('/auth/login').send({
-      email: 'owner@tenant-a.local',
-      password: 'tenant-a-pass',
-    });
-
-    expect(tenantALogin.status).toBe(201);
-    expect(tenantALogin.body.tokenType).toBe('Bearer');
-    expect(typeof tenantALogin.body.accessToken).toBe('string');
-
-    const tenantBLogin = await request(appServer).post('/auth/login').send({
-      email: 'owner@tenant-b.local',
-      password: 'tenant-b-pass',
-    });
-
-    expect(tenantBLogin.status).toBe(201);
+    expect(issueResponse.body.tenantId).toBe('tenant-a');
 
     const crossTenantPaid = await request(appServer)
       .post('/invoices/paid')

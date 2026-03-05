@@ -70,7 +70,7 @@ describe('Tenant isolation mutations', () => {
     const cashflow = new CashflowService();
     const invoices = new InvoiceService(cashflow);
 
-    const invoiceA = invoices.issue({
+    const invoiceA = invoices.issue('tenant-a', {
       tenantId: 'tenant-a',
       orderId: 'order-a',
       number: '2026-0001',
@@ -100,7 +100,7 @@ describe('Tenant isolation mutations', () => {
     const cashflow = new CashflowService();
     const invoices = new InvoiceService(cashflow);
 
-    const invoiceA = invoices.issue({
+    const invoiceA = invoices.issue('tenant-a', {
       tenantId: 'tenant-a',
       orderId: 'order-a',
       number: '2026-0002',

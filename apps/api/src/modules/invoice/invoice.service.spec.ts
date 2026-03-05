@@ -6,7 +6,7 @@ describe('InvoiceService', () => {
     const cashflow = new CashflowService();
     const service = new InvoiceService(cashflow);
 
-    const invoice = service.issue({
+    const invoice = service.issue('t1', {
       tenantId: 't1',
       orderId: 'o1',
       number: '2026-0001',
@@ -26,7 +26,7 @@ describe('InvoiceService', () => {
     const cashflow = new CashflowService();
     const service = new InvoiceService(cashflow);
 
-    const invoice = service.issue({
+    const invoice = service.issue('t1', {
       tenantId: 't1',
       orderId: 'o1',
       number: '2026-0002',

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { createHash, createHmac, timingSafeEqual } from 'crypto';
-import { LoginDto, LoginResponseDto } from './dto/auth.dto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import {
+  LoginDto,
+  LoginResponseDto,
+  MagicLinkConsumeDto,
+  MagicLinkRequestDto,
+} from './dto/auth.dto';
 
 export type AuthRole = 'OWNER' | 'PLANNER' | 'SHOPFLOOR' | 'FINANCE';
 
@@ -19,11 +24,23 @@ type User = {
   role: AuthRole;
 };
 
+type MagicLinkToken = {
+  tokenHash: string;
+  userId: string;
+  expiresAt: number;
+};
+
+type MagicLinkRequestResponse = {
+  token: string;
+  expiresAt: string;
+};
+
 @Injectable()
 export class AuthService {
   private readonly tokenSecret =
     process.env.AUTH_TOKEN_SECRET ?? 'planovna-dev-secret';
   private readonly tokenTtlSeconds = 60 * 60;
+  private readonly magicLinkTtlSeconds = 15 * 60;
   private readonly users: User[] = [
     {
       id: 'u-tenant-a-owner',
@@ -33,6 +50,27 @@ export class AuthService {
       role: 'OWNER',
     },
     {
+      id: 'u-tenant-a-finance',
+      tenantId: 'tenant-a',
+      email: 'finance@tenant-a.local',
+      passwordHash: this.hashPassword('tenant-a-pass'),
+      role: 'FINANCE',
+    },
+    {
+      id: 'u-tenant-a-planner',
+      tenantId: 'tenant-a',
+      email: 'planner@tenant-a.local',
+      passwordHash: this.hashPassword('tenant-a-pass'),
+      role: 'PLANNER',
+    },
+    {
+      id: 'u-tenant-a-shopfloor',
+      tenantId: 'tenant-a',
+      email: 'shopfloor@tenant-a.local',
+      passwordHash: this.hashPassword('tenant-a-pass'),
+      role: 'SHOPFLOOR',
+    },
+    {
       id: 'u-tenant-b-owner',
       tenantId: 'tenant-b',
       email: 'owner@tenant-b.local',
@@ -40,30 +78,57 @@ export class AuthService {
       role: 'OWNER',
     },
   ];
+  private readonly magicLinkTokens = new Map<string, MagicLinkToken>();
 
   login(input: LoginDto): LoginResponseDto | null {
-    const user = this.users.find(
-      (candidate) =>
-        candidate.email.toLowerCase() === input.email.toLowerCase(),
-    );
+    const user = this.findUserByEmail(input.email);
     if (!user) return null;
 
     const passwordHash = this.hashPassword(input.password);
     if (passwordHash !== user.passwordHash) return null;
 
-    const exp = Math.floor(Date.now() / 1000) + this.tokenTtlSeconds;
-    const payload: AuthTokenPayload = {
-      tenantId: user.tenantId,
+    return this.issueAccessToken(user);
+  }
+
+  requestMagicLink(input: MagicLinkRequestDto): MagicLinkRequestResponse | null {
+    const user = this.findUserByEmail(input.email);
+    if (!user) return null;
+
+    const token = randomUUID();
+    const expiresAt = this.nowInSeconds() + this.magicLinkTtlSeconds;
+    this.magicLinkTokens.set(token, {
+      tokenHash: this.hashMagicToken(token),
       userId: user.id,
-      role: user.role,
-      exp,
-    };
+      expiresAt,
+    });
 
     return {
-      tokenType: 'Bearer',
-      accessToken: this.sign(payload),
-      expiresAt: new Date(exp * 1000).toISOString(),
+      token,
+      expiresAt: new Date(expiresAt * 1000).toISOString(),
     };
+  }
+
+  consumeMagicLink(input: MagicLinkConsumeDto): LoginResponseDto | null {
+    const storedToken = this.magicLinkTokens.get(input.token);
+    if (!storedToken) {
+      return null;
+    }
+
+    if (storedToken.expiresAt <= this.nowInSeconds()) {
+      this.magicLinkTokens.delete(input.token);
+      return null;
+    }
+
+    if (storedToken.tokenHash !== this.hashMagicToken(input.token)) {
+      return null;
+    }
+
+    const user = this.findUserById(storedToken.userId);
+    if (!user) return null;
+
+    this.magicLinkTokens.delete(input.token);
+
+    return this.issueAccessToken(user);
   }
 
   verify(accessToken: string): AuthTokenPayload | null {
@@ -95,13 +160,47 @@ export class AuthService {
       ) {
         return null;
       }
-      if (payload.exp <= Math.floor(Date.now() / 1000)) {
+      if (payload.exp <= this.nowInSeconds()) {
         return null;
       }
       return payload;
     } catch {
       return null;
     }
+  }
+
+  private issueAccessToken(user: User): LoginResponseDto {
+    const exp = this.nowInSeconds() + this.tokenTtlSeconds;
+    const payload: AuthTokenPayload = {
+      tenantId: user.tenantId,
+      userId: user.id,
+      role: user.role,
+      exp,
+    };
+
+    return {
+      tokenType: 'Bearer',
+      accessToken: this.sign(payload),
+      expiresAt: new Date(exp * 1000).toISOString(),
+    };
+  }
+
+  private findUserByEmail(email: string): User | undefined {
+    return this.users.find(
+      (candidate) => candidate.email.toLowerCase() === email.toLowerCase(),
+    );
+  }
+
+  private findUserById(userId: string): User | undefined {
+    return this.users.find((candidate) => candidate.id === userId);
+  }
+
+  private hashMagicToken(token: string): string {
+    return createHmac('sha256', this.tokenSecret).update(token).digest('hex');
+  }
+
+  private nowInSeconds(): number {
+    return Math.floor(Date.now() / 1000);
   }
 
   private sign(payload: AuthTokenPayload): string {
