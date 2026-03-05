@@ -10,6 +10,7 @@
     "test": "echo 'web: no tests yet'"
   },
   "dependencies": {
+    "@trpc/client": "^11.7.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
