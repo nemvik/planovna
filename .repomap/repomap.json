@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-03-05T11:04:40.746882Z",
+  "root": "/mnt/w/Projects/planovna",
+  "maxDepth": 4,
+  "entries": [
+    {
+      "path": ".",
+      "dirs": [
+        "apps",
+        "docs",
+        "scripts"
+      ],
+      "files": [
+        ".gitignore",
+        "README.md",
+        "package-lock.json",
+        "package.json"
+      ]
+    },
+    {
+      "path": "apps",
+      "dirs": [
+        "api",
+        "web"
+      ],
+      "files": []
+    },
+    {
+      "path": "apps/api",
+      "dirs": [
+        "prisma",
+        "src",
+        "test"
+      ],
+      "files": [
+        ".env",
+        ".gitignore",
+        ".prettierrc",
+        "README.md",
+        "eslint.config.mjs",
+        "nest-cli.json",
+        "package.json",
+        "prisma.config.ts",
+        "tsconfig.build.json",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "path": "apps/api/prisma",
+      "dirs": [],
+      "files": [
+        "schema.prisma"
+      ]
+    },
+    {
+      "path": "apps/api/src",
+      "dirs": [],
+      "files": [
+        "app.controller.spec.ts",
+        "app.controller.ts",
+        "app.module.ts",
+        "app.service.ts",
+        "main.ts"
+      ]
+    },
+    {
+      "path": "apps/api/test",
+      "dirs": [],
+      "files": [
+        "app.e2e-spec.ts",
+        "jest-e2e.json"
+      ]
+    },
+    {
+      "path": "apps/web",
+      "dirs": [
+        "public",
+        "src"
+      ],
+      "files": [
+        ".gitignore",
+        "README.md",
+        "eslint.config.mjs",
+        "next-env.d.ts",
+        "next.config.ts",
+        "package.json",
+        "postcss.config.mjs",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "path": "apps/web/public",
+      "dirs": [],
+      "files": [
+        "file.svg",
+        "globe.svg",
+        "next.svg",
+        "vercel.svg",
+        "window.svg"
+      ]
+    },
+    {
+      "path": "apps/web/src",
+      "dirs": [
+        "app"
+      ],
+      "files": []
+    },
+    {
+      "path": "apps/web/src/app",
+      "dirs": [],
+      "files": [
+        "favicon.ico",
+        "globals.css",
+        "layout.tsx",
+        "page.tsx"
+      ]
+    },
+    {
+      "path": "docs",
+      "dirs": [],
+      "files": [
+        "ARCHITECTURE_MVP.md",
+        "BACKLOG_M1.md",
+        "EXECUTION_PLAN.md"
+      ]
+    },
+    {
+      "path": "scripts",
+      "dirs": [],
+      "files": [
+        "update_repomap.sh"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+# REPOMAP
+
+Generated: 2026-03-05T11:04:40.746882Z
+
+## Tree (depth<=4)
+- ./
+  - apps/
+  - docs/
+  - scripts/
+  - .gitignore
+  - README.md
+  - package-lock.json
+  - package.json
+- apps/
+  - api/
+  - web/
+- apps/api/
+  - prisma/
+  - src/
+  - test/
+  - .env
+  - .gitignore
+  - .prettierrc
+  - README.md
+  - eslint.config.mjs
+  - nest-cli.json
+  - package.json
+  - prisma.config.ts
+  - tsconfig.build.json
+  - tsconfig.json
+- apps/api/prisma/
+  - schema.prisma
+- apps/api/src/
+  - app.controller.spec.ts
+  - app.controller.ts
+  - app.module.ts
+  - app.service.ts
+  - main.ts
+- apps/api/test/
+  - app.e2e-spec.ts
+  - jest-e2e.json
+- apps/web/
+  - public/
+  - src/
+  - .gitignore
+  - README.md
+  - eslint.config.mjs
+  - next-env.d.ts
+  - next.config.ts
+  - package.json
+  - postcss.config.mjs
+  - tsconfig.json
+- apps/web/public/
+  - file.svg
+  - globe.svg
+  - next.svg
+  - vercel.svg
+  - window.svg
+- apps/web/src/
+  - app/
+- apps/web/src/app/
+  - favicon.ico
+  - globals.css
+  - layout.tsx
+  - page.tsx
+- docs/
+  - ARCHITECTURE_MVP.md
+  - BACKLOG_M1.md
+  - EXECUTION_PLAN.md
+- scripts/
+  - update_repomap.sh

@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  PLANNER
+  SHOPFLOOR
+  FINANCE
+}
+
+enum OperationStatus {
+  READY
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+}
+
+enum CashflowKind {
+  PLANNED_IN
+  ACTUAL_IN
+  PLANNED_OUT
+  ACTUAL_OUT
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  customers  Customer[]
+  orders     Order[]
+  operations Operation[]
+  invoices   Invoice[]
+  cashflows  CashflowItem[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  tenantId       String
+  email          String
+  passwordHash   String?
+  magicLinkToken String?
+  role           UserRole
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  ic        String?
+  dic       String?
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  version   Int      @default(1)
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Order {
+  id         String    @id @default(cuid())
+  tenantId   String
+  customerId String
+  code       String
+  title      String
+  dueDate    DateTime?
+  status     String
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  version    Int       @default(1)
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  operations Operation[]
+  invoices   Invoice[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, dueDate])
+}
+
+model Operation {
+  id            String          @id @default(cuid())
+  tenantId      String
+  orderId       String
+  code          String
+  title         String
+  status        OperationStatus @default(READY)
+  startDate     DateTime?
+  endDate       DateTime?
+  sortIndex     Int             @default(0)
+  blockedReason String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  version       Int             @default(1)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  dependsOn       OperationDependency[] @relation("dependsOn")
+  prerequisiteFor OperationDependency[] @relation("prerequisiteFor")
+
+  @@unique([tenantId, orderId, code])
+  @@index([tenantId, startDate, endDate])
+}
+
+model OperationDependency {
+  id          String @id @default(cuid())
+  tenantId    String
+  operationId String
+  dependsOnId String
+
+  operation Operation @relation("dependsOn", fields: [operationId], references: [id], onDelete: Cascade)
+  dependsOn Operation @relation("prerequisiteFor", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, operationId, dependsOnId])
+  @@index([tenantId])
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  tenantId    String
+  orderId     String
+  number      String
+  status      InvoiceStatus @default(DRAFT)
+  currency    String
+  amountNet   Decimal       @db.Decimal(14, 2)
+  amountVat   Decimal       @db.Decimal(14, 2)
+  amountGross Decimal       @db.Decimal(14, 2)
+  issuedAt    DateTime?
+  dueAt       DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  version     Int           @default(1)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  cashflowItems CashflowItem[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, dueAt])
+}
+
+model CashflowItem {
+  id        String       @id @default(cuid())
+  tenantId  String
+  invoiceId String?
+  kind      CashflowKind
+  currency  String
+  amount    Decimal      @db.Decimal(14, 2)
+  date      DateTime
+  note      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  version   Int          @default(1)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, date, kind])
+}
