@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { AuthService } from './modules/auth/auth.service';
 import { CustomerService } from './modules/customer/customer.service';
 import { InvoiceService } from './modules/invoice/invoice.service';
+import { OrderService } from './modules/order/order.service';
 import { createTrpcContext } from './trpc/context';
 import { createAppRouter } from './trpc/routers/app.router';
 
@@ -13,7 +14,13 @@ async function bootstrap() {
   const authService = app.get(AuthService);
   const customerService = app.get(CustomerService);
   const invoiceService = app.get(InvoiceService);
-  const appRouter = createAppRouter(authService, customerService, invoiceService);
+  const orderService = app.get(OrderService);
+  const appRouter = createAppRouter(
+    authService,
+    customerService,
+    invoiceService,
+    orderService,
+  );
 
   app.use(
     '/trpc',

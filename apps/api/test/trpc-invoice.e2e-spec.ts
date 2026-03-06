@@ -8,6 +8,7 @@ import { AuthService } from '../src/modules/auth/auth.service';
 import { CashflowService } from '../src/modules/cashflow/cashflow.service';
 import { CustomerService } from '../src/modules/customer/customer.service';
 import { InvoiceService } from '../src/modules/invoice/invoice.service';
+import { OrderService } from '../src/modules/order/order.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
@@ -41,9 +42,15 @@ describe('tRPC invoice write contracts (e2e)', () => {
     authService = app.get(AuthService);
     const customerService = app.get(CustomerService);
     const invoiceService = app.get(InvoiceService);
+    const orderService = app.get(OrderService);
     cashflowService = app.get(CashflowService);
 
-    const appRouter = createAppRouter(authService, customerService, invoiceService);
+    const appRouter = createAppRouter(
+      authService,
+      customerService,
+      invoiceService,
+      orderService,
+    );
 
     app.use(
       '/trpc',
