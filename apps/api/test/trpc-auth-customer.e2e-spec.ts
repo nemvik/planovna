@@ -147,4 +147,130 @@ describe('tRPC auth + customer (e2e)', () => {
       true,
     );
   });
+
+  it('denies cross-tenant customer.update and preserves original data', async () => {
+    const loginClient = createTRPCProxyClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: `${baseUrl}/trpc`,
+        }),
+      ],
+    });
+
+    const tenantA = await loginClient.auth.login.mutate({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    const tenantB = await loginClient.auth.login.mutate({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    const tenantAClient = createTRPCProxyClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: `${baseUrl}/trpc`,
+          headers: {
+            authorization: `Bearer ${tenantA.accessToken}`,
+          },
+        }),
+      ],
+    });
+
+    const tenantBClient = createTRPCProxyClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: `${baseUrl}/trpc`,
+          headers: {
+            authorization: `Bearer ${tenantB.accessToken}`,
+          },
+        }),
+      ],
+    });
+
+    const created = await tenantAClient.customer.create.mutate({
+      name: 'Protected customer',
+      email: 'protected@example.com',
+    });
+
+    await expect(
+      tenantBClient.customer.update.mutate({
+        id: created.id,
+        tenantId: 'tenant-a',
+        version: created.version,
+        name: 'Cross-tenant overwrite',
+      }),
+    ).rejects.toMatchObject({
+      data: { code: 'FORBIDDEN' },
+    });
+
+    const tenantACustomers = await tenantAClient.customer.list.query();
+    const stored = tenantACustomers.find((customer) => customer.id === created.id);
+
+    expect(stored).toBeDefined();
+    expect(stored?.name).toBe('Protected customer');
+    expect(stored?.version).toBe(1);
+  });
+
+  it('returns stable CONFLICT payload for stale customer.update version', async () => {
+    const loginClient = createTRPCProxyClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: `${baseUrl}/trpc`,
+        }),
+      ],
+    });
+
+    const tenantA = await loginClient.auth.login.mutate({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    const tenantAClient = createTRPCProxyClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: `${baseUrl}/trpc`,
+          headers: {
+            authorization: `Bearer ${tenantA.accessToken}`,
+          },
+        }),
+      ],
+    });
+
+    const created = await tenantAClient.customer.create.mutate({
+      name: 'Versioned customer',
+      email: 'versioned@example.com',
+    });
+
+    const updated = await tenantAClient.customer.update.mutate({
+      id: created.id,
+      tenantId: 'tenant-b',
+      version: created.version,
+      name: 'Versioned customer v2',
+    });
+
+    expect(updated.tenantId).toBe('tenant-a');
+    expect(updated.version).toBe(2);
+
+    await expect(
+      tenantAClient.customer.update.mutate({
+        id: created.id,
+        tenantId: 'tenant-a',
+        version: created.version,
+        name: 'Stale write',
+      }),
+    ).rejects.toMatchObject({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Customer',
+          id: created.id,
+          expectedVersion: created.version,
+          actualVersion: updated.version,
+        },
+      },
+    });
+  });
 });
