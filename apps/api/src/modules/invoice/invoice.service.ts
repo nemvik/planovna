@@ -17,6 +17,12 @@ export class InvoiceService {
 
   constructor(private readonly cashflow: CashflowService) {}
 
+  list(actorTenantId: string) {
+    return Array.from(this.db.values()).filter(
+      (invoice) => invoice.tenantId === actorTenantId,
+    );
+  }
+
   issue(actorTenantId: string, input: CreateInvoiceDto) {
     const id = randomUUID();
     const row: Invoice = {

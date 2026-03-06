@@ -7,10 +7,14 @@ import {
 import { throwTrpcVersionConflict } from '../errors/version-conflict';
 import { roleProtectedProcedure, router } from '../trpc';
 
+const invoiceReadProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
 const invoiceWriteProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
 
 export const createInvoiceRouter = (invoiceService: InvoiceService) =>
   router({
+    list: invoiceReadProcedure.query(({ ctx }) => {
+      return invoiceService.list(ctx.auth.tenantId);
+    }),
     issue: invoiceWriteProcedure
       .input(CreateInvoiceSchema)
       .mutation(({ ctx, input }) => {

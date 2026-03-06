@@ -13,7 +13,7 @@ import { OrderService } from '../src/modules/order/order.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
-describe('tRPC invoice write contracts (e2e)', () => {
+describe('tRPC invoice contracts (e2e)', () => {
   let app: INestApplication<App>;
   let baseUrl: string;
   let authService: AuthService;
@@ -45,7 +45,6 @@ describe('tRPC invoice write contracts (e2e)', () => {
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
     const operationService = app.get(OperationService);
-    const cashflowService = app.get(CashflowService);
     cashflowService = app.get(CashflowService);
 
     const appRouter = createAppRouter(
@@ -74,8 +73,12 @@ describe('tRPC invoice write contracts (e2e)', () => {
     await app.close();
   });
 
-  it('enforces auth and roles for invoice.issue and invoice.paid', async () => {
+  it('enforces auth and role contract for invoice.list/issue/paid', async () => {
     const publicClient = createClient();
+
+    await expect(publicClient.invoice.list.query()).rejects.toMatchObject({
+      data: { code: 'UNAUTHORIZED' },
+    });
 
     await expect(
       publicClient.invoice.issue.mutate({
@@ -104,6 +107,10 @@ describe('tRPC invoice write contracts (e2e)', () => {
 
     const plannerClient = createClient(plannerLogin!.accessToken);
 
+    await expect(plannerClient.invoice.list.query()).rejects.toMatchObject({
+      data: { code: 'FORBIDDEN' },
+    });
+
     await expect(
       plannerClient.invoice.issue.mutate({
         tenantId: 'tenant-a',
@@ -114,6 +121,24 @@ describe('tRPC invoice write contracts (e2e)', () => {
         dueAt: new Date('2026-04-10').toISOString(),
       }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+
+    const ownerLogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const financeLogin = authService.login({
+      email: 'finance@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(ownerLogin).not.toBeNull();
+    expect(financeLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const financeClient = createClient(financeLogin!.accessToken);
+
+    await expect(ownerClient.invoice.list.query()).resolves.toEqual([]);
+    await expect(financeClient.invoice.list.query()).resolves.toEqual([]);
   });
 
   it('covers invalid input, not-found and version-conflict paths for invoice writes', async () => {
@@ -178,6 +203,61 @@ describe('tRPC invoice write contracts (e2e)', () => {
         },
       },
     });
+  });
+
+  it('keeps invoice.list tenant-safe and reflects ISSUED -> PAID lifecycle', async () => {
+    const tenantAOwnerLogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantAFinanceLogin = authService.login({
+      email: 'finance@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBOwnerLogin = authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(tenantAOwnerLogin).not.toBeNull();
+    expect(tenantAFinanceLogin).not.toBeNull();
+    expect(tenantBOwnerLogin).not.toBeNull();
+
+    const tenantAOwnerClient = createClient(tenantAOwnerLogin!.accessToken);
+    const tenantAFinanceClient = createClient(tenantAFinanceLogin!.accessToken);
+    const tenantBOwnerClient = createClient(tenantBOwnerLogin!.accessToken);
+
+    const issued = await tenantAOwnerClient.invoice.issue.mutate({
+      tenantId: 'tenant-b',
+      orderId: 'order-list-1',
+      number: 'INV-TRPC-LIST-1',
+      currency: 'CZK',
+      amountGross: 3333,
+      dueAt: new Date('2026-04-20').toISOString(),
+    });
+
+    expect(issued.tenantId).toBe('tenant-a');
+    expect(issued.status).toBe('ISSUED');
+
+    const tenantABeforePaid = await tenantAFinanceClient.invoice.list.query();
+    const tenantAIssued = tenantABeforePaid.find((invoice) => invoice.id === issued.id);
+    expect(tenantAIssued?.status).toBe('ISSUED');
+
+    const tenantBBeforePaid = await tenantBOwnerClient.invoice.list.query();
+    expect(tenantBBeforePaid.some((invoice) => invoice.id === issued.id)).toBe(false);
+
+    await tenantAOwnerClient.invoice.paid.mutate({
+      invoiceId: issued.id,
+      paidAt: new Date('2026-04-21').toISOString(),
+      version: issued.version,
+    });
+
+    const tenantAAfterPaid = await tenantAFinanceClient.invoice.list.query();
+    const tenantAPaid = tenantAAfterPaid.find((invoice) => invoice.id === issued.id);
+    expect(tenantAPaid?.status).toBe('PAID');
+
+    const tenantBAfterPaid = await tenantBOwnerClient.invoice.list.query();
+    expect(tenantBAfterPaid.some((invoice) => invoice.id === issued.id)).toBe(false);
   });
 
   it('resolves tenant from token and blocks cross-tenant paid side effects', async () => {
