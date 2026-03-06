@@ -1,21 +1,40 @@
 "use client";
 
+import { TRPCClientError } from '@trpc/client';
 import { FormEvent, useMemo, useState } from 'react';
 import { createTrpcClient } from '../lib/trpc/client';
 
-type Customer = {
+type Invoice = {
   id: string;
-  name: string;
-  email: string;
   tenantId: string;
+  orderId: string;
+  number: string;
+  status: 'DRAFT' | 'ISSUED' | 'PAID';
+  currency: 'CZK' | 'EUR';
+  amountGross: number;
+  dueAt?: string;
+  paidAt?: string;
+};
+
+type InvoiceLoadState = 'idle' | 'loading' | 'loaded' | 'empty' | 'forbidden' | 'error';
+
+const isForbiddenTrpcError = (error: unknown) => {
+  if (!(error instanceof TRPCClientError)) {
+    return false;
+  }
+
+  return (
+    error.data?.code === 'FORBIDDEN' || error.shape?.data?.code === 'FORBIDDEN'
+  );
 };
 
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [message, setMessage] = useState('');
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [authMessage, setAuthMessage] = useState('');
+  const [invoiceLoadState, setInvoiceLoadState] = useState<InvoiceLoadState>('idle');
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -24,29 +43,34 @@ export default function Home() {
 
   const onLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMessage('');
+    setAuthMessage('');
 
     try {
       const result = await trpcClient.auth.login.mutate({ email, password });
       setAccessToken(result.accessToken);
-      setMessage('Logged in');
+      setInvoices([]);
+      setInvoiceLoadState('idle');
+      setAuthMessage('Logged in');
     } catch {
       setAccessToken(null);
-      setCustomers([]);
-      setMessage('Invalid credentials');
+      setInvoices([]);
+      setInvoiceLoadState('idle');
+      setAuthMessage('Invalid credentials');
     }
   };
 
-  const onLoadCustomers = async () => {
-    setMessage('');
+  const onLoadInvoices = async () => {
+    setInvoiceLoadState('loading');
 
     try {
-      const result = await trpcClient.customer.list.query();
-      setCustomers(result as Customer[]);
-      setMessage(`Loaded ${result.length} customers`);
-    } catch {
-      setCustomers([]);
-      setMessage('Failed to load customers');
+      const result = await trpcClient.invoice.list.query();
+      const loadedInvoices = result as Invoice[];
+
+      setInvoices(loadedInvoices);
+      setInvoiceLoadState(loadedInvoices.length > 0 ? 'loaded' : 'empty');
+    } catch (error) {
+      setInvoices([]);
+      setInvoiceLoadState(isForbiddenTrpcError(error) ? 'forbidden' : 'error');
     }
   };
 
@@ -82,21 +106,34 @@ export default function Home() {
       <button
         className="rounded border px-3 py-2 disabled:opacity-50"
         type="button"
-        disabled={!accessToken}
-        onClick={onLoadCustomers}
+        disabled={!accessToken || invoiceLoadState === 'loading'}
+        onClick={onLoadInvoices}
       >
-        Load customers
+        {invoiceLoadState === 'loading' ? 'Loading invoices…' : 'Load invoices'}
       </button>
 
-      {message ? <p>{message}</p> : null}
+      {authMessage ? <p>{authMessage}</p> : null}
 
-      <ul className="list-disc pl-5">
-        {customers.map((customer) => (
-          <li key={customer.id}>
-            {customer.name} ({customer.email})
-          </li>
-        ))}
-      </ul>
+      {invoiceLoadState === 'loading' ? <p>Loading invoices…</p> : null}
+      {invoiceLoadState === 'empty' ? <p>No invoices found.</p> : null}
+      {invoiceLoadState === 'forbidden' ? (
+        <p>Forbidden: your role is not allowed to view invoices.</p>
+      ) : null}
+      {invoiceLoadState === 'error' ? <p>Failed to load invoices.</p> : null}
+
+      {invoiceLoadState === 'loaded' ? (
+        <ul className="list-disc pl-5">
+          {invoices.map((invoice) => (
+            <li key={invoice.id}>
+              <div>
+                {invoice.number} — {invoice.status} — {invoice.amountGross} {invoice.currency}
+              </div>
+              {invoice.dueAt ? <div>Due at: {invoice.dueAt}</div> : null}
+              {invoice.paidAt ? <div>Paid at: {invoice.paidAt}</div> : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </main>
   );
 }
