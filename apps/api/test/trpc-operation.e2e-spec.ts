@@ -5,6 +5,7 @@ import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
+import { CashflowService } from '../src/modules/cashflow/cashflow.service';
 import { CustomerService } from '../src/modules/customer/customer.service';
 import { InvoiceService } from '../src/modules/invoice/invoice.service';
 import { OperationService } from '../src/modules/operation/operation.service';
@@ -43,6 +44,7 @@ describe('tRPC operation contracts (e2e)', () => {
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
     const operationService = app.get(OperationService);
+    const cashflowService = app.get(CashflowService);
 
     const appRouter = createAppRouter(
       authService,
@@ -50,6 +52,7 @@ describe('tRPC operation contracts (e2e)', () => {
       invoiceService,
       orderService,
       operationService,
+      cashflowService,
     );
 
     app.use(

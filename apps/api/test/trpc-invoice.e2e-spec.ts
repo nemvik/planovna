@@ -45,6 +45,7 @@ describe('tRPC invoice write contracts (e2e)', () => {
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
     const operationService = app.get(OperationService);
+    const cashflowService = app.get(CashflowService);
     cashflowService = app.get(CashflowService);
 
     const appRouter = createAppRouter(
@@ -53,6 +54,7 @@ describe('tRPC invoice write contracts (e2e)', () => {
       invoiceService,
       orderService,
       operationService,
+      cashflowService,
     );
 
     app.use(

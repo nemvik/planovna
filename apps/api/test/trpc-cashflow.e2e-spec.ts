@@ -1,0 +1,166 @@
+import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { App } from 'supertest/types';
+import { AppModule } from '../src/app.module';
+import { AuthService } from '../src/modules/auth/auth.service';
+import { CashflowService } from '../src/modules/cashflow/cashflow.service';
+import { CustomerService } from '../src/modules/customer/customer.service';
+import { InvoiceService } from '../src/modules/invoice/invoice.service';
+import { OperationService } from '../src/modules/operation/operation.service';
+import { OrderService } from '../src/modules/order/order.service';
+import { createTrpcContext } from '../src/trpc/context';
+import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
+
+describe('tRPC cashflow read contracts (e2e)', () => {
+  let app: INestApplication<App>;
+  let baseUrl: string;
+  let authService: AuthService;
+
+  const createClient = (accessToken?: string) =>
+    createTRPCProxyClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: `${baseUrl}/trpc`,
+          headers: accessToken
+            ? {
+                authorization: `Bearer ${accessToken}`,
+              }
+            : undefined,
+        }),
+      ],
+    });
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+
+    authService = app.get(AuthService);
+    const customerService = app.get(CustomerService);
+    const invoiceService = app.get(InvoiceService);
+    const orderService = app.get(OrderService);
+    const operationService = app.get(OperationService);
+    const cashflowService = app.get(CashflowService);
+
+    const appRouter = createAppRouter(
+      authService,
+      customerService,
+      invoiceService,
+      orderService,
+      operationService,
+      cashflowService,
+    );
+
+    app.use(
+      '/trpc',
+      createExpressMiddleware({
+        router: appRouter,
+        createContext: ({ req }) => createTrpcContext({ req, authService }),
+      }),
+    );
+
+    await app.init();
+    await app.listen(0);
+    baseUrl = await app.getUrl();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('enforces auth and role contract for cashflow.list', async () => {
+    const publicClient = createClient();
+
+    await expect(publicClient.cashflow.list.query()).rejects.toMatchObject({
+      data: { code: 'UNAUTHORIZED' },
+    });
+
+    const plannerLogin = authService.login({
+      email: 'planner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    expect(plannerLogin).not.toBeNull();
+
+    const plannerClient = createClient(plannerLogin!.accessToken);
+
+    await expect(plannerClient.cashflow.list.query()).rejects.toMatchObject({
+      data: { code: 'FORBIDDEN' },
+    });
+
+    const ownerLogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const financeLogin = authService.login({
+      email: 'finance@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(ownerLogin).not.toBeNull();
+    expect(financeLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const financeClient = createClient(financeLogin!.accessToken);
+
+    await expect(ownerClient.cashflow.list.query()).resolves.toEqual([]);
+    await expect(financeClient.cashflow.list.query()).resolves.toEqual([]);
+  });
+
+  it('reflects invoice.issue + invoice.paid lifecycle in tenant-scoped cashflow.list', async () => {
+    const ownerLogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const financeLogin = authService.login({
+      email: 'finance@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBLogin = authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(ownerLogin).not.toBeNull();
+    expect(financeLogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const financeClient = createClient(financeLogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
+
+    const issued = await ownerClient.invoice.issue.mutate({
+      tenantId: 'tenant-b',
+      orderId: 'order-cashflow-1',
+      number: 'INV-CASHFLOW-1',
+      currency: 'CZK',
+      amountGross: 4200,
+      dueAt: new Date('2026-05-15').toISOString(),
+    });
+
+    await ownerClient.invoice.paid.mutate({
+      invoiceId: issued.id,
+      paidAt: new Date('2026-05-16').toISOString(),
+      version: issued.version,
+    });
+
+    const tenantACashflow = await financeClient.cashflow.list.query();
+
+    expect(tenantACashflow.every((item) => item.tenantId === 'tenant-a')).toBe(true);
+
+    const tenantAForInvoice = tenantACashflow.filter(
+      (item) => item.invoiceId === issued.id,
+    );
+
+    expect(tenantAForInvoice.map((item) => item.kind).sort()).toEqual([
+      'ACTUAL_IN',
+      'PLANNED_IN',
+    ]);
+
+    const tenantBCashflow = await tenantBClient.cashflow.list.query();
+    expect(tenantBCashflow.some((item) => item.invoiceId === issued.id)).toBe(false);
+  });
+});

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { AppModule } from './app.module';
 import { AuthService } from './modules/auth/auth.service';
+import { CashflowService } from './modules/cashflow/cashflow.service';
 import { CustomerService } from './modules/customer/customer.service';
 import { InvoiceService } from './modules/invoice/invoice.service';
 import { OperationService } from './modules/operation/operation.service';
@@ -17,12 +18,14 @@ async function bootstrap() {
   const invoiceService = app.get(InvoiceService);
   const orderService = app.get(OrderService);
   const operationService = app.get(OperationService);
+  const cashflowService = app.get(CashflowService);
   const appRouter = createAppRouter(
     authService,
     customerService,
     invoiceService,
     orderService,
     operationService,
+    cashflowService,
   );
 
   app.use(
