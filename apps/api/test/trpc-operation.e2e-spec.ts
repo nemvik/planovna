@@ -12,11 +12,10 @@ import { OrderService } from '../src/modules/order/order.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
-describe('tRPC operation list contracts (e2e)', () => {
+describe('tRPC operation contracts (e2e)', () => {
   let app: INestApplication<App>;
   let baseUrl: string;
   let authService: AuthService;
-  let operationService: OperationService;
 
   const createClient = (accessToken?: string) =>
     createTRPCProxyClient<AppRouter>({
@@ -43,7 +42,7 @@ describe('tRPC operation list contracts (e2e)', () => {
     const customerService = app.get(CustomerService);
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
-    operationService = app.get(OperationService);
+    const operationService = app.get(OperationService);
 
     const appRouter = createAppRouter(
       authService,
@@ -70,26 +69,68 @@ describe('tRPC operation list contracts (e2e)', () => {
     await app.close();
   });
 
-  it('requires authentication for operation.list', async () => {
+  it('requires authentication for operation.list and operation.create', async () => {
     const publicClient = createClient();
 
     await expect(publicClient.operation.list.query()).rejects.toMatchObject({
       data: { code: 'UNAUTHORIZED' },
     });
+
+    await expect(
+      publicClient.operation.create.mutate({
+        tenantId: 'tenant-a',
+        orderId: 'order-a-1',
+        code: 'OP-UNAUTH',
+        title: 'Unauthorized operation create',
+      }),
+    ).rejects.toMatchObject({
+      data: { code: 'UNAUTHORIZED' },
+    });
   });
 
-  it('returns only operations scoped to auth tenant', async () => {
-    operationService.create({
-      tenantId: 'tenant-a',
+  it('forces tenant from auth context on operation.create even with payload override', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+
+    const created = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-b',
       orderId: 'order-a-1',
-      code: 'OP-A-1',
-      title: 'Tenant A operation',
+      code: 'OP-A-OVERRIDE',
+      title: 'Tenant override attempt',
       status: 'READY',
       sortIndex: 1,
     });
 
-    operationService.create({
-      tenantId: 'tenant-b',
+    expect(created.tenantId).toBe('tenant-a');
+
+    const tenantAList = await tenantAClient.operation.list.query();
+    expect(tenantAList.some((operation) => operation.id === created.id)).toBe(true);
+  });
+
+  it('keeps operation.list tenant-scoped for operations created via tRPC', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBLogin = authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
+
+    const createdByTenantB = await tenantBClient.operation.create.mutate({
+      tenantId: 'tenant-a',
       orderId: 'order-b-1',
       code: 'OP-B-1',
       title: 'Tenant B operation',
@@ -97,18 +138,14 @@ describe('tRPC operation list contracts (e2e)', () => {
       sortIndex: 1,
     });
 
-    const tenantALogin = authService.login({
-      email: 'owner@tenant-a.local',
-      password: 'tenant-a-pass',
-    });
-    expect(tenantALogin).not.toBeNull();
+    expect(createdByTenantB.tenantId).toBe('tenant-b');
 
-    const tenantAClient = createClient(tenantALogin!.accessToken);
-    const listed = await tenantAClient.operation.list.query();
+    const tenantAList = await tenantAClient.operation.list.query();
+    expect(tenantAList.some((operation) => operation.id === createdByTenantB.id)).toBe(
+      false,
+    );
 
-    expect(listed).toHaveLength(1);
-    expect(listed[0]?.tenantId).toBe('tenant-a');
-    expect(listed[0]?.code).toBe('OP-A-1');
-    expect(listed.some((operation) => operation.tenantId === 'tenant-b')).toBe(false);
+    const tenantBList = await tenantBClient.operation.list.query();
+    expect(tenantBList.some((operation) => operation.id === createdByTenantB.id)).toBe(true);
   });
 });
