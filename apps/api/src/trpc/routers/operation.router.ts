@@ -1,5 +1,9 @@
+import { TRPCError } from '@trpc/server';
 import { OperationService } from '../../modules/operation/operation.service';
-import { CreateOperationSchema } from '../../modules/operation/dto/operation.dto';
+import {
+  CreateOperationSchema,
+  UpdateOperationSchema,
+} from '../../modules/operation/dto/operation.dto';
 import { protectedProcedure, router } from '../trpc';
 
 export const createOperationRouter = (operationService: OperationService) =>
@@ -14,5 +18,22 @@ export const createOperationRouter = (operationService: OperationService) =>
           ...input,
           tenantId: ctx.auth.tenantId,
         });
+      }),
+    update: protectedProcedure
+      .input(UpdateOperationSchema)
+      .mutation(({ ctx, input }) => {
+        const result = operationService.update({
+          ...input,
+          tenantId: ctx.auth.tenantId,
+        });
+
+        if (!result) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Operation access denied',
+          });
+        }
+
+        return result;
       }),
   });

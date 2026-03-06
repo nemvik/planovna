@@ -69,7 +69,7 @@ describe('tRPC operation contracts (e2e)', () => {
     await app.close();
   });
 
-  it('requires authentication for operation.list and operation.create', async () => {
+  it('requires authentication for operation.list/create/update', async () => {
     const publicClient = createClient();
 
     await expect(publicClient.operation.list.query()).rejects.toMatchObject({
@@ -82,6 +82,17 @@ describe('tRPC operation contracts (e2e)', () => {
         orderId: 'order-a-1',
         code: 'OP-UNAUTH',
         title: 'Unauthorized operation create',
+      }),
+    ).rejects.toMatchObject({
+      data: { code: 'UNAUTHORIZED' },
+    });
+
+    await expect(
+      publicClient.operation.update.mutate({
+        id: 'op-unauth',
+        tenantId: 'tenant-a',
+        version: 1,
+        title: 'Unauthorized update',
       }),
     ).rejects.toMatchObject({
       data: { code: 'UNAUTHORIZED' },
@@ -111,6 +122,94 @@ describe('tRPC operation contracts (e2e)', () => {
 
     const tenantAList = await tenantAClient.operation.list.query();
     expect(tenantAList.some((operation) => operation.id === created.id)).toBe(true);
+  });
+
+  it('denies cross-tenant update and keeps original operation data unchanged', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBLogin = authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
+
+    const created = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: 'order-a-1',
+      code: 'OP-A-UPDATE',
+      title: 'Original operation title',
+      status: 'READY',
+      sortIndex: 2,
+    });
+
+    await expect(
+      tenantBClient.operation.update.mutate({
+        id: created.id,
+        tenantId: 'tenant-a',
+        version: created.version,
+        title: 'Cross tenant overwrite',
+        status: 'DONE',
+      }),
+    ).rejects.toMatchObject({
+      data: { code: 'FORBIDDEN' },
+    });
+
+    const tenantAList = await tenantAClient.operation.list.query();
+    const stored = tenantAList.find((operation) => operation.id === created.id);
+
+    expect(stored).toBeDefined();
+    expect(stored?.title).toBe('Original operation title');
+    expect(stored?.status).toBe('READY');
+    expect(stored?.version).toBe(1);
+  });
+
+  it('surfaces version-conflict path on stale operation.update', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+
+    const created = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: 'order-a-1',
+      code: 'OP-A-VERSION',
+      title: 'Versioned operation',
+      status: 'READY',
+      sortIndex: 3,
+    });
+
+    const updated = await tenantAClient.operation.update.mutate({
+      id: created.id,
+      tenantId: 'tenant-b',
+      version: created.version,
+      title: 'Updated operation title',
+      status: 'IN_PROGRESS',
+    });
+
+    expect(updated.tenantId).toBe('tenant-a');
+    expect(updated.version).toBe(2);
+
+    await expect(
+      tenantAClient.operation.update.mutate({
+        id: created.id,
+        tenantId: 'tenant-a',
+        version: created.version,
+        title: 'Stale write',
+      }),
+    ).rejects.toMatchObject({
+      data: { code: 'INTERNAL_SERVER_ERROR' },
+    });
   });
 
   it('keeps operation.list tenant-scoped for operations created via tRPC', async () => {
