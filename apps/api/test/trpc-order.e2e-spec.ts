@@ -7,6 +7,7 @@ import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { CustomerService } from '../src/modules/customer/customer.service';
 import { InvoiceService } from '../src/modules/invoice/invoice.service';
+import { OperationService } from '../src/modules/operation/operation.service';
 import { OrderService } from '../src/modules/order/order.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
@@ -41,12 +42,14 @@ describe('tRPC order contracts (e2e)', () => {
     const customerService = app.get(CustomerService);
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
+    const operationService = app.get(OperationService);
 
     const appRouter = createAppRouter(
       authService,
       customerService,
       invoiceService,
       orderService,
+      operationService,
     );
 
     app.use(
