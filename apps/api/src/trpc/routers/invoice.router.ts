@@ -4,6 +4,7 @@ import {
   CreateInvoiceSchema,
   MarkPaidSchema,
 } from '../../modules/invoice/dto/invoice.dto';
+import { throwTrpcVersionConflict } from '../errors/version-conflict';
 import { roleProtectedProcedure, router } from '../trpc';
 
 const invoiceWriteProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
@@ -18,14 +19,18 @@ export const createInvoiceRouter = (invoiceService: InvoiceService) =>
     paid: invoiceWriteProcedure
       .input(MarkPaidSchema)
       .mutation(({ ctx, input }) => {
-        const result = invoiceService.markPaid(ctx.auth.tenantId, input);
-        if (!result) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Invoice access denied',
-          });
-        }
+        try {
+          const result = invoiceService.markPaid(ctx.auth.tenantId, input);
+          if (!result) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Invoice access denied',
+            });
+          }
 
-        return result;
+          return result;
+        } catch (error) {
+          throwTrpcVersionConflict(error);
+        }
       }),
   });

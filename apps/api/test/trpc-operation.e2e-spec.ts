@@ -208,7 +208,16 @@ describe('tRPC operation contracts (e2e)', () => {
         title: 'Stale write',
       }),
     ).rejects.toMatchObject({
-      data: { code: 'INTERNAL_SERVER_ERROR' },
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: created.id,
+          expectedVersion: created.version,
+          actualVersion: updated.version,
+        },
+      },
     });
   });
 

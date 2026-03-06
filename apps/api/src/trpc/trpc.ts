@@ -1,6 +1,7 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import { ZodError } from 'zod';
 import type { AuthRole } from '../modules/auth/auth.service';
+import { extractConflictData } from './errors/version-conflict';
 import type { TrpcContext } from './context';
 
 const t = initTRPC.context<TrpcContext>().create({
@@ -10,6 +11,7 @@ const t = initTRPC.context<TrpcContext>().create({
       data: {
         ...shape.data,
         zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+        conflict: extractConflictData(error.cause),
       },
     };
   },

@@ -4,6 +4,7 @@ import {
   CreateOrderSchema,
   UpdateOrderSchema,
 } from '../../modules/order/dto/order.dto';
+import { throwTrpcVersionConflict } from '../errors/version-conflict';
 import { protectedProcedure, router } from '../trpc';
 
 export const createOrderRouter = (orderService: OrderService) =>
@@ -22,18 +23,22 @@ export const createOrderRouter = (orderService: OrderService) =>
     update: protectedProcedure
       .input(UpdateOrderSchema)
       .mutation(({ ctx, input }) => {
-        const result = orderService.update({
-          ...input,
-          tenantId: ctx.auth.tenantId,
-        });
-
-        if (!result) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Order access denied',
+        try {
+          const result = orderService.update({
+            ...input,
+            tenantId: ctx.auth.tenantId,
           });
-        }
 
-        return result;
+          if (!result) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Order access denied',
+            });
+          }
+
+          return result;
+        } catch (error) {
+          throwTrpcVersionConflict(error);
+        }
       }),
   });

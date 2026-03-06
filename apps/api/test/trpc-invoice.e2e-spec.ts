@@ -164,7 +164,18 @@ describe('tRPC invoice write contracts (e2e)', () => {
         paidAt: new Date('2026-04-14').toISOString(),
         version: issued.version,
       }),
-    ).rejects.toMatchObject({ data: { code: 'INTERNAL_SERVER_ERROR' } });
+    ).rejects.toMatchObject({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Invoice',
+          id: issued.id,
+          expectedVersion: issued.version,
+          actualVersion: firstPaid.version,
+        },
+      },
+    });
   });
 
   it('resolves tenant from token and blocks cross-tenant paid side effects', async () => {
