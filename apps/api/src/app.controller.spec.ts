@@ -14,9 +14,19 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('health', () => {
+    it('should return readiness contract', () => {
+      expect(appController.getReadiness()).toEqual({
+        status: 'ready',
+        service: 'api',
+      });
+    });
+
+    it('should alias /health to readiness contract', () => {
+      expect(appController.getHealth()).toEqual({
+        status: 'ready',
+        service: 'api',
+      });
     });
   });
 });
