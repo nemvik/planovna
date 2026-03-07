@@ -32,3 +32,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Production boot health smoke
+        run: bash ./scripts/prod_boot_health_smoke.sh
