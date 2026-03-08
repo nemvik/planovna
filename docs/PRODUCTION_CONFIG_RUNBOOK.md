@@ -12,9 +12,9 @@ This runbook makes the production runtime contract explicit before boot.
 - Treat as a secret.
 
 ### `DATABASE_URL`
-- Required in production.
+- Required for full readiness in production.
 - Must be non-empty.
-- Purpose: database connection string used by Prisma.
+- Purpose: database connection string used by Prisma readiness checks and future runtime data access.
 - Treat as a secret.
 
 ## Optional environment variables
@@ -26,6 +26,74 @@ This runbook makes the production runtime contract explicit before boot.
 ### `NODE_ENV`
 - Recommended value: `production`.
 - The app already enforces the `AUTH_TOKEN_SECRET` production guardrail when `NODE_ENV=production`.
+
+## Probe contract
+
+### `GET /health`
+- Lightweight liveness probe.
+- Returns `200` when the API process is up.
+- Does **not** perform dependency checks.
+
+Expected payload:
+
+```json
+{
+  "status": "ready",
+  "service": "api"
+}
+```
+
+### `GET /health/ready`
+- Readiness probe.
+- Verifies database dependency availability.
+- Returns `200` when dependencies are ready.
+- Returns `503` when the database is missing or unreachable.
+
+Ready payload example:
+
+```json
+{
+  "status": "ready",
+  "service": "api",
+  "dependencies": {
+    "database": {
+      "status": "up"
+    }
+  }
+}
+```
+
+Not-ready payload example:
+
+```json
+{
+  "status": "not_ready",
+  "service": "api",
+  "dependencies": {
+    "database": {
+      "status": "down",
+      "code": "DATABASE_UNAVAILABLE",
+      "reason": "database unreachable"
+    }
+  }
+}
+```
+
+If `DATABASE_URL` is missing, readiness returns:
+
+```json
+{
+  "status": "not_ready",
+  "service": "api",
+  "dependencies": {
+    "database": {
+      "status": "down",
+      "code": "DATABASE_URL_MISSING",
+      "reason": "database configuration missing"
+    }
+  }
+}
+```
 
 ## Preflight command
 
@@ -61,19 +129,14 @@ bash ./scripts/prod_config_preflight.sh
    ```bash
    npm -w apps/api run start:prod
    ```
-5. Verify readiness:
+5. Verify liveness:
    ```bash
    curl http://127.0.0.1:${PORT:-3000}/health
    ```
-
-Expected readiness payload:
-
-```json
-{
-  "status": "ready",
-  "service": "api"
-}
-```
+6. Verify readiness:
+   ```bash
+   curl -i http://127.0.0.1:${PORT:-3000}/health/ready
+   ```
 
 ## Secret handling
 
@@ -93,8 +156,9 @@ Recommended rotation steps:
 2. Update the secret in the deployment environment.
 3. Run `npm run prod:preflight`.
 4. Restart the API.
-5. Confirm `/health` is ready.
-6. Expect existing sessions to require re-authentication.
+5. Confirm `/health` is live.
+6. Confirm `/health/ready` is ready.
+7. Expect existing sessions to require re-authentication.
 
 ### `DATABASE_URL`
 Rotate according to the database provider process.
@@ -104,7 +168,8 @@ Recommended rotation steps:
 2. Update `DATABASE_URL` in the deployment environment.
 3. Run `npm run prod:preflight`.
 4. Restart the API.
-5. Confirm the service boots and `/health` is ready.
+5. Confirm `/health` is live.
+6. Confirm `/health/ready` is ready.
 
 ## Failure modes
 
@@ -113,8 +178,17 @@ Recommended rotation steps:
 - Fix the environment.
 - Re-run `npm run prod:preflight`.
 
+### Liveness fails
+- The API process is not booted cleanly.
+- Check startup logs and process supervision.
+
+### Readiness fails in production
+- Confirm `DATABASE_URL` is set.
+- Confirm the database host is reachable from the API runtime.
+- Confirm credentials and network policy/firewall rules.
+- Check startup and request logs, then re-run the preflight.
+
 ### API boot fails in production
 - Confirm `NODE_ENV=production`.
 - Confirm `AUTH_TOKEN_SECRET` is set and not equal to `planovna-dev-secret`.
-- Confirm `DATABASE_URL` is set.
 - Check startup logs, then re-run the preflight.

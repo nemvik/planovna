@@ -7,9 +7,11 @@ cd "$ROOT_DIR"
 PORT="${PLANOVNA_SMOKE_PORT:-4310}"
 HOST="127.0.0.1"
 HEALTH_URL="http://${HOST}:${PORT}/health"
+READINESS_URL="http://${HOST}:${PORT}/health/ready"
 BOOT_TIMEOUT_SECONDS="${PLANOVNA_SMOKE_TIMEOUT_SECONDS:-30}"
 PROD_SECRET="${PLANOVNA_SMOKE_AUTH_TOKEN_SECRET:-planovna-prod-smoke-secret}"
 EXPECTED_SECRET_ERROR='AUTH_TOKEN_SECRET must be set to a non-default value in production'
+EXPECTED_READY_DB_URL='postgresql://planovna:planovna@127.0.0.1:55432/planovna?schema=public'
 
 TMP_DIR="$(mktemp -d)"
 LOG_FILE="$TMP_DIR/api.log"
@@ -27,7 +29,14 @@ trap cleanup EXIT INT TERM
 
 start_api() {
   : >"$LOG_FILE"
-  setsid env NODE_ENV=production PORT="$PORT" AUTH_TOKEN_SECRET="$1" npm -w apps/api run start:prod >"$LOG_FILE" 2>&1 &
+  local database_url="${1:-}"
+
+  if [[ -n "$database_url" ]]; then
+    setsid env NODE_ENV=production PORT="$PORT" AUTH_TOKEN_SECRET="$PROD_SECRET" DATABASE_URL="$database_url" npm -w apps/api run start:prod >"$LOG_FILE" 2>&1 &
+  else
+    setsid env NODE_ENV=production PORT="$PORT" AUTH_TOKEN_SECRET="$PROD_SECRET" npm -w apps/api run start:prod >"$LOG_FILE" 2>&1 &
+  fi
+
   API_PID="$!"
 }
 
@@ -68,14 +77,14 @@ assert_negative_boot_guard() {
   exit 1
 }
 
-assert_positive_boot_health() {
-  echo "[smoke] booting production API on ${HOST}:${PORT} with explicit AUTH_TOKEN_SECRET"
-  start_api "$PROD_SECRET"
+assert_positive_boot_liveness() {
+  echo "[smoke] booting production API on ${HOST}:${PORT} for lightweight liveness check"
+  start_api
 
   deadline=$((SECONDS + BOOT_TIMEOUT_SECONDS))
   while ((SECONDS < deadline)); do
     if ! kill -0 "$API_PID" 2>/dev/null; then
-      echo "[smoke] production API exited before becoming ready"
+      echo "[smoke] production API exited before becoming live"
       tail -n 80 "$LOG_FILE" || true
       exit 1
     fi
@@ -93,7 +102,7 @@ assert_positive_boot_health() {
         exit 1
       fi
 
-      echo "[smoke] health contract OK at $HEALTH_URL"
+      echo "[smoke] liveness contract OK at $HEALTH_URL"
       return 0
     fi
 
@@ -114,5 +123,101 @@ assert_positive_boot_health() {
   exit 1
 }
 
+assert_readiness_reports_database_down_without_database_url() {
+  echo "[smoke] verifying readiness reports database dependency down when DATABASE_URL is missing"
+
+  http_code="$(curl --silent --output "$BODY_FILE" --write-out '%{http_code}' "$READINESS_URL" || true)"
+  if [[ "$http_code" != "503" ]]; then
+    echo "[smoke] expected 503 from $READINESS_URL without DATABASE_URL, got $http_code"
+    [[ -s "$BODY_FILE" ]] && cat "$BODY_FILE"
+    exit 1
+  fi
+
+  if ! node -e '
+    const fs = require("node:fs");
+    const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const database = body.dependencies?.database;
+    if (
+      body.status !== "not_ready" ||
+      body.service !== "api" ||
+      database?.status !== "down" ||
+      database?.code !== "DATABASE_URL_MISSING" ||
+      database?.reason !== "database configuration missing"
+    ) {
+      process.exit(1);
+    }
+  ' "$BODY_FILE"; then
+    echo "[smoke] readiness payload mismatch at $READINESS_URL"
+    cat "$BODY_FILE"
+    exit 1
+  fi
+
+  echo "[smoke] readiness negative-path contract OK at $READINESS_URL"
+}
+
+assert_readiness_reports_database_ready_when_reachable() {
+  echo "[smoke] optional readiness check against reachable database"
+
+  if ! command -v pg_isready >/dev/null 2>&1; then
+    echo "[smoke] skipping reachable-database readiness check (pg_isready not installed)"
+    return 0
+  fi
+
+  if ! pg_isready -d "${PLANOVNA_SMOKE_DATABASE_URL:-$EXPECTED_READY_DB_URL}" >/dev/null 2>&1; then
+    echo "[smoke] skipping reachable-database readiness check (database not reachable)"
+    return 0
+  fi
+
+  kill -- -"$API_PID" 2>/dev/null || true
+  wait "$API_PID" 2>/dev/null || true
+  API_PID=""
+
+  start_api "${PLANOVNA_SMOKE_DATABASE_URL:-$EXPECTED_READY_DB_URL}"
+
+  deadline=$((SECONDS + BOOT_TIMEOUT_SECONDS))
+  while ((SECONDS < deadline)); do
+    if ! kill -0 "$API_PID" 2>/dev/null; then
+      echo "[smoke] production API exited before database readiness became available"
+      tail -n 80 "$LOG_FILE" || true
+      exit 1
+    fi
+
+    http_code="$(curl --silent --output "$BODY_FILE" --write-out '%{http_code}' "$READINESS_URL" || true)"
+
+    if [[ "$http_code" == "200" ]]; then
+      if ! node -e '
+        const fs = require("node:fs");
+        const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+        if (
+          body.status !== "ready" ||
+          body.service !== "api" ||
+          body.dependencies?.database?.status !== "up"
+        ) process.exit(1);
+      ' "$BODY_FILE"; then
+        echo "[smoke] readiness payload mismatch at $READINESS_URL"
+        cat "$BODY_FILE"
+        exit 1
+      fi
+
+      echo "[smoke] readiness positive-path contract OK at $READINESS_URL"
+      return 0
+    fi
+
+    if [[ "$http_code" =~ ^[0-9]{3}$ ]] && [[ "$http_code" != "000" ]]; then
+      echo "[smoke] unexpected HTTP status from $READINESS_URL: $http_code"
+      [[ -s "$BODY_FILE" ]] && cat "$BODY_FILE"
+      exit 1
+    fi
+
+    sleep 1
+  done
+
+  echo "[smoke] boot timeout after ${BOOT_TIMEOUT_SECONDS}s waiting for $READINESS_URL"
+  tail -n 80 "$LOG_FILE" || true
+  exit 1
+}
+
 assert_negative_boot_guard
-assert_positive_boot_health
+assert_positive_boot_liveness
+assert_readiness_reports_database_down_without_database_url
+assert_readiness_reports_database_ready_when_reachable
