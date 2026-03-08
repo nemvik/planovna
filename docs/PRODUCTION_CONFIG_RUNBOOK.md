@@ -114,6 +114,27 @@ Direct invocation is also supported:
 bash ./scripts/prod_config_preflight.sh
 ```
 
+## Prisma migration commands
+
+Run these from the repo root or via `npm -w apps/api run ...`.
+
+### Generate Prisma client
+```bash
+npm -w apps/api run prisma:generate
+```
+
+### Apply committed migrations
+```bash
+npm -w apps/api run prisma:migrate:deploy
+```
+
+### Check migration status
+```bash
+npm -w apps/api run prisma:migrate:status
+```
+
+`prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
+
 ## Recommended deployment order
 
 1. Export or inject production environment variables.
@@ -125,15 +146,23 @@ bash ./scripts/prod_config_preflight.sh
    ```bash
    npm run build
    ```
-4. Start the API:
+4. Generate the Prisma client from the committed schema:
+   ```bash
+   npm -w apps/api run prisma:generate
+   ```
+5. Apply committed migrations against `DATABASE_URL`:
+   ```bash
+   npm -w apps/api run prisma:migrate:deploy
+   ```
+6. Start the API:
    ```bash
    npm -w apps/api run start:prod
    ```
-5. Verify liveness:
+7. Verify liveness:
    ```bash
    curl http://127.0.0.1:${PORT:-3000}/health
    ```
-6. Verify readiness:
+8. Verify readiness:
    ```bash
    curl -i http://127.0.0.1:${PORT:-3000}/health/ready
    ```
