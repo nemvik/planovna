@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { AppModule } from './app.module';
-import { AuthService } from './modules/auth/auth.service';
+import { AuthService, resolveTokenSecret } from './modules/auth/auth.service';
 import { CashflowService } from './modules/cashflow/cashflow.service';
 import { CustomerService } from './modules/customer/customer.service';
 import { InvoiceService } from './modules/invoice/invoice.service';
@@ -11,6 +11,8 @@ import { createTrpcContext } from './trpc/context';
 import { createAppRouter } from './trpc/routers/app.router';
 
 async function bootstrap() {
+  resolveTokenSecret();
+
   const app = await NestFactory.create(AppModule);
 
   const authService = app.get(AuthService);
@@ -39,4 +41,12 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+
+bootstrap().catch((error: unknown) => {
+  if (error instanceof Error) {
+    console.error(error.message);
+  } else {
+    console.error(error);
+  }
+  process.exit(1);
+});

@@ -35,10 +35,27 @@ type MagicLinkRequestResponse = {
   expiresAt: string;
 };
 
+const DEV_TOKEN_SECRET = 'planovna-dev-secret';
+const PRODUCTION_SECRET_ERROR =
+  'AUTH_TOKEN_SECRET must be set to a non-default value in production';
+
+function resolveTokenSecret(env = process.env): string {
+  const configuredSecret = env.AUTH_TOKEN_SECRET?.trim();
+  const isProduction = env.NODE_ENV === 'production';
+
+  if (
+    isProduction &&
+    (!configuredSecret || configuredSecret === DEV_TOKEN_SECRET)
+  ) {
+    throw new Error(PRODUCTION_SECRET_ERROR);
+  }
+
+  return configuredSecret || DEV_TOKEN_SECRET;
+}
+
 @Injectable()
 export class AuthService {
-  private readonly tokenSecret =
-    process.env.AUTH_TOKEN_SECRET ?? 'planovna-dev-secret';
+  private readonly tokenSecret = resolveTokenSecret();
   private readonly tokenTtlSeconds = 60 * 60;
   private readonly magicLinkTtlSeconds = 15 * 60;
   private readonly users: User[] = [
@@ -218,3 +235,5 @@ export class AuthService {
     return createHash('sha256').update(rawPassword).digest('hex');
   }
 }
+
+export { DEV_TOKEN_SECRET, PRODUCTION_SECRET_ERROR, resolveTokenSecret };

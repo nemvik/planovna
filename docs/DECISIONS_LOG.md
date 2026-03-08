@@ -9,3 +9,6 @@
 - Currencies: CZK, EUR
 - Tenant creation: admin manual
 - Owner-only delete actions
+
+## 2026-03-08
+- Production auth boot guardrail: API startup must fail fast in production unless `AUTH_TOKEN_SECRET` is explicitly set to a non-default value; smoke automation proves both reject-without-secret and healthy boot-with-secret paths.
