@@ -11,6 +11,7 @@
     "dev:api": "npm -w apps/api run start:dev",
     "build": "npm run -ws build",
     "test": "npm run -ws test",
+    "prod:preflight": "bash ./scripts/prod_config_preflight.sh",
     "gate:local": "bash ./scripts/ci_local_gate.sh"
   }
 }
