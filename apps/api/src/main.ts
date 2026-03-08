@@ -14,6 +14,7 @@ async function bootstrap() {
   resolveTokenSecret();
 
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
   const authService = app.get(AuthService);
   const customerService = app.get(CustomerService);

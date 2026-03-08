@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Socket } from 'node:net';
+import { PrismaService } from './prisma/prisma.service';
 
 export type LivenessResponse = {
   status: 'ready';
@@ -34,6 +34,8 @@ export type ReadinessResponse =
 
 @Injectable()
 export class AppService {
+  constructor(private readonly prismaService: PrismaService) {}
+
   getHealth(): LivenessResponse {
     return {
       status: 'ready',
@@ -66,8 +68,7 @@ export class AppService {
   private async getDatabaseDependencyStatus(): Promise<
     DatabaseReadyDependency | DatabaseNotReadyDependency
   > {
-    const databaseUrl = process.env.DATABASE_URL?.trim();
-    if (!databaseUrl) {
+    if (!process.env.DATABASE_URL?.trim()) {
       return {
         status: 'down',
         code: 'DATABASE_URL_MISSING',
@@ -76,8 +77,7 @@ export class AppService {
     }
 
     try {
-      const { hostname, port } = new URL(databaseUrl);
-      await this.assertTcpReachable(hostname, Number(port || 5432));
+      await this.prismaService.isReady();
 
       return {
         status: 'up',
@@ -89,35 +89,5 @@ export class AppService {
         reason: 'database unreachable',
       };
     }
-  }
-
-  private assertTcpReachable(host: string, port: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const socket = new Socket();
-      const cleanup = () => socket.removeAllListeners();
-
-      socket.setTimeout(1000);
-
-      socket.once('connect', () => {
-        cleanup();
-        socket.end();
-        socket.destroy();
-        resolve();
-      });
-
-      socket.once('timeout', () => {
-        cleanup();
-        socket.destroy();
-        reject(new Error('timeout'));
-      });
-
-      socket.once('error', (error) => {
-        cleanup();
-        socket.destroy();
-        reject(error);
-      });
-
-      socket.connect(port, host);
-    });
   }
 }

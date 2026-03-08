@@ -7,9 +7,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
 import { OperationModule } from './modules/operation/operation.module';
 import { OrderModule } from './modules/order/order.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     AuthModule,
     CustomerModule,
     OrderModule,
