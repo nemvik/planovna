@@ -22,9 +22,9 @@ export const createOrderRouter = (orderService: OrderService) =>
       }),
     update: protectedProcedure
       .input(UpdateOrderSchema)
-      .mutation(({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
         try {
-          const result = orderService.update({
+          const result = await orderService.update({
             ...input,
             tenantId: ctx.auth.tenantId,
           });

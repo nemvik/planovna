@@ -24,11 +24,11 @@ describe('Tenant isolation mutations', () => {
     expect(tenantAList[0].name).toBe('A Corp');
   });
 
-  it('prevents cross-tenant order and operation update', () => {
+  it('prevents cross-tenant order and operation update', async () => {
     const orders = new OrderService();
     const operations = new OperationService();
 
-    const orderA = orders.create({
+    const orderA = await orders.create({
       tenantId: 'tenant-a',
       customerId: 'c-1',
       code: 'ORD-1',
@@ -45,7 +45,7 @@ describe('Tenant isolation mutations', () => {
       sortIndex: 0,
     });
 
-    const orderResult = orders.update({
+    const orderResult = await orders.update({
       id: orderA.id,
       tenantId: 'tenant-b',
       version: orderA.version,
@@ -62,7 +62,7 @@ describe('Tenant isolation mutations', () => {
     expect(orderResult).toBeNull();
     expect(opResult).toBeNull();
 
-    expect(orders.list('tenant-a')[0].title).toBe('Order A');
+    expect((await orders.list('tenant-a'))[0].title).toBe('Order A');
     expect(operations.list('tenant-a')[0].title).toBe('Operation A');
   });
 

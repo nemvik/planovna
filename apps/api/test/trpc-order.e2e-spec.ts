@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -31,6 +32,20 @@ describe('tRPC order contracts (e2e)', () => {
         }),
       ],
     });
+
+  const uniqueSuffix = () => randomUUID().slice(0, 8);
+
+  const createOrderCustomer = async (
+    client: ReturnType<typeof createClient>,
+    tenantKey: string,
+  ) => {
+    const suffix = uniqueSuffix();
+
+    return client.customer.create.mutate({
+      name: `Order customer ${tenantKey} ${suffix}`,
+      email: `order-${tenantKey}-${suffix}@example.test`,
+    });
+  };
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -110,11 +125,13 @@ describe('tRPC order contracts (e2e)', () => {
     expect(ownerLogin).not.toBeNull();
 
     const ownerClient = createClient(ownerLogin!.accessToken);
+    const customer = await createOrderCustomer(ownerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const created = await ownerClient.order.create.mutate({
       tenantId: 'tenant-b',
-      customerId: 'c-override',
-      code: 'ORD-101',
+      customerId: customer.id,
+      code: `ORD-101-${suffix}`,
       title: 'Tenant override attempt',
     });
 
@@ -139,11 +156,13 @@ describe('tRPC order contracts (e2e)', () => {
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
     const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const customer = await createOrderCustomer(tenantAClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const created = await tenantAClient.order.create.mutate({
       tenantId: 'tenant-a',
-      customerId: 'c-a',
-      code: 'ORD-102',
+      customerId: customer.id,
+      code: `ORD-102-${suffix}`,
       title: 'Original title',
       status: 'OPEN',
     });
@@ -177,11 +196,13 @@ describe('tRPC order contracts (e2e)', () => {
     expect(ownerLogin).not.toBeNull();
 
     const ownerClient = createClient(ownerLogin!.accessToken);
+    const customer = await createOrderCustomer(ownerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const created = await ownerClient.order.create.mutate({
       tenantId: 'tenant-a',
-      customerId: 'c-version',
-      code: 'ORD-103',
+      customerId: customer.id,
+      code: `ORD-103-${suffix}`,
       title: 'Versioned order',
     });
 
