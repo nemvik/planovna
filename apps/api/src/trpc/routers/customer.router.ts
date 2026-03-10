@@ -25,9 +25,9 @@ export const createCustomerRouter = (customerService: CustomerService) =>
       }),
     update: protectedProcedure
       .input(UpdateCustomerSchema)
-      .mutation(({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
         try {
-          const result = customerService.update({
+          const result = await customerService.update({
             ...input,
             tenantId: ctx.auth.tenantId,
           });

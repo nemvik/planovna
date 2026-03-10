@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink, TRPCClientError } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -16,6 +17,8 @@ import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router'
 describe('tRPC auth + customer (e2e)', () => {
   let app: INestApplication<App>;
   let baseUrl: string;
+
+  const unique = (label: string) => `${label} ${randomUUID().slice(0, 8)}`;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -128,13 +131,13 @@ describe('tRPC auth + customer (e2e)', () => {
     );
 
     const createdByTenantA = await tenantAClient.customer.create.mutate({
-      name: 'Tenant A customer',
-      email: 'a@example.com',
+      name: unique('Tenant A customer'),
+      email: `a-${randomUUID().slice(0, 8)}@example.com`,
     });
 
     const createdByTenantB = await tenantBClient.customer.create.mutate({
-      name: 'Tenant B customer',
-      email: 'b@example.com',
+      name: unique('Tenant B customer'),
+      email: `b-${randomUUID().slice(0, 8)}@example.com`,
     });
 
     expect(createdByTenantA.tenantId).toBe('tenant-a');
@@ -192,9 +195,10 @@ describe('tRPC auth + customer (e2e)', () => {
       ],
     });
 
+    const createdName = unique('Protected customer');
     const created = await tenantAClient.customer.create.mutate({
-      name: 'Protected customer',
-      email: 'protected@example.com',
+      name: createdName,
+      email: `protected-${randomUUID().slice(0, 8)}@example.com`,
     });
 
     await expect(
@@ -212,7 +216,7 @@ describe('tRPC auth + customer (e2e)', () => {
     const stored = tenantACustomers.find((customer) => customer.id === created.id);
 
     expect(stored).toBeDefined();
-    expect(stored?.name).toBe('Protected customer');
+    expect(stored?.name).toBe(createdName);
     expect(stored?.version).toBe(1);
   });
 
@@ -242,18 +246,20 @@ describe('tRPC auth + customer (e2e)', () => {
     });
 
     const created = await tenantAClient.customer.create.mutate({
-      name: 'Versioned customer',
-      email: 'versioned@example.com',
+      name: unique('Versioned customer'),
+      email: `versioned-${randomUUID().slice(0, 8)}@example.com`,
     });
 
+    const updatedName = unique('Versioned customer v2');
     const updated = await tenantAClient.customer.update.mutate({
       id: created.id,
-      tenantId: 'tenant-b',
+      tenantId: 'tenant-a',
       version: created.version,
-      name: 'Versioned customer v2',
+      name: updatedName,
     });
 
     expect(updated.tenantId).toBe('tenant-a');
+    expect(updated.name).toBe(updatedName);
     expect(updated.version).toBe(2);
 
     await expect(

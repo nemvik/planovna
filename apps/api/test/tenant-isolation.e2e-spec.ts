@@ -5,14 +5,14 @@ import { OperationService } from '../src/modules/operation/operation.service';
 import { OrderService } from '../src/modules/order/order.service';
 
 describe('Tenant isolation mutations', () => {
-  it('prevents cross-tenant customer update', () => {
+  it('prevents cross-tenant customer update', async () => {
     const customers = new CustomerService();
-    const customerA = customers.create({
+    const customerA = await customers.create({
       tenantId: 'tenant-a',
       name: 'A Corp',
     });
 
-    const result = customers.update({
+    const result = await customers.update({
       id: customerA.id,
       tenantId: 'tenant-b',
       version: customerA.version,
@@ -20,7 +20,7 @@ describe('Tenant isolation mutations', () => {
     });
 
     expect(result).toBeNull();
-    const tenantAList = customers.list('tenant-a');
+    const tenantAList = await customers.list('tenant-a');
     expect(tenantAList[0].name).toBe('A Corp');
   });
 
