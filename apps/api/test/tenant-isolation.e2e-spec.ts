@@ -36,7 +36,7 @@ describe('Tenant isolation mutations', () => {
       status: 'OPEN',
     });
 
-    const operationA = operations.create({
+    const operationA = await operations.create({
       tenantId: 'tenant-a',
       orderId: orderA.id,
       code: 'OP-1',
@@ -52,7 +52,7 @@ describe('Tenant isolation mutations', () => {
       title: 'Mutated by B',
     });
 
-    const opResult = operations.update({
+    const opResult = await operations.update({
       id: operationA.id,
       tenantId: 'tenant-b',
       version: operationA.version,
@@ -63,7 +63,7 @@ describe('Tenant isolation mutations', () => {
     expect(opResult).toBeNull();
 
     expect((await orders.list('tenant-a'))[0].title).toBe('Order A');
-    expect(operations.list('tenant-a')[0].title).toBe('Operation A');
+    expect((await operations.list('tenant-a'))[0].title).toBe('Operation A');
   });
 
   it('prevents cross-tenant invoice markPaid and side effects', () => {

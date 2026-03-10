@@ -1,34 +1,200 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOperationDto, UpdateOperationDto } from './dto/operation.dto';
 
 type OperationRecord = CreateOperationDto & { id: string; version: number };
+
+type PrismaOperationRow = {
+  id: string;
+  tenantId: string;
+  orderId: string;
+  code: string;
+  title: string;
+  status: 'READY' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED';
+  startDate: Date | null;
+  endDate: Date | null;
+  sortIndex: number;
+  blockedReason: string | null;
+  version: number;
+};
 
 @Injectable()
 export class OperationService {
   private readonly db = new Map<string, OperationRecord>();
 
-  create(input: CreateOperationDto) {
-    const id = randomUUID();
-    const row: OperationRecord = { ...input, id, version: 1 };
-    this.db.set(id, row);
+  constructor(private readonly prisma?: PrismaService) {}
+
+  async create(input: CreateOperationDto) {
+    if (!this.prisma) {
+      const id = randomUUID();
+      const row: OperationRecord = { ...input, id, version: 1 };
+      this.db.set(id, row);
+      return row;
+    }
+
+    const created = await this.prisma.operation.create({
+      data: {
+        tenantId: input.tenantId,
+        orderId: input.orderId,
+        code: input.code,
+        title: input.title,
+        status: input.status,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        sortIndex: input.sortIndex,
+        blockedReason: input.blockedReason,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        orderId: true,
+        code: true,
+        title: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        sortIndex: true,
+        blockedReason: true,
+        version: true,
+      },
+    });
+
+    const row = this.toOperationRecord(created);
+    this.db.set(row.id, row);
     return row;
   }
 
-  list(tenantId: string) {
-    return Array.from(this.db.values()).filter((x) => x.tenantId === tenantId);
+  async list(tenantId: string) {
+    if (!this.prisma) {
+      return Array.from(this.db.values()).filter((x) => x.tenantId === tenantId);
+    }
+
+    const operations = await this.prisma.operation.findMany({
+      where: { tenantId },
+      orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        tenantId: true,
+        orderId: true,
+        code: true,
+        title: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        sortIndex: true,
+        blockedReason: true,
+        version: true,
+      },
+    });
+
+    return operations.map((operation) => this.toOperationRecord(operation));
   }
 
-  update(input: UpdateOperationDto) {
-    const row = this.db.get(input.id);
-    if (!row || row.tenantId !== input.tenantId) return null;
+  async update(input: UpdateOperationDto) {
+    if (!this.prisma) {
+      const row = this.db.get(input.id);
+      if (!row || row.tenantId !== input.tenantId) return null;
 
-    assertVersion('Operation', row.id, input.version, row.version);
+      assertVersion('Operation', row.id, input.version, row.version);
 
-    const { tenantId: _ignoredTenantId, ...patch } = input;
-    const next = { ...row, ...patch, tenantId: row.tenantId, version: row.version + 1 };
-    this.db.set(row.id, next);
-    return next;
+      const { tenantId: _ignoredTenantId, ...patch } = input;
+      const next = { ...row, ...patch, tenantId: row.tenantId, version: row.version + 1 };
+      this.db.set(row.id, next);
+      return next;
+    }
+
+    const existing = await this.prisma.operation.findUnique({
+      where: { id: input.id },
+      select: {
+        id: true,
+        tenantId: true,
+        version: true,
+      },
+    });
+
+    if (!existing || existing.tenantId !== input.tenantId) {
+      return null;
+    }
+
+    assertVersion('Operation', existing.id, input.version, existing.version);
+
+    const {
+      id: _ignoredId,
+      tenantId: _ignoredTenantId,
+      version: _ignoredVersion,
+      ...patch
+    } = input;
+
+    const updated = await this.prisma.operation.updateMany({
+      where: {
+        id: existing.id,
+        tenantId: existing.tenantId,
+        version: existing.version,
+      },
+      data: {
+        ...patch,
+        version: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      const latest = await this.prisma.operation.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          tenantId: true,
+          version: true,
+        },
+      });
+
+      if (!latest || latest.tenantId !== input.tenantId) {
+        return null;
+      }
+
+      assertVersion('Operation', latest.id, input.version, latest.version);
+    }
+
+    const row = await this.prisma.operation.findUnique({
+      where: { id: input.id },
+      select: {
+        id: true,
+        tenantId: true,
+        orderId: true,
+        code: true,
+        title: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        sortIndex: true,
+        blockedReason: true,
+        version: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return this.toOperationRecord(row);
+  }
+
+  private toOperationRecord(row: PrismaOperationRow): OperationRecord {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      orderId: row.orderId,
+      code: row.code,
+      title: row.title,
+      status: row.status,
+      startDate: row.startDate?.toISOString(),
+      endDate: row.endDate?.toISOString(),
+      sortIndex: row.sortIndex,
+      blockedReason: row.blockedReason ?? undefined,
+      version: row.version,
+    };
   }
 }

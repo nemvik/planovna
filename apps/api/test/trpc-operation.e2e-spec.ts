@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -31,6 +32,27 @@ describe('tRPC operation contracts (e2e)', () => {
         }),
       ],
     });
+
+  const uniqueSuffix = () => randomUUID().slice(0, 8);
+
+  const createOperationOrder = async (
+    client: ReturnType<typeof createClient>,
+    tenantKey: string,
+  ) => {
+    const suffix = uniqueSuffix();
+    const customer = await client.customer.create.mutate({
+      name: `Operation customer ${tenantKey} ${suffix}`,
+      email: `operation-${tenantKey}-${suffix}@example.test`,
+    });
+
+    return client.order.create.mutate({
+      tenantId: tenantKey,
+      customerId: customer.id,
+      code: `ORD-OP-${suffix}`,
+      title: `Operation order ${tenantKey} ${suffix}`,
+      status: 'OPEN',
+    });
+  };
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -111,10 +133,11 @@ describe('tRPC operation contracts (e2e)', () => {
     expect(tenantALogin).not.toBeNull();
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
 
     const created = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-b',
-      orderId: 'order-a-1',
+      orderId: order.id,
       code: 'OP-A-OVERRIDE',
       title: 'Tenant override attempt',
       status: 'READY',
@@ -142,10 +165,11 @@ describe('tRPC operation contracts (e2e)', () => {
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
     const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
 
     const created = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-a',
-      orderId: 'order-a-1',
+      orderId: order.id,
       code: 'OP-A-UPDATE',
       title: 'Original operation title',
       status: 'READY',
@@ -182,10 +206,11 @@ describe('tRPC operation contracts (e2e)', () => {
     expect(tenantALogin).not.toBeNull();
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
 
     const created = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-a',
-      orderId: 'order-a-1',
+      orderId: order.id,
       code: 'OP-A-VERSION',
       title: 'Versioned operation',
       status: 'READY',
@@ -239,10 +264,11 @@ describe('tRPC operation contracts (e2e)', () => {
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
     const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const tenantBOrder = await createOperationOrder(tenantBClient, 'tenant-b');
 
     const createdByTenantB = await tenantBClient.operation.create.mutate({
       tenantId: 'tenant-a',
-      orderId: 'order-b-1',
+      orderId: tenantBOrder.id,
       code: 'OP-B-1',
       title: 'Tenant B operation',
       status: 'READY',
