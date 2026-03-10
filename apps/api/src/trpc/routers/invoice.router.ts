@@ -12,19 +12,19 @@ const invoiceWriteProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
 
 export const createInvoiceRouter = (invoiceService: InvoiceService) =>
   router({
-    list: invoiceReadProcedure.query(({ ctx }) => {
-      return invoiceService.list(ctx.auth.tenantId);
+    list: invoiceReadProcedure.query(async ({ ctx }) => {
+      return await invoiceService.list(ctx.auth.tenantId);
     }),
     issue: invoiceWriteProcedure
       .input(CreateInvoiceSchema)
-      .mutation(({ ctx, input }) => {
-        return invoiceService.issue(ctx.auth.tenantId, input);
+      .mutation(async ({ ctx, input }) => {
+        return await invoiceService.issue(ctx.auth.tenantId, input);
       }),
     paid: invoiceWriteProcedure
       .input(MarkPaidSchema)
-      .mutation(({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
         try {
-          const result = invoiceService.markPaid(ctx.auth.tenantId, input);
+          const result = await invoiceService.markPaid(ctx.auth.tenantId, input);
           if (!result) {
             throw new TRPCError({
               code: 'FORBIDDEN',

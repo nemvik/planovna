@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -31,6 +32,27 @@ describe('tRPC auth+invoice parity with REST lockdown (e2e)', () => {
         }),
       ],
     });
+
+  const uniqueSuffix = () => randomUUID().slice(0, 8);
+
+  const createInvoiceOrder = async (
+    client: ReturnType<typeof createClient>,
+    tenantKey: 'tenant-a' | 'tenant-b',
+  ) => {
+    const suffix = uniqueSuffix();
+    const customer = await client.customer.create.mutate({
+      name: `Lockdown invoice customer ${tenantKey} ${suffix}`,
+      email: `lockdown-invoice-${tenantKey}-${suffix}@example.test`,
+    });
+
+    return client.order.create.mutate({
+      tenantId: tenantKey,
+      customerId: customer.id,
+      code: `LOCK-INV-ORD-${tenantKey}-${suffix}`,
+      title: `Lockdown invoice order ${tenantKey} ${suffix}`,
+      status: 'OPEN',
+    });
+  };
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -132,11 +154,13 @@ describe('tRPC auth+invoice parity with REST lockdown (e2e)', () => {
     expect(consumed.tokenType).toBe('Bearer');
 
     const authClient = createClient(login.accessToken);
+    const order = await createInvoiceOrder(authClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const issued = await authClient.invoice.issue.mutate({
       tenantId: 'tenant-b',
-      orderId: 'order-trpc-1',
-      number: 'INV-TRPC-LOCK-1',
+      orderId: order.id,
+      number: `INV-TRPC-LOCK-${suffix}`,
       currency: 'CZK',
       amountGross: 3200,
       dueAt: new Date('2026-04-12').toISOString(),

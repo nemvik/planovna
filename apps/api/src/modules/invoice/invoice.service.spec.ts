@@ -2,11 +2,11 @@ import { CashflowService } from '../cashflow/cashflow.service';
 import { InvoiceService } from './invoice.service';
 
 describe('InvoiceService', () => {
-  it('creates planned cashflow on issue', () => {
+  it('creates planned cashflow on issue', async () => {
     const cashflow = new CashflowService();
     const service = new InvoiceService(cashflow);
 
-    const invoice = service.issue('t1', {
+    const invoice = await service.issue('t1', {
       tenantId: 't1',
       orderId: 'o1',
       number: '2026-0001',
@@ -22,11 +22,11 @@ describe('InvoiceService', () => {
     expect(items[0].invoiceId).toBe(invoice.id);
   });
 
-  it('creates actual cashflow on markPaid', () => {
+  it('creates actual cashflow on markPaid', async () => {
     const cashflow = new CashflowService();
     const service = new InvoiceService(cashflow);
 
-    const invoice = service.issue('t1', {
+    const invoice = await service.issue('t1', {
       tenantId: 't1',
       orderId: 'o1',
       number: '2026-0002',
@@ -36,7 +36,7 @@ describe('InvoiceService', () => {
     });
 
     const paidAt = new Date('2026-04-01').toISOString();
-    const paid = service.markPaid('t1', {
+    const paid = await service.markPaid('t1', {
       invoiceId: invoice.id,
       paidAt,
       version: invoice.version,

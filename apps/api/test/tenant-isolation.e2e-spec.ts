@@ -66,11 +66,11 @@ describe('Tenant isolation mutations', () => {
     expect((await operations.list('tenant-a'))[0].title).toBe('Operation A');
   });
 
-  it('prevents cross-tenant invoice markPaid and side effects', () => {
+  it('prevents cross-tenant invoice markPaid and side effects', async () => {
     const cashflow = new CashflowService();
     const invoices = new InvoiceService(cashflow);
 
-    const invoiceA = invoices.issue('tenant-a', {
+    const invoiceA = await invoices.issue('tenant-a', {
       tenantId: 'tenant-a',
       orderId: 'order-a',
       number: '2026-0001',
@@ -79,7 +79,7 @@ describe('Tenant isolation mutations', () => {
       dueAt: new Date('2026-03-31').toISOString(),
     });
 
-    const markPaidResult = invoices.markPaid('tenant-b', {
+    const markPaidResult = await invoices.markPaid('tenant-b', {
       invoiceId: invoiceA.id,
       paidAt: new Date('2026-04-01').toISOString(),
       version: invoiceA.version,
@@ -96,11 +96,11 @@ describe('Tenant isolation mutations', () => {
     expect(bItems).toHaveLength(0);
   });
 
-  it('keeps same-tenant invoice -> cashflow behavior green', () => {
+  it('keeps same-tenant invoice -> cashflow behavior green', async () => {
     const cashflow = new CashflowService();
     const invoices = new InvoiceService(cashflow);
 
-    const invoiceA = invoices.issue('tenant-a', {
+    const invoiceA = await invoices.issue('tenant-a', {
       tenantId: 'tenant-a',
       orderId: 'order-a',
       number: '2026-0002',
@@ -109,7 +109,7 @@ describe('Tenant isolation mutations', () => {
       dueAt: new Date('2026-03-31').toISOString(),
     });
 
-    const paid = invoices.markPaid('tenant-a', {
+    const paid = await invoices.markPaid('tenant-a', {
       invoiceId: invoiceA.id,
       paidAt: new Date('2026-04-01').toISOString(),
       version: invoiceA.version,

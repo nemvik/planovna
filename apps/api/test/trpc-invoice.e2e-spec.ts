@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -32,6 +33,27 @@ describe('tRPC invoice contracts (e2e)', () => {
         }),
       ],
     });
+
+  const uniqueSuffix = () => randomUUID().slice(0, 8);
+
+  const createInvoiceOrder = async (
+    client: ReturnType<typeof createClient>,
+    tenantKey: 'tenant-a' | 'tenant-b',
+  ) => {
+    const suffix = uniqueSuffix();
+    const customer = await client.customer.create.mutate({
+      name: `Invoice customer ${tenantKey} ${suffix}`,
+      email: `invoice-${tenantKey}-${suffix}@example.test`,
+    });
+
+    return client.order.create.mutate({
+      tenantId: tenantKey,
+      customerId: customer.id,
+      code: `INV-ORD-${tenantKey}-${suffix}`,
+      title: `Invoice order ${tenantKey} ${suffix}`,
+      status: 'OPEN',
+    });
+  };
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -137,8 +159,14 @@ describe('tRPC invoice contracts (e2e)', () => {
     const ownerClient = createClient(ownerLogin!.accessToken);
     const financeClient = createClient(financeLogin!.accessToken);
 
-    await expect(ownerClient.invoice.list.query()).resolves.toEqual([]);
-    await expect(financeClient.invoice.list.query()).resolves.toEqual([]);
+    const ownerInvoices = await ownerClient.invoice.list.query();
+    const financeInvoices = await financeClient.invoice.list.query();
+
+    expect(ownerInvoices.every((invoice) => invoice.tenantId === 'tenant-a')).toBe(true);
+    expect(financeInvoices.every((invoice) => invoice.tenantId === 'tenant-a')).toBe(true);
+    expect(financeInvoices.map((invoice) => invoice.id).sort()).toEqual(
+      ownerInvoices.map((invoice) => invoice.id).sort(),
+    );
   });
 
   it('covers invalid input, not-found and version-conflict paths for invoice writes', async () => {
@@ -161,6 +189,9 @@ describe('tRPC invoice contracts (e2e)', () => {
       }),
     ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
 
+    const order = await createInvoiceOrder(ownerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
+
     await expect(
       ownerClient.invoice.paid.mutate({
         invoiceId: 'invoice-does-not-exist',
@@ -171,8 +202,8 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     const issued = await ownerClient.invoice.issue.mutate({
       tenantId: 'tenant-a',
-      orderId: 'order-conflict-1',
-      number: 'INV-TRPC-CONFLICT',
+      orderId: order.id,
+      number: `INV-TRPC-CONFLICT-${suffix}`,
       currency: 'CZK',
       amountGross: 900,
       dueAt: new Date('2026-04-12').toISOString(),
@@ -226,11 +257,13 @@ describe('tRPC invoice contracts (e2e)', () => {
     const tenantAOwnerClient = createClient(tenantAOwnerLogin!.accessToken);
     const tenantAFinanceClient = createClient(tenantAFinanceLogin!.accessToken);
     const tenantBOwnerClient = createClient(tenantBOwnerLogin!.accessToken);
+    const order = await createInvoiceOrder(tenantAOwnerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const issued = await tenantAOwnerClient.invoice.issue.mutate({
       tenantId: 'tenant-b',
-      orderId: 'order-list-1',
-      number: 'INV-TRPC-LIST-1',
+      orderId: order.id,
+      number: `INV-TRPC-LIST-${suffix}`,
       currency: 'CZK',
       amountGross: 3333,
       dueAt: new Date('2026-04-20').toISOString(),
@@ -275,11 +308,13 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
     const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const order = await createInvoiceOrder(tenantAClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const issued = await tenantAClient.invoice.issue.mutate({
       tenantId: 'tenant-b',
-      orderId: 'order-cross-1',
-      number: 'INV-TRPC-200',
+      orderId: order.id,
+      number: `INV-TRPC-200-${suffix}`,
       currency: 'CZK',
       amountGross: 2100,
       dueAt: new Date('2026-04-12').toISOString(),

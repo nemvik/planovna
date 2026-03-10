@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -31,6 +32,27 @@ describe('tRPC cashflow read contracts (e2e)', () => {
         }),
       ],
     });
+
+  const uniqueSuffix = () => randomUUID().slice(0, 8);
+
+  const createInvoiceOrder = async (
+    client: ReturnType<typeof createClient>,
+    tenantKey: 'tenant-a' | 'tenant-b',
+  ) => {
+    const suffix = uniqueSuffix();
+    const customer = await client.customer.create.mutate({
+      name: `Cashflow invoice customer ${tenantKey} ${suffix}`,
+      email: `cashflow-invoice-${tenantKey}-${suffix}@example.test`,
+    });
+
+    return client.order.create.mutate({
+      tenantId: tenantKey,
+      customerId: customer.id,
+      code: `CASH-INV-ORD-${tenantKey}-${suffix}`,
+      title: `Cashflow invoice order ${tenantKey} ${suffix}`,
+      status: 'OPEN',
+    });
+  };
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -131,11 +153,13 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     const ownerClient = createClient(ownerLogin!.accessToken);
     const financeClient = createClient(financeLogin!.accessToken);
     const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const order = await createInvoiceOrder(ownerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
 
     const issued = await ownerClient.invoice.issue.mutate({
       tenantId: 'tenant-b',
-      orderId: 'order-cashflow-1',
-      number: 'INV-CASHFLOW-1',
+      orderId: order.id,
+      number: `INV-CASHFLOW-${suffix}`,
       currency: 'CZK',
       amountGross: 4200,
       dueAt: new Date('2026-05-15').toISOString(),
