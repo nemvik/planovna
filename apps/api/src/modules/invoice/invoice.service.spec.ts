@@ -15,7 +15,7 @@ describe('InvoiceService', () => {
       dueAt: new Date('2026-03-31').toISOString(),
     });
 
-    const items = cashflow.list('t1');
+    const items = await cashflow.list('t1');
     expect(invoice.status).toBe('ISSUED');
     expect(items).toHaveLength(1);
     expect(items[0].kind).toBe('PLANNED_IN');
@@ -42,7 +42,7 @@ describe('InvoiceService', () => {
       version: invoice.version,
     });
 
-    const items = cashflow.list('t1');
+    const items = await cashflow.list('t1');
     expect(paid?.status).toBe('PAID');
     expect(items.filter((x) => x.kind === 'ACTUAL_IN')).toHaveLength(1);
   });

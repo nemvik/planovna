@@ -92,7 +92,7 @@ export class InvoiceService {
       };
       this.db.set(id, row);
 
-      this.cashflow.upsertPlannedIn({
+      await this.cashflow.upsertPlannedIn({
         tenantId: row.tenantId,
         invoiceId: id,
         amount: input.amountGross,
@@ -134,7 +134,7 @@ export class InvoiceService {
     const row = this.toInvoiceRecord(created);
     this.db.set(row.id, row);
 
-    this.cashflow.upsertPlannedIn({
+    await this.cashflow.upsertPlannedIn({
       tenantId: row.tenantId,
       invoiceId: row.id,
       amount: row.amountGross,
@@ -160,7 +160,7 @@ export class InvoiceService {
       };
       this.db.set(row.id, next);
 
-      this.cashflow.upsertActualIn({
+      await this.cashflow.upsertActualIn({
         tenantId: row.tenantId,
         invoiceId: row.id,
         amount: row.amountGross,
@@ -242,7 +242,7 @@ export class InvoiceService {
     const next = this.toInvoiceRecord(row);
     this.db.set(next.id, next);
 
-    this.cashflow.upsertActualIn({
+    await this.cashflow.upsertActualIn({
       tenantId: next.tenantId,
       invoiceId: next.id,
       amount: next.amountGross,

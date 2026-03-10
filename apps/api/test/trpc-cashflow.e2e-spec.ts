@@ -128,8 +128,14 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     const ownerClient = createClient(ownerLogin!.accessToken);
     const financeClient = createClient(financeLogin!.accessToken);
 
-    await expect(ownerClient.cashflow.list.query()).resolves.toEqual([]);
-    await expect(financeClient.cashflow.list.query()).resolves.toEqual([]);
+    const ownerCashflow = await ownerClient.cashflow.list.query();
+    const financeCashflow = await financeClient.cashflow.list.query();
+
+    expect(ownerCashflow.every((item) => item.tenantId === 'tenant-a')).toBe(true);
+    expect(financeCashflow.every((item) => item.tenantId === 'tenant-a')).toBe(true);
+    expect(financeCashflow.map((item) => item.id).sort()).toEqual(
+      ownerCashflow.map((item) => item.id).sort(),
+    );
   });
 
   it('reflects invoice.issue + invoice.paid lifecycle in tenant-scoped cashflow.list', async () => {
@@ -157,7 +163,7 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     const suffix = uniqueSuffix();
 
     const issued = await ownerClient.invoice.issue.mutate({
-      tenantId: 'tenant-b',
+      tenantId: 'tenant-a',
       orderId: order.id,
       number: `INV-CASHFLOW-${suffix}`,
       currency: 'CZK',

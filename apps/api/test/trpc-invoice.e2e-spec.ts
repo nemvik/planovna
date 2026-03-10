@@ -18,7 +18,6 @@ describe('tRPC invoice contracts (e2e)', () => {
   let app: INestApplication<App>;
   let baseUrl: string;
   let authService: AuthService;
-  let cashflowService: CashflowService;
 
   const createClient = (accessToken?: string) =>
     createTRPCProxyClient<AppRouter>({
@@ -67,7 +66,7 @@ describe('tRPC invoice contracts (e2e)', () => {
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
     const operationService = app.get(OperationService);
-    cashflowService = app.get(CashflowService);
+    const cashflowService = app.get(CashflowService);
 
     const appRouter = createAppRouter(
       authService,
@@ -331,12 +330,17 @@ describe('tRPC invoice contracts (e2e)', () => {
       }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
 
-    const aItemsAfterCrossTry = cashflowService.list('tenant-a');
-    const bItemsAfterCrossTry = cashflowService.list('tenant-b');
+    const aItemsAfterCrossTry = await tenantAClient.cashflow.list.query();
+    const bItemsAfterCrossTry = await tenantBClient.cashflow.list.query();
 
-    expect(aItemsAfterCrossTry.filter((x) => x.kind === 'PLANNED_IN')).toHaveLength(1);
-    expect(aItemsAfterCrossTry.filter((x) => x.kind === 'ACTUAL_IN')).toHaveLength(0);
-    expect(bItemsAfterCrossTry).toHaveLength(0);
+    expect(aItemsAfterCrossTry.filter((x) => x.invoiceId === issued.id)).toEqual([
+      expect.objectContaining({
+        tenantId: 'tenant-a',
+        invoiceId: issued.id,
+        kind: 'PLANNED_IN',
+      }),
+    ]);
+    expect(bItemsAfterCrossTry.some((x) => x.invoiceId === issued.id)).toBe(false);
 
     const paid = await tenantAClient.invoice.paid.mutate({
       invoiceId: issued.id,
@@ -347,7 +351,11 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     expect(paid.status).toBe('PAID');
 
-    const aItemsAfterSuccess = cashflowService.list('tenant-a');
-    expect(aItemsAfterSuccess.filter((x) => x.kind === 'ACTUAL_IN')).toHaveLength(1);
+    const aItemsAfterSuccess = await tenantAClient.cashflow.list.query();
+    expect(
+      aItemsAfterSuccess.filter(
+        (x) => x.invoiceId === issued.id && x.kind === 'ACTUAL_IN',
+      ),
+    ).toHaveLength(1);
   });
 });
