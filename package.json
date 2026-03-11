@@ -13,5 +13,8 @@
     "test": "npm run -ws test",
     "prod:preflight": "bash ./scripts/prod_config_preflight.sh",
     "gate:local": "bash ./scripts/ci_local_gate.sh"
+  },
+  "devDependencies": {
+    "@next/swc-linux-x64-gnu": "^16.1.6"
   }
 }

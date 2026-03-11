@@ -117,6 +117,12 @@ const buildBuckets = (operations: Operation[]): OperationBucket[] => {
 const toStartDate = (bucketLabel: BucketFilter) =>
   bucketLabel === BACKLOG_BUCKET ? undefined : `${bucketLabel}T00:00:00.000Z`;
 
+const isDateBucket = (value: string): value is Exclude<BucketFilter, 'ALL' | typeof BACKLOG_BUCKET> =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+const getScheduledDateValue = (operation: Operation, scheduleDates: Record<string, string>) =>
+  scheduleDates[operation.id] ?? operation.startDate?.slice(0, 10) ?? '';
+
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
@@ -126,6 +132,7 @@ export default function Home() {
   const [boardMessage, setBoardMessage] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
   const [movingOperationId, setMovingOperationId] = useState<string | null>(null);
+  const [scheduleDates, setScheduleDates] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
 
   const trpcClient = useMemo(
@@ -170,6 +177,7 @@ export default function Home() {
     setOperations([]);
     setBoardMessage('');
     setMovingOperationId(null);
+    setScheduleDates({});
     setOperationLoadState('idle');
   };
 
@@ -214,9 +222,9 @@ export default function Home() {
   };
 
   const onMoveOperation = async (operation: Operation, bucketLabel: Exclude<BucketFilter, 'ALL'>) => {
-    const currentBucket = getOperationBucketLabel(operation.startDate);
+    const nextStartDate = toStartDate(bucketLabel);
 
-    if (bucketLabel === currentBucket) {
+    if (nextStartDate === operation.startDate) {
       return;
     }
 
@@ -228,7 +236,7 @@ export default function Home() {
         id: operation.id,
         tenantId: operation.tenantId,
         version: operation.version,
-        startDate: toStartDate(bucketLabel),
+        startDate: nextStartDate,
       })) as Operation;
 
       setOperations((currentOperations) =>
@@ -236,6 +244,10 @@ export default function Home() {
           currentOperation.id === updatedOperation.id ? updatedOperation : currentOperation,
         ),
       );
+      setScheduleDates((currentScheduleDates) => ({
+        ...currentScheduleDates,
+        [updatedOperation.id]: updatedOperation.startDate?.slice(0, 10) ?? '',
+      }));
     } catch (error) {
       if (extractConflictData(error)) {
         try {
@@ -250,6 +262,18 @@ export default function Home() {
     } finally {
       setMovingOperationId(null);
     }
+  };
+
+  const onScheduleOperation = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
+    event.preventDefault();
+
+    const selectedDate = getScheduledDateValue(operation, scheduleDates);
+
+    if (!isDateBucket(selectedDate)) {
+      return;
+    }
+
+    await onMoveOperation(operation, selectedDate);
   };
 
   const controlsDisabled = !accessToken;
@@ -367,41 +391,74 @@ export default function Home() {
                 </div>
 
                 <ul className="space-y-2">
-                  {bucket.operations.map((operation) => (
-                    <li key={operation.id} className="rounded border bg-white p-3">
-                      <div className="font-medium">
-                        {operation.code} — {operation.title}
-                      </div>
-                      <div className="text-sm text-slate-600">
-                        {operation.status} · sort {operation.sortIndex}
-                      </div>
-                      {operation.blockedReason ? (
-                        <div className="text-sm text-amber-700">
-                          Blocked: {operation.blockedReason}
+                  {bucket.operations.map((operation) => {
+                    const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
+                    const canSchedule =
+                      isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
+
+                    return (
+                      <li key={operation.id} className="rounded border bg-white p-3">
+                        <div className="font-medium">
+                          {operation.code} — {operation.title}
                         </div>
-                      ) : null}
-                      <label className="mt-3 flex flex-col gap-1 text-sm">
-                        Move to bucket
-                        <select
-                          className="rounded border bg-white px-2 py-1"
-                          value={getOperationBucketLabel(operation.startDate)}
-                          disabled={movingOperationId !== null}
-                          onChange={(event) =>
-                            void onMoveOperation(
-                              operation,
-                              event.target.value as Exclude<BucketFilter, 'ALL'>,
-                            )
-                          }
+                        <div className="text-sm text-slate-600">
+                          {operation.status} · sort {operation.sortIndex}
+                        </div>
+                        {operation.blockedReason ? (
+                          <div className="text-sm text-amber-700">
+                            Blocked: {operation.blockedReason}
+                          </div>
+                        ) : null}
+                        <label className="mt-3 flex flex-col gap-1 text-sm">
+                          Move to bucket
+                          <select
+                            className="rounded border bg-white px-2 py-1"
+                            value={getOperationBucketLabel(operation.startDate)}
+                            disabled={movingOperationId !== null}
+                            onChange={(event) =>
+                              void onMoveOperation(
+                                operation,
+                                event.target.value as Exclude<BucketFilter, 'ALL'>,
+                              )
+                            }
+                          >
+                            {moveBucketOptions.map((moveBucket) => (
+                              <option key={moveBucket} value={moveBucket}>
+                                {moveBucket}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <form
+                          className="mt-3 flex items-end gap-2"
+                          onSubmit={(event) => void onScheduleOperation(event, operation)}
                         >
-                          {moveBucketOptions.map((moveBucket) => (
-                            <option key={moveBucket} value={moveBucket}>
-                              {moveBucket}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </li>
-                  ))}
+                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                            Schedule to date
+                            <input
+                              className="rounded border bg-white px-2 py-1"
+                              type="date"
+                              value={scheduledDateValue}
+                              disabled={movingOperationId !== null}
+                              onChange={(event) =>
+                                setScheduleDates((currentScheduleDates) => ({
+                                  ...currentScheduleDates,
+                                  [operation.id]: event.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                          <button
+                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            type="submit"
+                            disabled={movingOperationId !== null || !canSchedule}
+                          >
+                            Schedule
+                          </button>
+                        </form>
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
             ))}

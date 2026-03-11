@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Home from './page';
 import { createTrpcClient } from '../lib/trpc/client';
@@ -245,6 +245,134 @@ describe('homepage operations board', () => {
       expect(within(dateBucket).getByText('OP-100 — Backlog item')).toBeInTheDocument();
       expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
     });
+  });
+
+  it('schedules an operation into a newly selected date bucket using operation.update', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Loaded dated item',
+        status: 'READY',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Backlog item',
+      status: 'READY',
+      startDate: '2026-03-08T00:00:00.000Z',
+      sortIndex: 0,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    fireEvent.change(within(operationCard as HTMLElement).getByLabelText('Schedule to date'), {
+      target: { value: '2026-03-08' },
+    });
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Schedule' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      startDate: '2026-03-08T00:00:00.000Z',
+    });
+
+    await waitFor(() => {
+      const dateBucket = screen.getByRole('region', { name: '2026-03-08' });
+      expect(within(dateBucket).getByText('OP-100 — Backlog item')).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps move-to-bucket options while enabling schedule only after choosing a different explicit date', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Loaded dated item',
+        status: 'READY',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Another loaded date',
+        status: 'READY',
+        startDate: '2026-03-07T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const dateBucket = await screen.findByRole('region', { name: '2026-03-06' });
+    const operationCard = within(dateBucket)
+      .getByText('OP-100 — Loaded dated item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const moveSelect = within(operationCard as HTMLElement).getByLabelText('Move to bucket');
+    expect(within(moveSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '2026-03-06',
+      '2026-03-07',
+    ]);
+
+    const scheduleInput = within(operationCard as HTMLElement).getByLabelText('Schedule to date');
+    const scheduleButton = within(operationCard as HTMLElement).getByRole('button', { name: 'Schedule' });
+
+    expect(scheduleInput).toHaveValue('2026-03-06');
+    expect(scheduleButton).toBeDisabled();
+
+    fireEvent.change(scheduleInput, { target: { value: '2026-03-08' } });
+
+    expect(scheduleButton).toBeEnabled();
   });
 
   it('reloads operations once and shows a resync message on version conflict', async () => {
