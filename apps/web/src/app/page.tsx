@@ -123,6 +123,15 @@ const isDateBucket = (value: string): value is Exclude<BucketFilter, 'ALL' | typ
 const getScheduledDateValue = (operation: Operation, scheduleDates: Record<string, string>) =>
   scheduleDates[operation.id] ?? operation.startDate?.slice(0, 10) ?? '';
 
+const getBlockedReasonValue = (operation: Operation, blockedReasonDrafts: Record<string, string>) =>
+  blockedReasonDrafts[operation.id] ?? operation.blockedReason ?? '';
+
+const buildBlockedReasonDrafts = (operations: Operation[]) =>
+  operations.reduce<Record<string, string>>((drafts, operation) => {
+    drafts[operation.id] = operation.blockedReason ?? '';
+    return drafts;
+  }, {});
+
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
@@ -133,6 +142,7 @@ export default function Home() {
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
   const [mutatingOperationId, setMutatingOperationId] = useState<string | null>(null);
   const [scheduleDates, setScheduleDates] = useState<Record<string, string>>({});
+  const [blockedReasonDrafts, setBlockedReasonDrafts] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
 
   const trpcClient = useMemo(
@@ -178,6 +188,7 @@ export default function Home() {
     setBoardMessage('');
     setMutatingOperationId(null);
     setScheduleDates({});
+    setBlockedReasonDrafts({});
     setOperationLoadState('idle');
   };
 
@@ -188,6 +199,7 @@ export default function Home() {
       const result = await trpcClient.operation.list.query();
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
+      setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
       return loadedOperations;
     } catch (error) {
@@ -223,7 +235,7 @@ export default function Home() {
 
   const onUpdateOperation = async (
     operation: Operation,
-    updates: Partial<Pick<Operation, 'startDate' | 'status'>>,
+    updates: Partial<Pick<Operation, 'startDate' | 'status' | 'blockedReason'>>,
     failureMessage: string,
   ) => {
     setBoardMessage('');
@@ -245,6 +257,10 @@ export default function Home() {
       setScheduleDates((currentScheduleDates) => ({
         ...currentScheduleDates,
         [updatedOperation.id]: updatedOperation.startDate?.slice(0, 10) ?? '',
+      }));
+      setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
+        ...currentBlockedReasonDrafts,
+        [updatedOperation.id]: updatedOperation.blockedReason ?? '',
       }));
     } catch (error) {
       if (extractConflictData(error)) {
@@ -290,6 +306,18 @@ export default function Home() {
     }
 
     await onMoveOperation(operation, selectedDate);
+  };
+
+  const onSaveBlockedReason = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
+    event.preventDefault();
+
+    const blockedReason = getBlockedReasonValue(operation, blockedReasonDrafts);
+
+    if (blockedReason === (operation.blockedReason ?? '')) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { blockedReason }, 'Failed to update blocked reason.');
   };
 
   const controlsDisabled = !accessToken;
@@ -409,8 +437,10 @@ export default function Home() {
                 <ul className="space-y-2">
                   {bucket.operations.map((operation) => {
                     const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
+                    const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
                     const canSchedule =
                       isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
+                    const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
 
                     return (
                       <li key={operation.id} className="rounded border bg-white p-3">
@@ -418,13 +448,41 @@ export default function Home() {
                           {operation.code} — {operation.title}
                         </div>
                          <div className="text-sm text-slate-600">sort {operation.sortIndex}</div>
-                         {operation.blockedReason ? (
-                           <div className="text-sm text-amber-700">
-                             Blocked: {operation.blockedReason}
-                           </div>
-                         ) : null}
-                         <label className="mt-3 flex flex-col gap-1 text-sm">
-                           Status
+                          {operation.blockedReason ? (
+                            <div className="text-sm text-amber-700">
+                              Blocked: {operation.blockedReason}
+                            </div>
+                          ) : null}
+                          {operation.status === 'BLOCKED' ? (
+                            <form
+                              className="mt-3 flex items-end gap-2"
+                              onSubmit={(event) => void onSaveBlockedReason(event, operation)}
+                            >
+                              <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                Blocked reason
+                                <input
+                                  className="rounded border bg-white px-2 py-1"
+                                  value={blockedReasonValue}
+                                  disabled={mutatingOperationId !== null}
+                                  onChange={(event) =>
+                                    setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
+                                      ...currentBlockedReasonDrafts,
+                                      [operation.id]: event.target.value,
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <button
+                                className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                                type="submit"
+                                disabled={mutatingOperationId !== null || !canSaveBlockedReason}
+                              >
+                                Save reason
+                              </button>
+                            </form>
+                          ) : null}
+                          <label className="mt-3 flex flex-col gap-1 text-sm">
+                            Status
                            <select
                              className="max-w-[11rem] rounded border bg-white px-2 py-1"
                              value={operation.status}

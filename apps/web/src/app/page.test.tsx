@@ -321,6 +321,65 @@ describe('homepage operations board', () => {
     expect(within(updatedCard as HTMLElement).getByLabelText('Status')).toHaveValue('DONE');
   });
 
+  it('persists a blocked reason edit and merges the returned operation into board state', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Blocked backlog item',
+        status: 'BLOCKED',
+        sortIndex: 0,
+        blockedReason: 'Waiting for material',
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Blocked backlog item',
+      status: 'BLOCKED',
+      sortIndex: 0,
+      blockedReason: 'Vendor confirmed Friday delivery',
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Blocked backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const blockedReasonInput = within(operationCard as HTMLElement).getByLabelText('Blocked reason');
+    await user.clear(blockedReasonInput);
+    await user.type(blockedReasonInput, 'Vendor confirmed Friday delivery');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save reason' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      blockedReason: 'Vendor confirmed Friday delivery',
+    });
+
+    await waitFor(() => {
+      expect(within(operationCard as HTMLElement).getByDisplayValue('Vendor confirmed Friday delivery')).toBeInTheDocument();
+      expect(within(operationCard as HTMLElement).getByText('Blocked: Vendor confirmed Friday delivery')).toBeInTheDocument();
+    });
+  });
+
   it('schedules an operation into a newly selected date bucket using operation.update', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -607,6 +666,83 @@ describe('homepage operations board', () => {
 
       expect(refreshedCard).not.toBeNull();
       expect(within(refreshedCard as HTMLElement).getByLabelText('Status')).toHaveValue('DONE');
+    });
+  });
+
+  it('reloads operations and shows the resync message when a blocked reason edit hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Blocked backlog item',
+          status: 'BLOCKED',
+          sortIndex: 0,
+          blockedReason: 'Waiting for material',
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Blocked backlog item',
+          status: 'BLOCKED',
+          sortIndex: 0,
+          blockedReason: 'Supplier delayed shipment',
+          version: 2,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Blocked backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const blockedReasonInput = within(operationCard as HTMLElement).getByLabelText('Blocked reason');
+    await user.clear(blockedReasonInput);
+    await user.type(blockedReasonInput, 'Vendor confirmed Friday delivery');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save reason' }));
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      const refreshedCard = within(screen.getByRole('region', { name: 'Backlog' }))
+        .getByText('OP-100 — Blocked backlog item')
+        .closest('li');
+
+      expect(refreshedCard).not.toBeNull();
+      expect(within(refreshedCard as HTMLElement).getByDisplayValue('Supplier delayed shipment')).toBeInTheDocument();
+      expect(within(refreshedCard as HTMLElement).getByText('Blocked: Supplier delayed shipment')).toBeInTheDocument();
     });
   });
 
