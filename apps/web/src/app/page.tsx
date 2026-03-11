@@ -9,6 +9,7 @@ import {
   getAvailableBucketFilters,
   getOperationBucketLabel,
   type BoardFilters,
+  type BucketFilter,
   parseBoardFilters,
   serializeBoardFilters,
 } from './board-filters';
@@ -35,6 +36,14 @@ type OperationBucket = {
   operations: Operation[];
 };
 
+type ConflictData = {
+  code?: string;
+  entity?: string;
+  id?: string;
+  expectedVersion?: number;
+  actualVersion?: number;
+};
+
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
     return { status: 'ALL', bucket: 'ALL' };
@@ -54,6 +63,26 @@ const hasForbiddenCode = (error: unknown) => {
   };
 
   return candidate.data?.code === 'FORBIDDEN' || candidate.shape?.data?.code === 'FORBIDDEN';
+};
+
+const extractConflictData = (error: unknown): ConflictData | null => {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const candidate = error as {
+    data?: { code?: string; conflict?: ConflictData };
+    shape?: { data?: { code?: string; conflict?: ConflictData } };
+  };
+
+  const conflict = candidate.data?.conflict ?? candidate.shape?.data?.conflict;
+  const code = candidate.data?.code ?? candidate.shape?.data?.code;
+
+  if (code !== 'CONFLICT' || !conflict) {
+    return null;
+  }
+
+  return conflict;
 };
 
 const compareOperations = (left: Operation, right: Operation) => {
@@ -85,13 +114,18 @@ const buildBuckets = (operations: Operation[]): OperationBucket[] => {
     }));
 };
 
+const toStartDate = (bucketLabel: BucketFilter) =>
+  bucketLabel === BACKLOG_BUCKET ? undefined : `${bucketLabel}T00:00:00.000Z`;
+
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [authMessage, setAuthMessage] = useState('');
+  const [boardMessage, setBoardMessage] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
+  const [movingOperationId, setMovingOperationId] = useState<string | null>(null);
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
 
   const trpcClient = useMemo(
@@ -100,6 +134,10 @@ export default function Home() {
   );
 
   const availableBucketFilters = useMemo(() => getAvailableBucketFilters(operations), [operations]);
+  const moveBucketOptions = useMemo(
+    () => availableBucketFilters.filter((bucket): bucket is Exclude<BucketFilter, 'ALL'> => bucket !== 'ALL'),
+    [availableBucketFilters],
+  );
   const filteredOperations = useMemo(() => applyBoardFilters(operations, filters), [operations, filters]);
   const operationBuckets = useMemo(() => buildBuckets(filteredOperations), [filteredOperations]);
 
@@ -130,7 +168,25 @@ export default function Home() {
 
   const resetOperationsState = () => {
     setOperations([]);
+    setBoardMessage('');
+    setMovingOperationId(null);
     setOperationLoadState('idle');
+  };
+
+  const loadOperations = async () => {
+    setOperationLoadState('loading');
+
+    try {
+      const result = await trpcClient.operation.list.query();
+      const loadedOperations = result as Operation[];
+      setOperations(loadedOperations);
+      setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
+      return loadedOperations;
+    } catch (error) {
+      setOperations([]);
+      setOperationLoadState(hasForbiddenCode(error) ? 'forbidden' : 'error');
+      throw error;
+    }
   };
 
   const onLogin = async (event: FormEvent<HTMLFormElement>) => {
@@ -150,16 +206,49 @@ export default function Home() {
   };
 
   const onLoadOperations = async () => {
-    setOperationLoadState('loading');
+    try {
+      await loadOperations();
+    } catch {
+      // state is already updated in loadOperations
+    }
+  };
+
+  const onMoveOperation = async (operation: Operation, bucketLabel: Exclude<BucketFilter, 'ALL'>) => {
+    const currentBucket = getOperationBucketLabel(operation.startDate);
+
+    if (bucketLabel === currentBucket) {
+      return;
+    }
+
+    setBoardMessage('');
+    setMovingOperationId(operation.id);
 
     try {
-      const result = await trpcClient.operation.list.query();
-      const loadedOperations = result as Operation[];
-      setOperations(loadedOperations);
-      setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
+      const updatedOperation = (await trpcClient.operation.update.mutate({
+        id: operation.id,
+        tenantId: operation.tenantId,
+        version: operation.version,
+        startDate: toStartDate(bucketLabel),
+      })) as Operation;
+
+      setOperations((currentOperations) =>
+        currentOperations.map((currentOperation) =>
+          currentOperation.id === updatedOperation.id ? updatedOperation : currentOperation,
+        ),
+      );
     } catch (error) {
-      setOperations([]);
-      setOperationLoadState(hasForbiddenCode(error) ? 'forbidden' : 'error');
+      if (extractConflictData(error)) {
+        try {
+          await loadOperations();
+          setBoardMessage('Board was out of date. Reloaded latest operations, please try again.');
+        } catch {
+          setBoardMessage('Board was out of date and reload failed. Please reload operations again.');
+        }
+      } else {
+        setBoardMessage('Failed to move operation.');
+      }
+    } finally {
+      setMovingOperationId(null);
     }
   };
 
@@ -170,7 +259,7 @@ export default function Home() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Planovna operations board</h1>
         <p className="text-sm text-slate-600">
-          Read-only board preview for planning operations by backlog and start date.
+          Lightweight planning board for moving operations between backlog and loaded start-date buckets.
         </p>
       </div>
 
@@ -211,6 +300,7 @@ export default function Home() {
       </div>
 
       {authMessage ? <p>{authMessage}</p> : null}
+      {boardMessage ? <p>{boardMessage}</p> : null}
 
       {operationLoadState === 'loading' ? <p>Loading operations…</p> : null}
       {operationLoadState === 'empty' ? <p>No operations found.</p> : null}
@@ -290,6 +380,26 @@ export default function Home() {
                           Blocked: {operation.blockedReason}
                         </div>
                       ) : null}
+                      <label className="mt-3 flex flex-col gap-1 text-sm">
+                        Move to bucket
+                        <select
+                          className="rounded border bg-white px-2 py-1"
+                          value={getOperationBucketLabel(operation.startDate)}
+                          disabled={movingOperationId !== null}
+                          onChange={(event) =>
+                            void onMoveOperation(
+                              operation,
+                              event.target.value as Exclude<BucketFilter, 'ALL'>,
+                            )
+                          }
+                        >
+                          {moveBucketOptions.map((moveBucket) => (
+                            <option key={moveBucket} value={moveBucket}>
+                              {moveBucket}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </li>
                   ))}
                 </ul>
