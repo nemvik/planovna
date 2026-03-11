@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrderDto, UpdateOrderDto } from './dto/order.dto';
@@ -18,20 +17,23 @@ type PrismaOrderRow = {
   version: number;
 };
 
+const orderRecordSelect = {
+  id: true,
+  tenantId: true,
+  customerId: true,
+  code: true,
+  title: true,
+  status: true,
+  dueDate: true,
+  notes: true,
+  version: true,
+} as const;
+
 @Injectable()
 export class OrderService {
-  private readonly db = new Map<string, OrderRecord>();
-
-  constructor(private readonly prisma?: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(input: CreateOrderDto) {
-    if (!this.prisma) {
-      const id = randomUUID();
-      const row: OrderRecord = { ...input, id, version: 1 };
-      this.db.set(id, row);
-      return row;
-    }
-
     const created = await this.prisma.order.create({
       data: {
         tenantId: input.tenantId,
@@ -42,61 +44,23 @@ export class OrderService {
         dueDate: input.dueDate,
         notes: input.notes,
       },
-      select: {
-        id: true,
-        tenantId: true,
-        customerId: true,
-        code: true,
-        title: true,
-        status: true,
-        dueDate: true,
-        notes: true,
-        version: true,
-      },
+      select: orderRecordSelect,
     });
 
-    const row = this.toOrderRecord(created);
-    this.db.set(row.id, row);
-    return row;
+    return this.toOrderRecord(created);
   }
 
   async list(tenantId: string) {
-    if (!this.prisma) {
-      return Array.from(this.db.values()).filter((x) => x.tenantId === tenantId);
-    }
-
     const orders = await this.prisma.order.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'asc' },
-      select: {
-        id: true,
-        tenantId: true,
-        customerId: true,
-        code: true,
-        title: true,
-        status: true,
-        dueDate: true,
-        notes: true,
-        version: true,
-      },
+      select: orderRecordSelect,
     });
 
     return orders.map((order) => this.toOrderRecord(order));
   }
 
   async update(input: UpdateOrderDto) {
-    if (!this.prisma) {
-      const row = this.db.get(input.id);
-      if (!row || row.tenantId !== input.tenantId) return null;
-
-      assertVersion('Order', row.id, input.version, row.version);
-
-      const { tenantId: _ignoredTenantId, ...patch } = input;
-      const next = { ...row, ...patch, tenantId: row.tenantId, version: row.version + 1 };
-      this.db.set(row.id, next);
-      return next;
-    }
-
     const existing = await this.prisma.order.findUnique({
       where: { id: input.id },
       select: {
@@ -152,17 +116,7 @@ export class OrderService {
 
     const row = await this.prisma.order.findUnique({
       where: { id: input.id },
-      select: {
-        id: true,
-        tenantId: true,
-        customerId: true,
-        code: true,
-        title: true,
-        status: true,
-        dueDate: true,
-        notes: true,
-        version: true,
-      },
+      select: orderRecordSelect,
     });
 
     if (!row) {
