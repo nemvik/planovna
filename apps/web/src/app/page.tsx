@@ -126,9 +126,18 @@ const getScheduledDateValue = (operation: Operation, scheduleDates: Record<strin
 const getBlockedReasonValue = (operation: Operation, blockedReasonDrafts: Record<string, string>) =>
   blockedReasonDrafts[operation.id] ?? operation.blockedReason ?? '';
 
+const getSortIndexValue = (operation: Operation, sortIndexDrafts: Record<string, string>) =>
+  sortIndexDrafts[operation.id] ?? String(operation.sortIndex);
+
 const buildBlockedReasonDrafts = (operations: Operation[]) =>
   operations.reduce<Record<string, string>>((drafts, operation) => {
     drafts[operation.id] = operation.blockedReason ?? '';
+    return drafts;
+  }, {});
+
+const buildSortIndexDrafts = (operations: Operation[]) =>
+  operations.reduce<Record<string, string>>((drafts, operation) => {
+    drafts[operation.id] = String(operation.sortIndex);
     return drafts;
   }, {});
 
@@ -143,6 +152,7 @@ export default function Home() {
   const [mutatingOperationId, setMutatingOperationId] = useState<string | null>(null);
   const [scheduleDates, setScheduleDates] = useState<Record<string, string>>({});
   const [blockedReasonDrafts, setBlockedReasonDrafts] = useState<Record<string, string>>({});
+  const [sortIndexDrafts, setSortIndexDrafts] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
 
   const trpcClient = useMemo(
@@ -189,6 +199,7 @@ export default function Home() {
     setMutatingOperationId(null);
     setScheduleDates({});
     setBlockedReasonDrafts({});
+    setSortIndexDrafts({});
     setOperationLoadState('idle');
   };
 
@@ -200,6 +211,7 @@ export default function Home() {
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
       setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
+      setSortIndexDrafts(buildSortIndexDrafts(loadedOperations));
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
       return loadedOperations;
     } catch (error) {
@@ -235,7 +247,7 @@ export default function Home() {
 
   const onUpdateOperation = async (
     operation: Operation,
-    updates: Partial<Pick<Operation, 'startDate' | 'status' | 'blockedReason'>>,
+    updates: Partial<Pick<Operation, 'startDate' | 'status' | 'blockedReason' | 'sortIndex'>>,
     failureMessage: string,
   ) => {
     setBoardMessage('');
@@ -261,6 +273,10 @@ export default function Home() {
       setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
         ...currentBlockedReasonDrafts,
         [updatedOperation.id]: updatedOperation.blockedReason ?? '',
+      }));
+      setSortIndexDrafts((currentSortIndexDrafts) => ({
+        ...currentSortIndexDrafts,
+        [updatedOperation.id]: String(updatedOperation.sortIndex),
       }));
     } catch (error) {
       if (extractConflictData(error)) {
@@ -318,6 +334,24 @@ export default function Home() {
     }
 
     await onUpdateOperation(operation, { blockedReason }, 'Failed to update blocked reason.');
+  };
+
+  const onSaveSortIndex = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
+    event.preventDefault();
+
+    const nextSortIndexValue = getSortIndexValue(operation, sortIndexDrafts).trim();
+
+    if (nextSortIndexValue === '') {
+      return;
+    }
+
+    const sortIndex = Number(nextSortIndexValue);
+
+    if (!Number.isInteger(sortIndex) || sortIndex === operation.sortIndex) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { sortIndex }, 'Failed to update sort index.');
   };
 
   const controlsDisabled = !accessToken;
@@ -438,18 +472,51 @@ export default function Home() {
                   {bucket.operations.map((operation) => {
                     const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
                     const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
+                    const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
                     const canSchedule =
                       isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
                     const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
+                    const parsedSortIndex = Number(sortIndexValue.trim());
+                    const canSaveSortIndex =
+                      sortIndexValue.trim() !== '' &&
+                      Number.isInteger(parsedSortIndex) &&
+                      parsedSortIndex !== operation.sortIndex;
 
                     return (
                       <li key={operation.id} className="rounded border bg-white p-3">
                         <div className="font-medium">
                           {operation.code} — {operation.title}
                         </div>
-                         <div className="text-sm text-slate-600">sort {operation.sortIndex}</div>
+                        <form
+                          className="mt-3 flex items-end gap-2"
+                          onSubmit={(event) => void onSaveSortIndex(event, operation)}
+                        >
+                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                            Sort index
+                            <input
+                              className="rounded border bg-white px-2 py-1"
+                              type="number"
+                              inputMode="numeric"
+                              value={sortIndexValue}
+                              disabled={mutatingOperationId !== null}
+                              onChange={(event) =>
+                                setSortIndexDrafts((currentSortIndexDrafts) => ({
+                                  ...currentSortIndexDrafts,
+                                  [operation.id]: event.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                          <button
+                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            type="submit"
+                            disabled={mutatingOperationId !== null || !canSaveSortIndex}
+                          >
+                            Save sort
+                          </button>
+                        </form>
                           {operation.blockedReason ? (
-                            <div className="text-sm text-amber-700">
+                            <div className="mt-3 text-sm text-amber-700">
                               Blocked: {operation.blockedReason}
                             </div>
                           ) : null}

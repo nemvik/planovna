@@ -380,6 +380,77 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('persists a sort index edit and re-sorts the bucket with the returned operation', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'First backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Second backlog item',
+        status: 'READY',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-2',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-200',
+      title: 'Second backlog item',
+      status: 'READY',
+      sortIndex: -1,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-200 — Second backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const sortIndexInput = within(operationCard as HTMLElement).getByLabelText('Sort index');
+    await user.clear(sortIndexInput);
+    await user.type(sortIndexInput, '-1');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save sort' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-2',
+      tenantId: 'tenant-a',
+      version: 1,
+      sortIndex: -1,
+    });
+
+    await waitFor(() => {
+      const refreshedBacklogBucket = screen.getByRole('region', { name: 'Backlog' });
+      const backlogItems = within(refreshedBacklogBucket).getAllByRole('listitem');
+
+      expect(backlogItems[0]).toHaveTextContent('OP-200 — Second backlog item');
+      expect(backlogItems[1]).toHaveTextContent('OP-100 — First backlog item');
+      expect(within(backlogItems[0]).getByLabelText('Sort index')).toHaveValue(-1);
+    });
+  });
+
   it('schedules an operation into a newly selected date bucket using operation.update', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -743,6 +814,100 @@ describe('homepage operations board', () => {
       expect(refreshedCard).not.toBeNull();
       expect(within(refreshedCard as HTMLElement).getByDisplayValue('Supplier delayed shipment')).toBeInTheDocument();
       expect(within(refreshedCard as HTMLElement).getByText('Blocked: Supplier delayed shipment')).toBeInTheDocument();
+    });
+  });
+
+  it('reloads operations and shows the resync message when a sort index edit hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'First backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          version: 1,
+        },
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-200',
+          title: 'Second backlog item',
+          status: 'READY',
+          sortIndex: 1,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'First backlog item',
+          status: 'READY',
+          sortIndex: -1,
+          version: 2,
+        },
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-200',
+          title: 'Second backlog item',
+          status: 'READY',
+          sortIndex: 1,
+          version: 1,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — First backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const sortIndexInput = within(operationCard as HTMLElement).getByLabelText('Sort index');
+    await user.clear(sortIndexInput);
+    await user.type(sortIndexInput, '-1');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save sort' }));
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+
+      const refreshedBacklogBucket = screen.getByRole('region', { name: 'Backlog' });
+      const backlogItems = within(refreshedBacklogBucket).getAllByRole('listitem');
+
+      expect(backlogItems[0]).toHaveTextContent('OP-100 — First backlog item');
+      expect(within(backlogItems[0]).getByLabelText('Sort index')).toHaveValue(-1);
     });
   });
 
