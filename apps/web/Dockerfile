@@ -10,6 +10,7 @@ RUN npm ci --include=dev
 FROM deps AS build
 COPY . .
 ENV NODE_ENV=production
+RUN npm -w apps/api run prisma:generate
 RUN npm -w apps/web run build
 
 FROM base AS runner
