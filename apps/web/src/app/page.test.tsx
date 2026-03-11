@@ -551,6 +551,62 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('clears an existing end date inline and merges the returned operation into board state', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Ready backlog item',
+        status: 'READY',
+        endDate: '2026-03-10T00:00:00.000Z',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Ready backlog item',
+      status: 'READY',
+      sortIndex: 0,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Ready backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+    expect(within(operationCard as HTMLElement).getByLabelText('End date')).toHaveValue('2026-03-10');
+
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Clear end' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      endDate: null,
+    });
+
+    await waitFor(() => {
+      expect(within(operationCard as HTMLElement).getByLabelText('End date')).toHaveValue('');
+      expect(within(operationCard as HTMLElement).queryByRole('button', { name: 'Clear end' })).not.toBeInTheDocument();
+    });
+  });
+
   it('persists a sort index edit and re-sorts the bucket with the returned operation', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -1208,6 +1264,80 @@ describe('homepage operations board', () => {
 
       expect(refreshedCard).not.toBeNull();
       expect(within(refreshedCard as HTMLElement).getByLabelText('End date')).toHaveValue('2026-03-11');
+    });
+  });
+
+  it('reloads operations and shows the resync message when clearing an end date hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Ready backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          endDate: '2026-03-10T00:00:00.000Z',
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Ready backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          endDate: '2026-03-12T00:00:00.000Z',
+          version: 2,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Ready backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Clear end' }));
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      const refreshedCard = within(screen.getByRole('region', { name: 'Backlog' }))
+        .getByText('OP-100 — Ready backlog item')
+        .closest('li');
+
+      expect(refreshedCard).not.toBeNull();
+      expect(within(refreshedCard as HTMLElement).getByLabelText('End date')).toHaveValue('2026-03-12');
+      expect(within(refreshedCard as HTMLElement).getByRole('button', { name: 'Clear end' })).toBeInTheDocument();
     });
   });
 

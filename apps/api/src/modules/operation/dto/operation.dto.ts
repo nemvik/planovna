@@ -13,6 +13,7 @@ export const CreateOperationSchema = z.object({
 });
 
 export const UpdateOperationSchema = CreateOperationSchema.partial().extend({
+  endDate: z.string().datetime().nullable().optional(),
   id: z.string().min(1),
   tenantId: z.string().min(1),
   version: z.number().int().positive(),

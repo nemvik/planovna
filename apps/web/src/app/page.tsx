@@ -36,6 +36,12 @@ type OperationBucket = {
   operations: Operation[];
 };
 
+type OperationUpdate = Partial<
+  Pick<Operation, 'startDate' | 'status' | 'blockedReason' | 'sortIndex' | 'title' | 'code'>
+> & {
+  endDate?: string | null;
+};
+
 type ConflictData = {
   code?: string;
   entity?: string;
@@ -283,9 +289,7 @@ export default function Home() {
 
   const onUpdateOperation = async (
     operation: Operation,
-    updates: Partial<
-      Pick<Operation, 'startDate' | 'endDate' | 'status' | 'blockedReason' | 'sortIndex' | 'title' | 'code'>
-    >,
+    updates: OperationUpdate,
     failureMessage: string,
   ) => {
     setBoardMessage('');
@@ -420,6 +424,14 @@ export default function Home() {
     }
 
     await onUpdateOperation(operation, { endDate: `${endDate}T00:00:00.000Z` }, 'Failed to update end date.');
+  };
+
+  const onClearEndDate = async (operation: Operation) => {
+    if (!operation.endDate) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { endDate: null }, 'Failed to update end date.');
   };
 
   const onSaveSortIndex = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -568,6 +580,7 @@ export default function Home() {
                       isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
                     const canSaveEndDate =
                       isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
+                    const canClearEndDate = operation.endDate !== undefined;
                     const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
                     const parsedSortIndex = Number(sortIndexValue.trim());
                     const canSaveSortIndex =
@@ -658,6 +671,16 @@ export default function Home() {
                           >
                             Save end
                           </button>
+                          {canClearEndDate ? (
+                            <button
+                              className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                              type="button"
+                              disabled={mutatingOperationId !== null}
+                              onClick={() => void onClearEndDate(operation)}
+                            >
+                              Clear end
+                            </button>
+                          ) : null}
                         </form>
                         <form
                           className="mt-3 flex items-end gap-2"

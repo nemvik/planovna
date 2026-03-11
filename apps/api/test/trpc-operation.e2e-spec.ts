@@ -240,8 +240,9 @@ describe('tRPC operation contracts (e2e)', () => {
       status: 'IN_PROGRESS',
     });
 
-    expect(updated.tenantId).toBe('tenant-a');
-    expect(updated.version).toBe(2);
+    expect(updated).toBeDefined();
+    expect(updated?.tenantId).toBe('tenant-a');
+    expect(updated?.version).toBe(2);
 
     await expect(
       tenantAClient.operation.update.mutate({
@@ -258,10 +259,51 @@ describe('tRPC operation contracts (e2e)', () => {
           entity: 'Operation',
           id: created.id,
           expectedVersion: created.version,
-          actualVersion: updated.version,
+          actualVersion: updated?.version,
         },
       },
     });
+  });
+
+  it('clears a persisted endDate via operation.update when the payload sends null', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+
+    const created = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: 'OP-A-END-CLEAR',
+      title: 'Operation with end date',
+      status: 'READY',
+      endDate: '2026-03-10T00:00:00.000Z',
+      sortIndex: 3,
+    });
+
+    const cleared = await tenantAClient.operation.update.mutate({
+      id: created.id,
+      tenantId: 'tenant-a',
+      version: created.version,
+      endDate: null,
+    });
+
+    expect(cleared).toBeDefined();
+    expect(cleared?.endDate).toBeUndefined();
+    expect(cleared?.version).toBe(created.version + 1);
+
+    const tenantAList = await tenantAClient.operation.list.query();
+    const stored = tenantAList.find((operation) => operation.id === created.id);
+
+    expect(stored).toBeDefined();
+    expect(stored?.id).toBe(created.id);
+    expect(stored?.endDate).toBeUndefined();
+    expect(stored?.version).toBe(created.version + 1);
   });
 
   it('loads persisted operations from Prisma after app restart for the same tenant', async () => {

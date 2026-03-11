@@ -98,6 +98,13 @@ export class OperationService {
       version: _ignoredVersion,
       ...patch
     } = input;
+    const updateData = {
+      ...patch,
+      ...('endDate' in input ? { endDate: input.endDate } : {}),
+      version: {
+        increment: 1,
+      },
+    };
 
     const updated = await this.prisma.operation.updateMany({
       where: {
@@ -105,12 +112,7 @@ export class OperationService {
         tenantId: existing.tenantId,
         version: existing.version,
       },
-      data: {
-        ...patch,
-        version: {
-          increment: 1,
-        },
-      },
+      data: updateData,
     });
 
     if (updated.count === 0) {
