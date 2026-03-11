@@ -437,6 +437,63 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('persists a code edit and merges the returned operation into board state immediately', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-101',
+      title: 'Original title',
+      status: 'READY',
+      sortIndex: 0,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const codeInput = within(operationCard as HTMLElement).getByLabelText('Code');
+    await user.clear(codeInput);
+    await user.type(codeInput, 'OP-101');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save code' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      code: 'OP-101',
+    });
+
+    await waitFor(() => {
+      expect(within(operationCard as HTMLElement).getByDisplayValue('OP-101')).toBeInTheDocument();
+      expect(within(operationCard as HTMLElement).getByText('OP-101 — Original title')).toBeInTheDocument();
+    });
+  });
+
   it('persists an end date edit and merges the returned operation into board state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -1002,6 +1059,80 @@ describe('homepage operations board', () => {
 
       expect(refreshedCard).not.toBeNull();
       expect(within(refreshedCard as HTMLElement).getByDisplayValue('Server updated title')).toBeInTheDocument();
+    });
+  });
+
+  it('reloads operations and shows the resync message when a code edit hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Original title',
+          status: 'READY',
+          sortIndex: 0,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-199',
+          title: 'Original title',
+          status: 'READY',
+          sortIndex: 0,
+          version: 2,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const codeInput = within(operationCard as HTMLElement).getByLabelText('Code');
+    await user.clear(codeInput);
+    await user.type(codeInput, 'OP-101');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save code' }));
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      const refreshedCard = within(screen.getByRole('region', { name: 'Backlog' }))
+        .getByText('OP-199 — Original title')
+        .closest('li');
+
+      expect(refreshedCard).not.toBeNull();
+      expect(within(refreshedCard as HTMLElement).getByDisplayValue('OP-199')).toBeInTheDocument();
     });
   });
 

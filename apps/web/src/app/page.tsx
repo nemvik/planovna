@@ -132,6 +132,9 @@ const getBlockedReasonValue = (operation: Operation, blockedReasonDrafts: Record
 const getTitleValue = (operation: Operation, titleDrafts: Record<string, string>) =>
   titleDrafts[operation.id] ?? operation.title;
 
+const getCodeValue = (operation: Operation, codeDrafts: Record<string, string>) =>
+  codeDrafts[operation.id] ?? operation.code;
+
 const getSortIndexValue = (operation: Operation, sortIndexDrafts: Record<string, string>) =>
   sortIndexDrafts[operation.id] ?? String(operation.sortIndex);
 
@@ -144,6 +147,12 @@ const buildBlockedReasonDrafts = (operations: Operation[]) =>
 const buildTitleDrafts = (operations: Operation[]) =>
   operations.reduce<Record<string, string>>((drafts, operation) => {
     drafts[operation.id] = operation.title;
+    return drafts;
+  }, {});
+
+const buildCodeDrafts = (operations: Operation[]) =>
+  operations.reduce<Record<string, string>>((drafts, operation) => {
+    drafts[operation.id] = operation.code;
     return drafts;
   }, {});
 
@@ -172,6 +181,7 @@ export default function Home() {
   const [endDateDrafts, setEndDateDrafts] = useState<Record<string, string>>({});
   const [blockedReasonDrafts, setBlockedReasonDrafts] = useState<Record<string, string>>({});
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
+  const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
   const [sortIndexDrafts, setSortIndexDrafts] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
 
@@ -221,6 +231,7 @@ export default function Home() {
     setEndDateDrafts({});
     setBlockedReasonDrafts({});
     setTitleDrafts({});
+    setCodeDrafts({});
     setSortIndexDrafts({});
     setOperationLoadState('idle');
   };
@@ -235,6 +246,7 @@ export default function Home() {
       setEndDateDrafts(buildEndDateDrafts(loadedOperations));
       setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
       setTitleDrafts(buildTitleDrafts(loadedOperations));
+      setCodeDrafts(buildCodeDrafts(loadedOperations));
       setSortIndexDrafts(buildSortIndexDrafts(loadedOperations));
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
       return loadedOperations;
@@ -271,7 +283,9 @@ export default function Home() {
 
   const onUpdateOperation = async (
     operation: Operation,
-    updates: Partial<Pick<Operation, 'startDate' | 'endDate' | 'status' | 'blockedReason' | 'sortIndex' | 'title'>>,
+    updates: Partial<
+      Pick<Operation, 'startDate' | 'endDate' | 'status' | 'blockedReason' | 'sortIndex' | 'title' | 'code'>
+    >,
     failureMessage: string,
   ) => {
     setBoardMessage('');
@@ -305,6 +319,10 @@ export default function Home() {
       setTitleDrafts((currentTitleDrafts) => ({
         ...currentTitleDrafts,
         [updatedOperation.id]: updatedOperation.title,
+      }));
+      setCodeDrafts((currentCodeDrafts) => ({
+        ...currentCodeDrafts,
+        [updatedOperation.id]: updatedOperation.code,
       }));
       setSortIndexDrafts((currentSortIndexDrafts) => ({
         ...currentSortIndexDrafts,
@@ -378,6 +396,18 @@ export default function Home() {
     }
 
     await onUpdateOperation(operation, { title }, 'Failed to update title.');
+  };
+
+  const onSaveCode = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
+    event.preventDefault();
+
+    const code = getCodeValue(operation, codeDrafts);
+
+    if (code.trim() === '' || code === operation.code) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { code }, 'Failed to update code.');
   };
 
   const onSaveEndDate = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -530,8 +560,10 @@ export default function Home() {
                     const endDateValue = getEndDateValue(operation, endDateDrafts);
                     const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
                     const titleValue = getTitleValue(operation, titleDrafts);
+                    const codeValue = getCodeValue(operation, codeDrafts);
                     const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
                     const canSaveTitle = titleValue.trim() !== '' && titleValue !== operation.title;
+                    const canSaveCode = codeValue.trim() !== '' && codeValue !== operation.code;
                     const canSchedule =
                       isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
                     const canSaveEndDate =
@@ -550,6 +582,32 @@ export default function Home() {
                         </div>
                         <form
                           className="mt-2 flex items-end gap-2"
+                          onSubmit={(event) => void onSaveCode(event, operation)}
+                        >
+                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                            Code
+                            <input
+                              className="rounded border bg-white px-2 py-1"
+                              value={codeValue}
+                              disabled={mutatingOperationId !== null}
+                              onChange={(event) =>
+                                setCodeDrafts((currentCodeDrafts) => ({
+                                  ...currentCodeDrafts,
+                                  [operation.id]: event.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                          <button
+                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            type="submit"
+                            disabled={mutatingOperationId !== null || !canSaveCode}
+                          >
+                            Save code
+                          </button>
+                        </form>
+                        <form
+                          className="mt-3 flex items-end gap-2"
                           onSubmit={(event) => void onSaveTitle(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
