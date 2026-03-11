@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Home from './page';
 import { createTrpcClient } from '../lib/trpc/client';
@@ -30,12 +30,7 @@ const createClient = () => ({
       mutate: jest.fn(),
     },
   },
-  invoice: {
-    list: {
-      query: jest.fn(),
-    },
-  },
-  cashflow: {
+  operation: {
     list: {
       query: jest.fn(),
     },
@@ -61,7 +56,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('web regression states', () => {
+describe('homepage operations board', () => {
   it('keeps auth login UX for valid and invalid credentials', async () => {
     const client = createClient();
     client.auth.login.mutate
@@ -77,140 +72,87 @@ describe('web regression states', () => {
     expect(await screen.findByText('Logged in')).toBeInTheDocument();
   });
 
-  it('shows invoice loading state', async () => {
+  it('shows operation loading state', async () => {
     const client = createClient();
     const deferred = createDeferred<unknown[]>();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.invoice.list.query.mockReturnValue(deferred.promise);
+    client.operation.list.query.mockReturnValue(deferred.promise);
 
     renderWithClient(client);
     await login();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load invoices' }));
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
-    expect(screen.getAllByText('Loading invoices…').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Loading operations…').length).toBeGreaterThan(0);
 
     deferred.resolve([]);
     await waitFor(() => {
-      expect(screen.getByText('No invoices found.')).toBeInTheDocument();
+      expect(screen.getByText('No operations found.')).toBeInTheDocument();
     });
   });
 
-  it('shows invoice empty state', async () => {
+  it('shows operation empty state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.invoice.list.query.mockResolvedValue([]);
+    client.operation.list.query.mockResolvedValue([]);
 
     renderWithClient(client);
     await login();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load invoices' }));
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
-    expect(await screen.findByText('No invoices found.')).toBeInTheDocument();
+    expect(await screen.findByText('No operations found.')).toBeInTheDocument();
   });
 
-  it('shows invoice loaded state', async () => {
+  it('renders grouped board buckets with sorted operations', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.invoice.list.query.mockResolvedValue([
+    client.operation.list.query.mockResolvedValue([
       {
-        id: 'inv-1',
+        id: 'op-3',
         tenantId: 'tenant-a',
         orderId: 'ord-1',
-        number: '2026-0001',
-        status: 'ISSUED',
-        currency: 'CZK',
-        amountGross: 1200,
+        code: 'OP-300',
+        title: 'Later bucket item',
+        status: 'READY',
+        startDate: '2026-03-07T08:00:00.000Z',
+        sortIndex: 3,
+        version: 1,
       },
-    ]);
-
-    renderWithClient(client);
-    await login();
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load invoices' }));
-
-    expect(await screen.findByText('2026-0001 — ISSUED — 1200 CZK')).toBeInTheDocument();
-  });
-
-  it('shows invoice forbidden state for planner role', async () => {
-    const client = createClient();
-    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-planner' });
-    client.invoice.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
-
-    renderWithClient(client);
-    await login('planner@tenant-a.local', 'tenant-a-pass');
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load invoices' }));
-
-    expect(
-      await screen.findByText('Forbidden: your role is not allowed to view invoices.'),
-    ).toBeInTheDocument();
-  });
-
-  it('shows invoice error state', async () => {
-    const client = createClient();
-    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.invoice.list.query.mockRejectedValue(new Error('boom'));
-
-    renderWithClient(client);
-    await login();
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load invoices' }));
-
-    expect(await screen.findByText('Failed to load invoices.')).toBeInTheDocument();
-  });
-
-  it('shows cashflow loading state', async () => {
-    const client = createClient();
-    const deferred = createDeferred<unknown[]>();
-    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.cashflow.list.query.mockReturnValue(deferred.promise);
-
-    renderWithClient(client);
-    await login();
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load cashflow' }));
-
-    expect(screen.getAllByText('Loading cashflow…').length).toBeGreaterThan(0);
-
-    deferred.resolve([]);
-    await waitFor(() => {
-      expect(screen.getByText('No cashflow entries found.')).toBeInTheDocument();
-    });
-  });
-
-  it('shows cashflow empty state', async () => {
-    const client = createClient();
-    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.cashflow.list.query.mockResolvedValue([]);
-
-    renderWithClient(client);
-    await login();
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load cashflow' }));
-
-    expect(await screen.findByText('No cashflow entries found.')).toBeInTheDocument();
-  });
-
-  it('shows cashflow loaded state', async () => {
-    const client = createClient();
-    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.cashflow.list.query.mockResolvedValue([
       {
-        id: 'cf-1',
+        id: 'op-2',
         tenantId: 'tenant-a',
-        invoiceId: 'inv-1',
-        kind: 'PLANNED_IN',
-        amount: 1200,
-        currency: 'CZK',
-        date: '2026-03-06',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Backlog item',
+        status: 'BLOCKED',
+        sortIndex: 2,
+        blockedReason: 'Waiting for material',
+        version: 1,
+      },
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-150',
+        title: 'First dated item',
+        status: 'IN_PROGRESS',
+        startDate: '2026-03-06T12:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-4',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Same bucket lower sort index',
+        status: 'READY',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 0,
+        version: 1,
       },
     ]);
 
@@ -218,40 +160,49 @@ describe('web regression states', () => {
     await login();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load cashflow' }));
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
-    expect(
-      await screen.findByText('PLANNED_IN — 1200 CZK — 2026-03-06'),
-    ).toBeInTheDocument();
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const firstDateBucket = screen.getByRole('region', { name: '2026-03-06' });
+    const secondDateBucket = screen.getByRole('region', { name: '2026-03-07' });
+
+    expect(within(backlogBucket).getByText('OP-200 — Backlog item')).toBeInTheDocument();
+    expect(within(backlogBucket).getByText('Blocked: Waiting for material')).toBeInTheDocument();
+
+    const firstDateItems = within(firstDateBucket).getAllByRole('listitem');
+    expect(firstDateItems[0]).toHaveTextContent('OP-100 — Same bucket lower sort index');
+    expect(firstDateItems[1]).toHaveTextContent('OP-150 — First dated item');
+
+    expect(within(secondDateBucket).getByText('OP-300 — Later bucket item')).toBeInTheDocument();
   });
 
-  it('shows cashflow forbidden state for planner role', async () => {
+  it('shows operation forbidden state for planner role', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-planner' });
-    client.cashflow.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
+    client.operation.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
 
     renderWithClient(client);
     await login('planner@tenant-a.local', 'tenant-a-pass');
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load cashflow' }));
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     expect(
-      await screen.findByText('Forbidden: your role is not allowed to view cashflow.'),
+      await screen.findByText('Forbidden: your role is not allowed to view operations.'),
     ).toBeInTheDocument();
   });
 
-  it('shows cashflow error state', async () => {
+  it('shows operation error state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
-    client.cashflow.list.query.mockRejectedValue(new Error('boom'));
+    client.operation.list.query.mockRejectedValue(new Error('boom'));
 
     renderWithClient(client);
     await login();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load cashflow' }));
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
-    expect(await screen.findByText('Failed to load cashflow.')).toBeInTheDocument();
+    expect(await screen.findByText('Failed to load operations.')).toBeInTheDocument();
   });
 });
