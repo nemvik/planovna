@@ -15,7 +15,7 @@ import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
 describe('tRPC operation contracts (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication<App> | null = null;
   let baseUrl: string;
   let authService: AuthService;
 
@@ -54,19 +54,19 @@ describe('tRPC operation contracts (e2e)', () => {
     });
   };
 
-  beforeEach(async () => {
+  const bootstrapApp = async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    const nextApp = moduleFixture.createNestApplication();
 
-    authService = app.get(AuthService);
-    const customerService = app.get(CustomerService);
-    const invoiceService = app.get(InvoiceService);
-    const orderService = app.get(OrderService);
-    const operationService = app.get(OperationService);
-    const cashflowService = app.get(CashflowService);
+    authService = nextApp.get(AuthService);
+    const customerService = nextApp.get(CustomerService);
+    const invoiceService = nextApp.get(InvoiceService);
+    const orderService = nextApp.get(OrderService);
+    const operationService = nextApp.get(OperationService);
+    const cashflowService = nextApp.get(CashflowService);
 
     const appRouter = createAppRouter(
       authService,
@@ -77,7 +77,7 @@ describe('tRPC operation contracts (e2e)', () => {
       cashflowService,
     );
 
-    app.use(
+    nextApp.use(
       '/trpc',
       createExpressMiddleware({
         router: appRouter,
@@ -85,13 +85,28 @@ describe('tRPC operation contracts (e2e)', () => {
       }),
     );
 
-    await app.init();
-    await app.listen(0);
-    baseUrl = await app.getUrl();
+    await nextApp.init();
+    await nextApp.listen(0);
+
+    app = nextApp;
+    baseUrl = await nextApp.getUrl();
+  };
+
+  const closeApp = async () => {
+    if (!app) {
+      return;
+    }
+
+    await app.close();
+    app = null;
+  };
+
+  beforeEach(async () => {
+    await bootstrapApp();
   });
 
   afterEach(async () => {
-    await app.close();
+    await closeApp();
   });
 
   it('requires authentication for operation.list/create/update', async () => {
@@ -246,6 +261,46 @@ describe('tRPC operation contracts (e2e)', () => {
           actualVersion: updated.version,
         },
       },
+    });
+  });
+
+  it('loads persisted operations from Prisma after app restart for the same tenant', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const accessToken = tenantALogin!.accessToken;
+    const tenantAClient = createClient(accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+
+    const created = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-RESTART-${uniqueSuffix()}`,
+      title: 'Restart persistence operation',
+      status: 'IN_PROGRESS',
+      sortIndex: 4,
+    });
+
+    await closeApp();
+    await bootstrapApp();
+
+    const restartedTenantAClient = createClient(accessToken);
+    const tenantAList = await restartedTenantAClient.operation.list.query();
+    const persisted = tenantAList.find((operation) => operation.id === created.id);
+
+    expect(persisted).toMatchObject({
+      id: created.id,
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: created.code,
+      title: 'Restart persistence operation',
+      status: 'IN_PROGRESS',
+      sortIndex: 4,
+      version: 1,
     });
   });
 

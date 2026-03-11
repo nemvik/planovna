@@ -1,16 +1,16 @@
 {
-  "generated": "2026-03-10 19:00:28 CET",
+  "generated": "2026-03-11 04:01:30 CET",
   "branch": "main",
-  "head": "cf15ded",
-  "trackedFiles": 113,
-  "changedFiles": 7,
+  "head": "d6646e7",
+  "trackedFiles": 115,
+  "changedFiles": 13,
   "limits": {
     "maxChanged": 80,
     "maxSymbols": 120,
     "maxTreeLines": 200
   },
   "topDirs": [
-    "     96 apps",
+    "     98 apps",
     "      6 docs",
     "      4 scripts",
     "      2 .repomap",
@@ -21,9 +21,9 @@
     "      1 .github"
   ],
   "languages": [
-    "68 ts",
+    "69 ts",
+    "11 json",
     "10 md",
-    "10 json",
     "5 svg",
     "4 sh",
     "3 tsx",
@@ -41,26 +41,25 @@
     "package.json"
   ],
   "lastCommitFiles": [
-    "apps/api/src/modules/cashflow/cashflow.module.ts",
-    "apps/api/src/modules/cashflow/cashflow.service.ts",
+    ".repomap/REPOMAP.md",
+    ".repomap/repomap.json",
+    "apps/api/package.json",
+    "apps/api/prisma.config.ts",
+    "apps/api/prisma/schema.prisma",
+    "apps/api/src/app.controller.spec.ts",
     "apps/api/src/modules/invoice/invoice.service.spec.ts",
     "apps/api/src/modules/invoice/invoice.service.ts",
-    "apps/api/test/tenant-isolation.e2e-spec.ts",
-    "apps/api/test/trpc-cashflow.e2e-spec.ts",
-    "apps/api/test/trpc-invoice.e2e-spec.ts"
+    "apps/api/src/prisma/prisma.service.ts",
+    "apps/api/test/jest-e2e.global-setup.ts",
+    "apps/api/test/jest-e2e.json",
+    "apps/api/tsconfig.jest-e2e.json",
+    "package-lock.json"
   ],
   "symbols": [
-    "- apps/api/src/modules/cashflow/cashflow.module.ts:17:export class CashflowModule {}",
-    "- apps/api/src/modules/cashflow/cashflow.service.ts:31:export class CashflowService {",
-    "- apps/api/src/modules/invoice/invoice.service.ts:32:export class InvoiceService {",
-    "- apps/api/test/tenant-isolation.e2e-spec.ts:20:  const uniqueSuffix = () => randomUUID().slice(0, 8);",
-    "- apps/api/test/tenant-isolation.e2e-spec.ts:103:    const storedOrder = (await orders.list('tenant-a')).find((order) => order.id === orderA.id);",
-    "- apps/api/test/tenant-isolation.e2e-spec.ts:104:    const storedOperation = (await operations.list('tenant-a')).find(",
-    "- apps/api/test/trpc-cashflow.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>",
-    "- apps/api/test/trpc-cashflow.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);",
-    "- apps/api/test/trpc-cashflow.e2e-spec.ts:38:  const createInvoiceOrder = async (",
-    "- apps/api/test/trpc-invoice.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>",
-    "- apps/api/test/trpc-invoice.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);",
-    "- apps/api/test/trpc-invoice.e2e-spec.ts:38:  const createInvoiceOrder = async ("
+    "- apps/api/src/modules/invoice/invoice.service.spec.ts:8:  const decimal = (value: number) => ({",
+    "- apps/api/src/modules/invoice/invoice.service.ts:31:export class InvoiceService {",
+    "- apps/api/src/prisma/prisma.service.ts:6:function getSchemaFromDatabaseUrl(databaseUrl?: string): string | undefined {",
+    "- apps/api/src/prisma/prisma.service.ts:14:function createPoolConfig(databaseUrl?: string): PoolConfig {",
+    "- apps/api/src/prisma/prisma.service.ts:28:export class PrismaService extends PrismaClient implements OnModuleDestroy {"
   ]
 }

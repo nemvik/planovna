@@ -1,13 +1,13 @@
 # REPOMAP
 
-- Generated: 2026-03-10 19:00:28 CET
+- Generated: 2026-03-11 04:01:30 CET
 - Branch: main
-- HEAD: cf15ded
-- Tracked files: 113
-- Last commit changed files: 7
+- HEAD: d6646e7
+- Tracked files: 115
+- Last commit changed files: 13
 
 ## Architecture index (top dirs)
-- apps (96 files)
+- apps (98 files)
 - docs (6 files)
 - scripts (4 files)
 - .repomap (2 files)
@@ -18,9 +18,9 @@
 - .github (1 files)
 
 ## Language summary
-- .ts (68)
+- .ts (69)
+- .json (11)
 - .md (10)
-- .json (10)
 - .svg (5)
 - .sh (4)
 - .tsx (3)
@@ -38,27 +38,26 @@
 - package.json
 
 ## Last commit impact
-- apps/api/src/modules/cashflow/cashflow.module.ts
-- apps/api/src/modules/cashflow/cashflow.service.ts
+- .repomap/REPOMAP.md
+- .repomap/repomap.json
+- apps/api/package.json
+- apps/api/prisma.config.ts
+- apps/api/prisma/schema.prisma
+- apps/api/src/app.controller.spec.ts
 - apps/api/src/modules/invoice/invoice.service.spec.ts
 - apps/api/src/modules/invoice/invoice.service.ts
-- apps/api/test/tenant-isolation.e2e-spec.ts
-- apps/api/test/trpc-cashflow.e2e-spec.ts
-- apps/api/test/trpc-invoice.e2e-spec.ts
+- apps/api/src/prisma/prisma.service.ts
+- apps/api/test/jest-e2e.global-setup.ts
+- apps/api/test/jest-e2e.json
+- apps/api/tsconfig.jest-e2e.json
+- package-lock.json
 
 ## Symbols (changed files only)
-- apps/api/src/modules/cashflow/cashflow.module.ts:17:export class CashflowModule {}
-- apps/api/src/modules/cashflow/cashflow.service.ts:31:export class CashflowService {
-- apps/api/src/modules/invoice/invoice.service.ts:32:export class InvoiceService {
-- apps/api/test/tenant-isolation.e2e-spec.ts:20:  const uniqueSuffix = () => randomUUID().slice(0, 8);
-- apps/api/test/tenant-isolation.e2e-spec.ts:103:    const storedOrder = (await orders.list('tenant-a')).find((order) => order.id === orderA.id);
-- apps/api/test/tenant-isolation.e2e-spec.ts:104:    const storedOperation = (await operations.list('tenant-a')).find(
-- apps/api/test/trpc-cashflow.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>
-- apps/api/test/trpc-cashflow.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);
-- apps/api/test/trpc-cashflow.e2e-spec.ts:38:  const createInvoiceOrder = async (
-- apps/api/test/trpc-invoice.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>
-- apps/api/test/trpc-invoice.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);
-- apps/api/test/trpc-invoice.e2e-spec.ts:38:  const createInvoiceOrder = async (
+- apps/api/src/modules/invoice/invoice.service.spec.ts:8:  const decimal = (value: number) => ({
+- apps/api/src/modules/invoice/invoice.service.ts:31:export class InvoiceService {
+- apps/api/src/prisma/prisma.service.ts:6:function getSchemaFromDatabaseUrl(databaseUrl?: string): string | undefined {
+- apps/api/src/prisma/prisma.service.ts:14:function createPoolConfig(databaseUrl?: string): PoolConfig {
+- apps/api/src/prisma/prisma.service.ts:28:export class PrismaService extends PrismaClient implements OnModuleDestroy {
 
 ## Compact tree (depth<=4, token-saver)
 - .github
@@ -95,6 +94,7 @@
 - apps/api/test/app.e2e-spec.ts
 - apps/api/test/auth-invoice-paid.e2e-spec.ts
 - apps/api/test/auth-magic-link-role.e2e-spec.ts
+- apps/api/test/jest-e2e.global-setup.ts
 - apps/api/test/jest-e2e.json
 - apps/api/test/tenant-isolation.e2e-spec.ts
 - apps/api/test/trpc-auth-customer.e2e-spec.ts
@@ -106,6 +106,7 @@
 - apps/api/test/trpc-operation.e2e-spec.ts
 - apps/api/test/trpc-order.e2e-spec.ts
 - apps/api/tsconfig.build.json
+- apps/api/tsconfig.jest-e2e.json
 - apps/api/tsconfig.json
 - apps/web
 - apps/web/.gitignore

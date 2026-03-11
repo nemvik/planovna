@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOperationDto, UpdateOperationDto } from './dto/operation.dto';
@@ -22,18 +21,9 @@ type PrismaOperationRow = {
 
 @Injectable()
 export class OperationService {
-  private readonly db = new Map<string, OperationRecord>();
-
-  constructor(private readonly prisma?: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(input: CreateOperationDto) {
-    if (!this.prisma) {
-      const id = randomUUID();
-      const row: OperationRecord = { ...input, id, version: 1 };
-      this.db.set(id, row);
-      return row;
-    }
-
     const created = await this.prisma.operation.create({
       data: {
         tenantId: input.tenantId,
@@ -61,16 +51,10 @@ export class OperationService {
       },
     });
 
-    const row = this.toOperationRecord(created);
-    this.db.set(row.id, row);
-    return row;
+    return this.toOperationRecord(created);
   }
 
   async list(tenantId: string) {
-    if (!this.prisma) {
-      return Array.from(this.db.values()).filter((x) => x.tenantId === tenantId);
-    }
-
     const operations = await this.prisma.operation.findMany({
       where: { tenantId },
       orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
@@ -93,18 +77,6 @@ export class OperationService {
   }
 
   async update(input: UpdateOperationDto) {
-    if (!this.prisma) {
-      const row = this.db.get(input.id);
-      if (!row || row.tenantId !== input.tenantId) return null;
-
-      assertVersion('Operation', row.id, input.version, row.version);
-
-      const { tenantId: _ignoredTenantId, ...patch } = input;
-      const next = { ...row, ...patch, tenantId: row.tenantId, version: row.version + 1 };
-      this.db.set(row.id, next);
-      return next;
-    }
-
     const existing = await this.prisma.operation.findUnique({
       where: { id: input.id },
       select: {
