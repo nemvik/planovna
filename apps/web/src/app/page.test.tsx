@@ -54,6 +54,7 @@ const login = async (email = 'owner@tenant-a.local', password = 'tenant-a-pass')
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.history.replaceState({}, '', '/');
 });
 
 describe('homepage operations board', () => {
@@ -174,6 +175,180 @@ describe('homepage operations board', () => {
     expect(firstDateItems[1]).toHaveTextContent('OP-150 — First dated item');
 
     expect(within(secondDateBucket).getByText('OP-300 — Later bucket item')).toBeInTheDocument();
+  });
+
+  it('filters loaded operations by status and date bucket and persists the selection in the URL', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Ready backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Done dated item',
+        status: 'DONE',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Done later item',
+        status: 'DONE',
+        startDate: '2026-03-07T08:00:00.000Z',
+        sortIndex: 2,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const statusSelect = await screen.findByLabelText('Status');
+    const bucketSelect = screen.getByLabelText('Date bucket');
+
+    expect(statusSelect).toHaveValue('ALL');
+    expect(bucketSelect).toHaveValue('ALL');
+    expect(within(bucketSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'All',
+      'Backlog',
+      '2026-03-06',
+      '2026-03-07',
+    ]);
+
+    await user.selectOptions(statusSelect, 'DONE');
+    await user.selectOptions(bucketSelect, '2026-03-06');
+
+    expect(screen.queryByText('OP-100 — Ready backlog item')).not.toBeInTheDocument();
+    expect(screen.getByText('OP-200 — Done dated item')).toBeInTheDocument();
+    expect(screen.queryByText('OP-300 — Done later item')).not.toBeInTheDocument();
+    expect(window.location.search).toBe('?status=DONE&bucket=2026-03-06');
+  });
+
+  it('hydrates the initial status and bucket filters from URL search params', async () => {
+    window.history.replaceState({}, '', '/?status=BLOCKED&bucket=Backlog');
+
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Blocked backlog item',
+        status: 'BLOCKED',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Blocked dated item',
+        status: 'BLOCKED',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Ready backlog item',
+        status: 'READY',
+        sortIndex: 2,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    expect(await screen.findByLabelText('Status')).toHaveValue('BLOCKED');
+    expect(screen.getByLabelText('Date bucket')).toHaveValue('Backlog');
+    expect(screen.getByText('OP-100 — Blocked backlog item')).toBeInTheDocument();
+    expect(screen.queryByText('OP-200 — Blocked dated item')).not.toBeInTheDocument();
+    expect(screen.queryByText('OP-300 — Ready backlog item')).not.toBeInTheDocument();
+  });
+
+  it('resets a hydrated bucket filter to All when that bucket is not loaded', async () => {
+    window.history.replaceState({}, '', '/?status=DONE&bucket=2026-03-08');
+
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Done backlog item',
+        status: 'DONE',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Done loaded bucket item',
+        status: 'DONE',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Ready loaded bucket item',
+        status: 'READY',
+        startDate: '2026-03-07T08:00:00.000Z',
+        sortIndex: 2,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Status')).toHaveValue('DONE');
+      expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
+      expect(window.location.search).toBe('?status=DONE');
+    });
+
+    expect(screen.getByText('OP-100 — Done backlog item')).toBeInTheDocument();
+    expect(screen.getByText('OP-200 — Done loaded bucket item')).toBeInTheDocument();
+    expect(screen.queryByText('OP-300 — Ready loaded bucket item')).not.toBeInTheDocument();
   });
 
   it('shows operation forbidden state for planner role', async () => {
