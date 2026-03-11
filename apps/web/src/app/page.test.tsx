@@ -247,6 +247,80 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('persists a status change and updates the filtered board immediately', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Ready backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Blocked backlog item',
+        status: 'BLOCKED',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Ready backlog item',
+      status: 'DONE',
+      sortIndex: 0,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Ready backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    await user.selectOptions(within(operationCard as HTMLElement).getByLabelText('Status'), 'DONE');
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      status: 'DONE',
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('OP-100 — Ready backlog item')).not.toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getAllByLabelText('Status')[0], 'DONE');
+
+    const updatedCard = await within(screen.getByRole('region', { name: 'Backlog' }))
+      .findByText('OP-100 — Ready backlog item')
+      .then((element) => element.closest('li'));
+
+    expect(updatedCard).not.toBeNull();
+    expect(within(updatedCard as HTMLElement).getByLabelText('Status')).toHaveValue('DONE');
+  });
+
   it('schedules an operation into a newly selected date bucket using operation.update', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -465,6 +539,77 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('reloads operations and shows the resync message when a status change hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Ready backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Ready backlog item',
+          status: 'DONE',
+          sortIndex: 0,
+          version: 2,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Ready backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    await user.selectOptions(within(operationCard as HTMLElement).getByLabelText('Status'), 'DONE');
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      const refreshedCard = within(screen.getByRole('region', { name: 'Backlog' }))
+        .getByText('OP-100 — Ready backlog item')
+        .closest('li');
+
+      expect(refreshedCard).not.toBeNull();
+      expect(within(refreshedCard as HTMLElement).getByLabelText('Status')).toHaveValue('DONE');
+    });
+  });
+
   it('filters loaded operations by status and date bucket and persists the selection in the URL', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -509,7 +654,7 @@ describe('homepage operations board', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
-    const statusSelect = await screen.findByLabelText('Status');
+    const statusSelect = (await screen.findAllByLabelText('Status'))[0];
     const bucketSelect = screen.getByLabelText('Date bucket');
 
     expect(statusSelect).toHaveValue('ALL');
@@ -575,7 +720,7 @@ describe('homepage operations board', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
-    expect(await screen.findByLabelText('Status')).toHaveValue('BLOCKED');
+    expect((await screen.findAllByLabelText('Status'))[0]).toHaveValue('BLOCKED');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('Backlog');
     expect(screen.getByText('OP-100 — Blocked backlog item')).toBeInTheDocument();
     expect(screen.queryByText('OP-200 — Blocked dated item')).not.toBeInTheDocument();
@@ -629,7 +774,7 @@ describe('homepage operations board', () => {
     await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Status')).toHaveValue('DONE');
+      expect(screen.getAllByLabelText('Status')[0]).toHaveValue('DONE');
       expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
       expect(window.location.search).toBe('?status=DONE');
     });

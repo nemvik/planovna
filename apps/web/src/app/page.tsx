@@ -131,7 +131,7 @@ export default function Home() {
   const [authMessage, setAuthMessage] = useState('');
   const [boardMessage, setBoardMessage] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
-  const [movingOperationId, setMovingOperationId] = useState<string | null>(null);
+  const [mutatingOperationId, setMutatingOperationId] = useState<string | null>(null);
   const [scheduleDates, setScheduleDates] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
 
@@ -176,7 +176,7 @@ export default function Home() {
   const resetOperationsState = () => {
     setOperations([]);
     setBoardMessage('');
-    setMovingOperationId(null);
+    setMutatingOperationId(null);
     setScheduleDates({});
     setOperationLoadState('idle');
   };
@@ -221,22 +221,20 @@ export default function Home() {
     }
   };
 
-  const onMoveOperation = async (operation: Operation, bucketLabel: Exclude<BucketFilter, 'ALL'>) => {
-    const nextStartDate = toStartDate(bucketLabel);
-
-    if (nextStartDate === operation.startDate) {
-      return;
-    }
-
+  const onUpdateOperation = async (
+    operation: Operation,
+    updates: Partial<Pick<Operation, 'startDate' | 'status'>>,
+    failureMessage: string,
+  ) => {
     setBoardMessage('');
-    setMovingOperationId(operation.id);
+    setMutatingOperationId(operation.id);
 
     try {
       const updatedOperation = (await trpcClient.operation.update.mutate({
         id: operation.id,
         tenantId: operation.tenantId,
         version: operation.version,
-        startDate: nextStartDate,
+        ...updates,
       })) as Operation;
 
       setOperations((currentOperations) =>
@@ -257,11 +255,29 @@ export default function Home() {
           setBoardMessage('Board was out of date and reload failed. Please reload operations again.');
         }
       } else {
-        setBoardMessage('Failed to move operation.');
+        setBoardMessage(failureMessage);
       }
     } finally {
-      setMovingOperationId(null);
+      setMutatingOperationId(null);
     }
+  };
+
+  const onMoveOperation = async (operation: Operation, bucketLabel: Exclude<BucketFilter, 'ALL'>) => {
+    const nextStartDate = toStartDate(bucketLabel);
+
+    if (nextStartDate === operation.startDate) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { startDate: nextStartDate }, 'Failed to move operation.');
+  };
+
+  const onStatusChange = async (operation: Operation, status: Operation['status']) => {
+    if (status === operation.status) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { status }, 'Failed to update operation status.');
   };
 
   const onScheduleOperation = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -401,23 +417,38 @@ export default function Home() {
                         <div className="font-medium">
                           {operation.code} — {operation.title}
                         </div>
-                        <div className="text-sm text-slate-600">
-                          {operation.status} · sort {operation.sortIndex}
-                        </div>
-                        {operation.blockedReason ? (
-                          <div className="text-sm text-amber-700">
-                            Blocked: {operation.blockedReason}
-                          </div>
-                        ) : null}
-                        <label className="mt-3 flex flex-col gap-1 text-sm">
-                          Move to bucket
-                          <select
-                            className="rounded border bg-white px-2 py-1"
-                            value={getOperationBucketLabel(operation.startDate)}
-                            disabled={movingOperationId !== null}
-                            onChange={(event) =>
-                              void onMoveOperation(
-                                operation,
+                         <div className="text-sm text-slate-600">sort {operation.sortIndex}</div>
+                         {operation.blockedReason ? (
+                           <div className="text-sm text-amber-700">
+                             Blocked: {operation.blockedReason}
+                           </div>
+                         ) : null}
+                         <label className="mt-3 flex flex-col gap-1 text-sm">
+                           Status
+                           <select
+                             className="max-w-[11rem] rounded border bg-white px-2 py-1"
+                             value={operation.status}
+                             disabled={mutatingOperationId !== null}
+                             onChange={(event) =>
+                               void onStatusChange(operation, event.target.value as Operation['status'])
+                             }
+                           >
+                             {BOARD_STATUS_VALUES.map((status) => (
+                               <option key={status} value={status}>
+                                 {status}
+                               </option>
+                             ))}
+                           </select>
+                         </label>
+                         <label className="mt-3 flex flex-col gap-1 text-sm">
+                           Move to bucket
+                           <select
+                             className="rounded border bg-white px-2 py-1"
+                             value={getOperationBucketLabel(operation.startDate)}
+                             disabled={mutatingOperationId !== null}
+                             onChange={(event) =>
+                               void onMoveOperation(
+                                 operation,
                                 event.target.value as Exclude<BucketFilter, 'ALL'>,
                               )
                             }
@@ -436,25 +467,25 @@ export default function Home() {
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             Schedule to date
                             <input
-                              className="rounded border bg-white px-2 py-1"
-                              type="date"
-                              value={scheduledDateValue}
-                              disabled={movingOperationId !== null}
-                              onChange={(event) =>
-                                setScheduleDates((currentScheduleDates) => ({
-                                  ...currentScheduleDates,
+                               className="rounded border bg-white px-2 py-1"
+                               type="date"
+                               value={scheduledDateValue}
+                               disabled={mutatingOperationId !== null}
+                               onChange={(event) =>
+                                 setScheduleDates((currentScheduleDates) => ({
+                                   ...currentScheduleDates,
                                   [operation.id]: event.target.value,
                                 }))
                               }
                             />
                           </label>
                           <button
-                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
-                            type="submit"
-                            disabled={movingOperationId !== null || !canSchedule}
-                          >
-                            Schedule
-                          </button>
+                             className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                             type="submit"
+                             disabled={mutatingOperationId !== null || !canSchedule}
+                           >
+                             Schedule
+                           </button>
                         </form>
                       </li>
                     );
