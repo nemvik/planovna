@@ -380,6 +380,63 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('persists a title edit and merges the returned operation into board state immediately', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Updated title',
+      status: 'READY',
+      sortIndex: 0,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const titleInput = within(operationCard as HTMLElement).getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Updated title');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      title: 'Updated title',
+    });
+
+    await waitFor(() => {
+      expect(within(operationCard as HTMLElement).getByDisplayValue('Updated title')).toBeInTheDocument();
+      expect(within(operationCard as HTMLElement).getByText('OP-100 — Updated title')).toBeInTheDocument();
+    });
+  });
+
   it('persists an end date edit and merges the returned operation into board state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -871,6 +928,80 @@ describe('homepage operations board', () => {
       expect(refreshedCard).not.toBeNull();
       expect(within(refreshedCard as HTMLElement).getByDisplayValue('Supplier delayed shipment')).toBeInTheDocument();
       expect(within(refreshedCard as HTMLElement).getByText('Blocked: Supplier delayed shipment')).toBeInTheDocument();
+    });
+  });
+
+  it('reloads operations and shows the resync message when a title edit hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Original title',
+          status: 'READY',
+          sortIndex: 0,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Server updated title',
+          status: 'READY',
+          sortIndex: 0,
+          version: 2,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const titleInput = within(operationCard as HTMLElement).getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Client edited title');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      const refreshedCard = within(screen.getByRole('region', { name: 'Backlog' }))
+        .getByText('OP-100 — Server updated title')
+        .closest('li');
+
+      expect(refreshedCard).not.toBeNull();
+      expect(within(refreshedCard as HTMLElement).getByDisplayValue('Server updated title')).toBeInTheDocument();
     });
   });
 
