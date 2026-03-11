@@ -3,7 +3,11 @@ import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOperationDto, UpdateOperationDto } from './dto/operation.dto';
 
-type OperationRecord = CreateOperationDto & { id: string; version: number };
+type OperationRecord = CreateOperationDto & {
+  id: string;
+  version: number;
+  dependencyCount: number;
+};
 
 type PrismaOperationRow = {
   id: string;
@@ -17,6 +21,9 @@ type PrismaOperationRow = {
   sortIndex: number;
   blockedReason: string | null;
   version: number;
+  _count: {
+    dependsOn: number;
+  };
 };
 
 @Injectable()
@@ -48,6 +55,15 @@ export class OperationService {
         sortIndex: true,
         blockedReason: true,
         version: true,
+        _count: {
+          select: {
+            dependsOn: {
+              where: {
+                tenantId: input.tenantId,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -70,6 +86,15 @@ export class OperationService {
         sortIndex: true,
         blockedReason: true,
         version: true,
+        _count: {
+          select: {
+            dependsOn: {
+              where: {
+                tenantId,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -147,6 +172,15 @@ export class OperationService {
         sortIndex: true,
         blockedReason: true,
         version: true,
+        _count: {
+          select: {
+            dependsOn: {
+              where: {
+                tenantId: existing.tenantId,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -170,6 +204,7 @@ export class OperationService {
       sortIndex: row.sortIndex,
       blockedReason: row.blockedReason ?? undefined,
       version: row.version,
+      dependencyCount: row._count.dependsOn,
     };
   }
 }

@@ -11,6 +11,7 @@ import { CustomerService } from '../src/modules/customer/customer.service';
 import { InvoiceService } from '../src/modules/invoice/invoice.service';
 import { OperationService } from '../src/modules/operation/operation.service';
 import { OrderService } from '../src/modules/order/order.service';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
@@ -18,6 +19,7 @@ describe('tRPC operation contracts (e2e)', () => {
   let app: INestApplication<App> | null = null;
   let baseUrl: string;
   let authService: AuthService;
+  let prismaService: PrismaService;
 
   const createClient = (accessToken?: string) =>
     createTRPCProxyClient<AppRouter>({
@@ -62,6 +64,7 @@ describe('tRPC operation contracts (e2e)', () => {
     const nextApp = moduleFixture.createNestApplication();
 
     authService = nextApp.get(AuthService);
+    prismaService = nextApp.get(PrismaService);
     const customerService = nextApp.get(CustomerService);
     const invoiceService = nextApp.get(InvoiceService);
     const orderService = nextApp.get(OrderService);
@@ -422,5 +425,68 @@ describe('tRPC operation contracts (e2e)', () => {
 
     const tenantBList = await tenantBClient.operation.list.query();
     expect(tenantBList.some((operation) => operation.id === createdByTenantB.id)).toBe(true);
+  });
+
+  it('exposes same-tenant dependency counts on operation.list payloads', async () => {
+    const tenantALogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+
+    const prerequisite = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-PREREQ-${uniqueSuffix()}`,
+      title: 'Prerequisite operation',
+      status: 'DONE',
+      sortIndex: 1,
+    });
+    const blocked = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-BLOCKED-${uniqueSuffix()}`,
+      title: 'Blocked operation',
+      status: 'READY',
+      sortIndex: 2,
+    });
+    const unblocked = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-FREE-${uniqueSuffix()}`,
+      title: 'Unblocked operation',
+      status: 'READY',
+      sortIndex: 3,
+    });
+
+    await prismaService.operationDependency.createMany({
+      data: [
+        {
+          tenantId: 'tenant-a',
+          operationId: blocked.id,
+          dependsOnId: prerequisite.id,
+        },
+        {
+          tenantId: 'tenant-b',
+          operationId: blocked.id,
+          dependsOnId: prerequisite.id,
+        },
+      ],
+    });
+
+    const tenantAList = await tenantAClient.operation.list.query();
+
+    expect(tenantAList.find((operation) => operation.id === blocked.id)).toMatchObject({
+      id: blocked.id,
+      dependencyCount: 1,
+    });
+    expect(tenantAList.find((operation) => operation.id === unblocked.id)).toMatchObject({
+      id: unblocked.id,
+      dependencyCount: 0,
+    });
   });
 });

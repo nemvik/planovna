@@ -27,6 +27,7 @@ type Operation = {
   sortIndex: number;
   blockedReason?: string;
   version: number;
+  dependencyCount: number;
 };
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'empty' | 'forbidden' | 'error';
@@ -600,8 +601,15 @@ export default function Home() {
 
                     return (
                       <li key={operation.id} className="rounded border bg-white p-3">
-                        <div className="font-medium">
-                          {operation.code} — {operation.title}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-medium">
+                            {operation.code} — {operation.title}
+                          </div>
+                          {operation.dependencyCount > 0 ? (
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                              Blocked by {operation.dependencyCount}
+                            </span>
+                          ) : null}
                         </div>
                         <form
                           className="mt-2 flex items-end gap-2"
