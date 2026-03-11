@@ -37,8 +37,9 @@ type OperationBucket = {
 };
 
 type OperationUpdate = Partial<
-  Pick<Operation, 'startDate' | 'status' | 'blockedReason' | 'sortIndex' | 'title' | 'code'>
+  Pick<Operation, 'startDate' | 'status' | 'sortIndex' | 'title' | 'code'>
 > & {
+  blockedReason?: string | null;
   endDate?: string | null;
 };
 
@@ -390,6 +391,14 @@ export default function Home() {
     await onUpdateOperation(operation, { blockedReason }, 'Failed to update blocked reason.');
   };
 
+  const onClearBlockedReason = async (operation: Operation) => {
+    if (!operation.blockedReason) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { blockedReason: null }, 'Failed to update blocked reason.');
+  };
+
   const onSaveTitle = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
     event.preventDefault();
 
@@ -581,6 +590,7 @@ export default function Home() {
                     const canSaveEndDate =
                       isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
                     const canClearEndDate = operation.endDate !== undefined;
+                    const canClearBlockedReason = operation.blockedReason !== undefined;
                     const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
                     const parsedSortIndex = Number(sortIndexValue.trim());
                     const canSaveSortIndex =
@@ -710,11 +720,21 @@ export default function Home() {
                             Save sort
                           </button>
                         </form>
-                          {operation.blockedReason ? (
-                            <div className="mt-3 text-sm text-amber-700">
-                              Blocked: {operation.blockedReason}
-                            </div>
-                          ) : null}
+                        {operation.blockedReason ? (
+                          <div className="mt-3 flex items-center gap-2 text-sm text-amber-700">
+                            <span className="min-w-0 flex-1">Blocked: {operation.blockedReason}</span>
+                            {operation.status !== 'BLOCKED' ? (
+                              <button
+                                className="rounded border px-3 py-1.5 text-sm text-slate-900 disabled:opacity-50"
+                                type="button"
+                                disabled={mutatingOperationId !== null}
+                                onClick={() => void onClearBlockedReason(operation)}
+                              >
+                                Clear reason
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                           {operation.status === 'BLOCKED' ? (
                             <form
                               className="mt-3 flex items-end gap-2"
@@ -741,6 +761,16 @@ export default function Home() {
                               >
                                 Save reason
                               </button>
+                              {canClearBlockedReason ? (
+                                <button
+                                  className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                                  type="button"
+                                  disabled={mutatingOperationId !== null}
+                                  onClick={() => void onClearBlockedReason(operation)}
+                                >
+                                  Clear reason
+                                </button>
+                              ) : null}
                             </form>
                           ) : null}
                           <label className="mt-3 flex flex-col gap-1 text-sm">

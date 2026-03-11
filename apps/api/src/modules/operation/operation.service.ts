@@ -100,6 +100,7 @@ export class OperationService {
     } = input;
     const updateData = {
       ...patch,
+      ...('blockedReason' in input ? { blockedReason: input.blockedReason } : {}),
       ...('endDate' in input ? { endDate: input.endDate } : {}),
       version: {
         increment: 1,
