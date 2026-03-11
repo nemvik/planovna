@@ -123,6 +123,9 @@ const isDateBucket = (value: string): value is Exclude<BucketFilter, 'ALL' | typ
 const getScheduledDateValue = (operation: Operation, scheduleDates: Record<string, string>) =>
   scheduleDates[operation.id] ?? operation.startDate?.slice(0, 10) ?? '';
 
+const getEndDateValue = (operation: Operation, endDateDrafts: Record<string, string>) =>
+  endDateDrafts[operation.id] ?? operation.endDate?.slice(0, 10) ?? '';
+
 const getBlockedReasonValue = (operation: Operation, blockedReasonDrafts: Record<string, string>) =>
   blockedReasonDrafts[operation.id] ?? operation.blockedReason ?? '';
 
@@ -132,6 +135,12 @@ const getSortIndexValue = (operation: Operation, sortIndexDrafts: Record<string,
 const buildBlockedReasonDrafts = (operations: Operation[]) =>
   operations.reduce<Record<string, string>>((drafts, operation) => {
     drafts[operation.id] = operation.blockedReason ?? '';
+    return drafts;
+  }, {});
+
+const buildEndDateDrafts = (operations: Operation[]) =>
+  operations.reduce<Record<string, string>>((drafts, operation) => {
+    drafts[operation.id] = operation.endDate?.slice(0, 10) ?? '';
     return drafts;
   }, {});
 
@@ -151,6 +160,7 @@ export default function Home() {
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
   const [mutatingOperationId, setMutatingOperationId] = useState<string | null>(null);
   const [scheduleDates, setScheduleDates] = useState<Record<string, string>>({});
+  const [endDateDrafts, setEndDateDrafts] = useState<Record<string, string>>({});
   const [blockedReasonDrafts, setBlockedReasonDrafts] = useState<Record<string, string>>({});
   const [sortIndexDrafts, setSortIndexDrafts] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
@@ -198,6 +208,7 @@ export default function Home() {
     setBoardMessage('');
     setMutatingOperationId(null);
     setScheduleDates({});
+    setEndDateDrafts({});
     setBlockedReasonDrafts({});
     setSortIndexDrafts({});
     setOperationLoadState('idle');
@@ -210,6 +221,7 @@ export default function Home() {
       const result = await trpcClient.operation.list.query();
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
+      setEndDateDrafts(buildEndDateDrafts(loadedOperations));
       setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
       setSortIndexDrafts(buildSortIndexDrafts(loadedOperations));
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
@@ -247,7 +259,7 @@ export default function Home() {
 
   const onUpdateOperation = async (
     operation: Operation,
-    updates: Partial<Pick<Operation, 'startDate' | 'status' | 'blockedReason' | 'sortIndex'>>,
+    updates: Partial<Pick<Operation, 'startDate' | 'endDate' | 'status' | 'blockedReason' | 'sortIndex'>>,
     failureMessage: string,
   ) => {
     setBoardMessage('');
@@ -269,6 +281,10 @@ export default function Home() {
       setScheduleDates((currentScheduleDates) => ({
         ...currentScheduleDates,
         [updatedOperation.id]: updatedOperation.startDate?.slice(0, 10) ?? '',
+      }));
+      setEndDateDrafts((currentEndDateDrafts) => ({
+        ...currentEndDateDrafts,
+        [updatedOperation.id]: updatedOperation.endDate?.slice(0, 10) ?? '',
       }));
       setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
         ...currentBlockedReasonDrafts,
@@ -334,6 +350,18 @@ export default function Home() {
     }
 
     await onUpdateOperation(operation, { blockedReason }, 'Failed to update blocked reason.');
+  };
+
+  const onSaveEndDate = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
+    event.preventDefault();
+
+    const endDate = getEndDateValue(operation, endDateDrafts);
+
+    if (!isDateBucket(endDate) || endDate === operation.endDate?.slice(0, 10)) {
+      return;
+    }
+
+    await onUpdateOperation(operation, { endDate: `${endDate}T00:00:00.000Z` }, 'Failed to update end date.');
   };
 
   const onSaveSortIndex = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -471,10 +499,13 @@ export default function Home() {
                 <ul className="space-y-2">
                   {bucket.operations.map((operation) => {
                     const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
+                    const endDateValue = getEndDateValue(operation, endDateDrafts);
                     const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
                     const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
                     const canSchedule =
                       isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
+                    const canSaveEndDate =
+                      isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
                     const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
                     const parsedSortIndex = Number(sortIndexValue.trim());
                     const canSaveSortIndex =
@@ -487,6 +518,33 @@ export default function Home() {
                         <div className="font-medium">
                           {operation.code} — {operation.title}
                         </div>
+                        <form
+                          className="mt-3 flex items-end gap-2"
+                          onSubmit={(event) => void onSaveEndDate(event, operation)}
+                        >
+                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                            End date
+                            <input
+                              className="rounded border bg-white px-2 py-1"
+                              type="date"
+                              value={endDateValue}
+                              disabled={mutatingOperationId !== null}
+                              onChange={(event) =>
+                                setEndDateDrafts((currentEndDateDrafts) => ({
+                                  ...currentEndDateDrafts,
+                                  [operation.id]: event.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                          <button
+                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            type="submit"
+                            disabled={mutatingOperationId !== null || !canSaveEndDate}
+                          >
+                            Save end
+                          </button>
+                        </form>
                         <form
                           className="mt-3 flex items-end gap-2"
                           onSubmit={(event) => void onSaveSortIndex(event, operation)}
