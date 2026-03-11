@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CashflowService } from '../cashflow/cashflow.service';
@@ -30,20 +29,12 @@ type PrismaInvoiceRow = {
 
 @Injectable()
 export class InvoiceService {
-  private readonly db = new Map<string, Invoice>();
-
   constructor(
     private readonly cashflow: CashflowService,
-    private readonly prisma?: PrismaService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async list(actorTenantId: string) {
-    if (!this.prisma) {
-      return Array.from(this.db.values()).filter(
-        (invoice) => invoice.tenantId === actorTenantId,
-      );
-    }
-
     const persisted = await this.prisma.invoice.findMany({
       where: { tenantId: actorTenantId },
       orderBy: { createdAt: 'asc' },
@@ -62,47 +53,10 @@ export class InvoiceService {
       },
     });
 
-    const merged = new Map(
-      persisted.map((invoice) => {
-        const row = this.toInvoiceRecord(invoice);
-        return [row.id, row] as const;
-      }),
-    );
-
-    for (const invoice of this.db.values()) {
-      if (invoice.tenantId !== actorTenantId) {
-        continue;
-      }
-
-      merged.set(invoice.id, invoice);
-    }
-
-    return Array.from(merged.values());
+    return persisted.map((invoice) => this.toInvoiceRecord(invoice));
   }
 
   async issue(actorTenantId: string, input: CreateInvoiceDto) {
-    if (!this.prisma) {
-      const id = randomUUID();
-      const row: Invoice = {
-        ...input,
-        tenantId: actorTenantId,
-        id,
-        status: 'ISSUED',
-        version: 1,
-      };
-      this.db.set(id, row);
-
-      await this.cashflow.upsertPlannedIn({
-        tenantId: row.tenantId,
-        invoiceId: id,
-        amount: input.amountGross,
-        currency: input.currency,
-        date: input.dueAt ?? input.issuedAt ?? new Date().toISOString(),
-      });
-
-      return row;
-    }
-
     const created = await this.prisma.invoice.create({
       data: {
         tenantId: actorTenantId,
@@ -132,7 +86,6 @@ export class InvoiceService {
     });
 
     const row = this.toInvoiceRecord(created);
-    this.db.set(row.id, row);
 
     await this.cashflow.upsertPlannedIn({
       tenantId: row.tenantId,
@@ -146,31 +99,6 @@ export class InvoiceService {
   }
 
   async markPaid(actorTenantId: string, input: MarkPaidDto) {
-    if (!this.prisma) {
-      const row = this.db.get(input.invoiceId);
-      if (!row || row.tenantId !== actorTenantId) return null;
-
-      assertVersion('Invoice', row.id, input.version, row.version);
-
-      const next: Invoice = {
-        ...row,
-        status: 'PAID',
-        paidAt: input.paidAt,
-        version: row.version + 1,
-      };
-      this.db.set(row.id, next);
-
-      await this.cashflow.upsertActualIn({
-        tenantId: row.tenantId,
-        invoiceId: row.id,
-        amount: row.amountGross,
-        currency: row.currency,
-        date: input.paidAt,
-      });
-
-      return next;
-    }
-
     const existing = await this.prisma.invoice.findUnique({
       where: { id: input.invoiceId },
       select: {
@@ -240,7 +168,6 @@ export class InvoiceService {
     }
 
     const next = this.toInvoiceRecord(row);
-    this.db.set(next.id, next);
 
     await this.cashflow.upsertActualIn({
       tenantId: next.tenantId,

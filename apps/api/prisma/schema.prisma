@@ -1,11 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  schemas  = ["app"]
 }
 
 enum UserRole {
@@ -13,6 +13,8 @@ enum UserRole {
   PLANNER
   SHOPFLOOR
   FINANCE
+
+  @@schema("app")
 }
 
 enum OperationStatus {
@@ -20,12 +22,16 @@ enum OperationStatus {
   IN_PROGRESS
   DONE
   BLOCKED
+
+  @@schema("app")
 }
 
 enum InvoiceStatus {
   DRAFT
   ISSUED
   PAID
+
+  @@schema("app")
 }
 
 enum CashflowKind {
@@ -33,6 +39,8 @@ enum CashflowKind {
   ACTUAL_IN
   PLANNED_OUT
   ACTUAL_OUT
+
+  @@schema("app")
 }
 
 model Tenant {
@@ -47,6 +55,8 @@ model Tenant {
   operations Operation[]
   invoices   Invoice[]
   cashflows  CashflowItem[]
+
+  @@schema("app")
 }
 
 model User {
@@ -63,6 +73,7 @@ model User {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@schema("app")
 }
 
 model Customer {
@@ -82,6 +93,7 @@ model Customer {
 
   @@unique([tenantId, name])
   @@index([tenantId])
+  @@schema("app")
 }
 
 model Order {
@@ -104,6 +116,7 @@ model Order {
 
   @@unique([tenantId, code])
   @@index([tenantId, dueDate])
+  @@schema("app")
 }
 
 model Operation {
@@ -129,6 +142,7 @@ model Operation {
 
   @@unique([tenantId, orderId, code])
   @@index([tenantId, startDate, endDate])
+  @@schema("app")
 }
 
 model OperationDependency {
@@ -142,6 +156,7 @@ model OperationDependency {
 
   @@unique([tenantId, operationId, dependsOnId])
   @@index([tenantId])
+  @@schema("app")
 }
 
 model Invoice {
@@ -168,6 +183,7 @@ model Invoice {
 
   @@unique([tenantId, number])
   @@index([tenantId, status, dueAt])
+  @@schema("app")
 }
 
 model CashflowItem {
@@ -187,4 +203,5 @@ model CashflowItem {
   invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, date, kind])
+  @@schema("app")
 }

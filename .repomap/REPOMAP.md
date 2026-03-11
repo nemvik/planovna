@@ -1,34 +1,35 @@
 # REPOMAP
 
-- Generated: 2026-03-05 20:29:17 CET
+- Generated: 2026-03-10 19:00:28 CET
 - Branch: main
-- HEAD: 08a8268
-- Tracked files: 82
-- Last commit changed files: 12
+- HEAD: cf15ded
+- Tracked files: 113
+- Last commit changed files: 7
 
 ## Architecture index (top dirs)
-- apps (69 files)
-- docs (5 files)
-- scripts (2 files)
+- apps (96 files)
+- docs (6 files)
+- scripts (4 files)
 - .repomap (2 files)
 - package.json (1 files)
 - package-lock.json (1 files)
 - README.md (1 files)
 - .gitignore (1 files)
+- .github (1 files)
 
 ## Language summary
-- .ts (44)
+- .ts (68)
+- .md (10)
 - .json (10)
-- .md (9)
 - .svg (5)
+- .sh (4)
+- .tsx (3)
 - .mjs (3)
 - .gitignore (3)
-- .tsx (2)
-- .sh (2)
+- .yml (1)
+- .toml (1)
+- .sql (1)
 - .prisma (1)
-- .prettierrc (1)
-- .ico (1)
-- .css (1)
 
 ## Entrypoints & key infra
 - apps/api/package.json
@@ -37,29 +38,32 @@
 - package.json
 
 ## Last commit impact
-- apps/api/src/common/roles.decorator.ts
-- apps/api/src/common/roles.guard.ts
-- apps/api/src/modules/auth/auth.controller.ts
-- apps/api/src/modules/auth/auth.service.ts
-- apps/api/src/modules/auth/dto/auth.dto.ts
-- apps/api/src/modules/invoice/invoice.controller.ts
-- apps/api/src/modules/invoice/invoice.module.ts
+- apps/api/src/modules/cashflow/cashflow.module.ts
+- apps/api/src/modules/cashflow/cashflow.service.ts
 - apps/api/src/modules/invoice/invoice.service.spec.ts
 - apps/api/src/modules/invoice/invoice.service.ts
-- apps/api/test/auth-invoice-paid.e2e-spec.ts
-- apps/api/test/auth-magic-link-role.e2e-spec.ts
 - apps/api/test/tenant-isolation.e2e-spec.ts
+- apps/api/test/trpc-cashflow.e2e-spec.ts
+- apps/api/test/trpc-invoice.e2e-spec.ts
 
 ## Symbols (changed files only)
-- apps/api/src/common/roles.decorator.ts:6:export const Roles = (...roles: AuthRole[]) =>
-- apps/api/src/common/roles.guard.ts:13:export class RolesGuard implements CanActivate {
-- apps/api/src/modules/auth/auth.controller.ts:20:export class AuthController {
-- apps/api/src/modules/auth/auth.service.ts:39:export class AuthService {
-- apps/api/src/modules/invoice/invoice.controller.ts:18:export class InvoiceController {
-- apps/api/src/modules/invoice/invoice.module.ts:15:export class InvoiceModule {}
-- apps/api/src/modules/invoice/invoice.service.ts:15:export class InvoiceService {
+- apps/api/src/modules/cashflow/cashflow.module.ts:17:export class CashflowModule {}
+- apps/api/src/modules/cashflow/cashflow.service.ts:31:export class CashflowService {
+- apps/api/src/modules/invoice/invoice.service.ts:32:export class InvoiceService {
+- apps/api/test/tenant-isolation.e2e-spec.ts:20:  const uniqueSuffix = () => randomUUID().slice(0, 8);
+- apps/api/test/tenant-isolation.e2e-spec.ts:103:    const storedOrder = (await orders.list('tenant-a')).find((order) => order.id === orderA.id);
+- apps/api/test/tenant-isolation.e2e-spec.ts:104:    const storedOperation = (await operations.list('tenant-a')).find(
+- apps/api/test/trpc-cashflow.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>
+- apps/api/test/trpc-cashflow.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);
+- apps/api/test/trpc-cashflow.e2e-spec.ts:38:  const createInvoiceOrder = async (
+- apps/api/test/trpc-invoice.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>
+- apps/api/test/trpc-invoice.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);
+- apps/api/test/trpc-invoice.e2e-spec.ts:38:  const createInvoiceOrder = async (
 
 ## Compact tree (depth<=4, token-saver)
+- .github
+- .github/workflows
+- .github/workflows/ci.yml
 - .gitignore
 - .repomap
 - .repomap/REPOMAP.md
@@ -75,6 +79,7 @@
 - apps/api/package.json
 - apps/api/prisma
 - apps/api/prisma.config.ts
+- apps/api/prisma/migrations
 - apps/api/prisma/schema.prisma
 - apps/api/src
 - apps/api/src/app.controller.spec.ts
@@ -84,18 +89,30 @@
 - apps/api/src/common
 - apps/api/src/main.ts
 - apps/api/src/modules
+- apps/api/src/prisma
+- apps/api/src/trpc
 - apps/api/test
 - apps/api/test/app.e2e-spec.ts
 - apps/api/test/auth-invoice-paid.e2e-spec.ts
 - apps/api/test/auth-magic-link-role.e2e-spec.ts
 - apps/api/test/jest-e2e.json
 - apps/api/test/tenant-isolation.e2e-spec.ts
+- apps/api/test/trpc-auth-customer.e2e-spec.ts
+- apps/api/test/trpc-auth-invoice-rest-lockdown.e2e-spec.ts
+- apps/api/test/trpc-auth-magic-link.e2e-spec.ts
+- apps/api/test/trpc-cashflow.e2e-spec.ts
+- apps/api/test/trpc-customer-order-operation-rest-lockdown.e2e-spec.ts
+- apps/api/test/trpc-invoice.e2e-spec.ts
+- apps/api/test/trpc-operation.e2e-spec.ts
+- apps/api/test/trpc-order.e2e-spec.ts
 - apps/api/tsconfig.build.json
 - apps/api/tsconfig.json
 - apps/web
 - apps/web/.gitignore
 - apps/web/README.md
 - apps/web/eslint.config.mjs
+- apps/web/jest.config.ts
+- apps/web/jest.setup.ts
 - apps/web/next.config.ts
 - apps/web/package.json
 - apps/web/postcss.config.mjs
@@ -107,15 +124,19 @@
 - apps/web/public/window.svg
 - apps/web/src
 - apps/web/src/app
+- apps/web/src/lib
 - apps/web/tsconfig.json
 - docs
 - docs/ARCHITECTURE_MVP.md
 - docs/BACKLOG_M1.md
 - docs/DECISIONS_LOG.md
 - docs/EXECUTION_PLAN.md
+- docs/PRODUCTION_CONFIG_RUNBOOK.md
 - docs/PROJECT_BRIEF_FULL.md
 - package-lock.json
 - package.json
 - scripts
 - scripts/ci_local_gate.sh
+- scripts/prod_boot_health_smoke.sh
+- scripts/prod_config_preflight.sh
 - scripts/update_repomap.sh

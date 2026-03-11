@@ -1,8 +1,12 @@
+jest.mock('./app.service', () => ({
+  AppService: class AppService {},
+}));
+
 import { AppController } from './app.controller';
-import {
+import type {
   AppService,
-  type LivenessResponse,
-  type ReadinessResponse,
+  LivenessResponse,
+  ReadinessResponse,
 } from './app.service';
 
 describe('AppController', () => {

@@ -1,37 +1,38 @@
 {
-  "generated": "2026-03-05 20:29:17 CET",
+  "generated": "2026-03-10 19:00:28 CET",
   "branch": "main",
-  "head": "08a8268",
-  "trackedFiles": 82,
-  "changedFiles": 12,
+  "head": "cf15ded",
+  "trackedFiles": 113,
+  "changedFiles": 7,
   "limits": {
     "maxChanged": 80,
     "maxSymbols": 120,
     "maxTreeLines": 200
   },
   "topDirs": [
-    "     69 apps",
-    "      5 docs",
-    "      2 scripts",
+    "     96 apps",
+    "      6 docs",
+    "      4 scripts",
     "      2 .repomap",
     "      1 package.json",
     "      1 package-lock.json",
     "      1 README.md",
-    "      1 .gitignore"
+    "      1 .gitignore",
+    "      1 .github"
   ],
   "languages": [
-    "44 ts",
+    "68 ts",
+    "10 md",
     "10 json",
-    "9 md",
     "5 svg",
+    "4 sh",
+    "3 tsx",
     "3 mjs",
     "3 gitignore",
-    "2 tsx",
-    "2 sh",
-    "1 prisma",
-    "1 prettierrc",
-    "1 ico",
-    "1 css"
+    "1 yml",
+    "1 toml",
+    "1 sql",
+    "1 prisma"
   ],
   "entrypoints": [
     "apps/api/package.json",
@@ -40,26 +41,26 @@
     "package.json"
   ],
   "lastCommitFiles": [
-    "apps/api/src/common/roles.decorator.ts",
-    "apps/api/src/common/roles.guard.ts",
-    "apps/api/src/modules/auth/auth.controller.ts",
-    "apps/api/src/modules/auth/auth.service.ts",
-    "apps/api/src/modules/auth/dto/auth.dto.ts",
-    "apps/api/src/modules/invoice/invoice.controller.ts",
-    "apps/api/src/modules/invoice/invoice.module.ts",
+    "apps/api/src/modules/cashflow/cashflow.module.ts",
+    "apps/api/src/modules/cashflow/cashflow.service.ts",
     "apps/api/src/modules/invoice/invoice.service.spec.ts",
     "apps/api/src/modules/invoice/invoice.service.ts",
-    "apps/api/test/auth-invoice-paid.e2e-spec.ts",
-    "apps/api/test/auth-magic-link-role.e2e-spec.ts",
-    "apps/api/test/tenant-isolation.e2e-spec.ts"
+    "apps/api/test/tenant-isolation.e2e-spec.ts",
+    "apps/api/test/trpc-cashflow.e2e-spec.ts",
+    "apps/api/test/trpc-invoice.e2e-spec.ts"
   ],
   "symbols": [
-    "- apps/api/src/common/roles.decorator.ts:6:export const Roles = (...roles: AuthRole[]) =>",
-    "- apps/api/src/common/roles.guard.ts:13:export class RolesGuard implements CanActivate {",
-    "- apps/api/src/modules/auth/auth.controller.ts:20:export class AuthController {",
-    "- apps/api/src/modules/auth/auth.service.ts:39:export class AuthService {",
-    "- apps/api/src/modules/invoice/invoice.controller.ts:18:export class InvoiceController {",
-    "- apps/api/src/modules/invoice/invoice.module.ts:15:export class InvoiceModule {}",
-    "- apps/api/src/modules/invoice/invoice.service.ts:15:export class InvoiceService {"
+    "- apps/api/src/modules/cashflow/cashflow.module.ts:17:export class CashflowModule {}",
+    "- apps/api/src/modules/cashflow/cashflow.service.ts:31:export class CashflowService {",
+    "- apps/api/src/modules/invoice/invoice.service.ts:32:export class InvoiceService {",
+    "- apps/api/test/tenant-isolation.e2e-spec.ts:20:  const uniqueSuffix = () => randomUUID().slice(0, 8);",
+    "- apps/api/test/tenant-isolation.e2e-spec.ts:103:    const storedOrder = (await orders.list('tenant-a')).find((order) => order.id === orderA.id);",
+    "- apps/api/test/tenant-isolation.e2e-spec.ts:104:    const storedOperation = (await operations.list('tenant-a')).find(",
+    "- apps/api/test/trpc-cashflow.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>",
+    "- apps/api/test/trpc-cashflow.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);",
+    "- apps/api/test/trpc-cashflow.e2e-spec.ts:38:  const createInvoiceOrder = async (",
+    "- apps/api/test/trpc-invoice.e2e-spec.ts:22:  const createClient = (accessToken?: string) =>",
+    "- apps/api/test/trpc-invoice.e2e-spec.ts:36:  const uniqueSuffix = () => randomUUID().slice(0, 8);",
+    "- apps/api/test/trpc-invoice.e2e-spec.ts:38:  const createInvoiceOrder = async ("
   ]
 }
