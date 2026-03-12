@@ -1506,14 +1506,21 @@ describe('homepage operations board', () => {
       version: 1,
       title: 'Pending title',
     });
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Logged in')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+
     deferredUpdate.reject(new Error('slow failure'));
 
     expect(await screen.findByText('Failed to update title.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
     expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeEnabled();
     expect(within(operationCard as HTMLElement).getByDisplayValue('Pending title')).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
@@ -1531,6 +1538,7 @@ describe('homepage operations board', () => {
     });
 
     await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
       expect(within(operationCard as HTMLElement).getByDisplayValue('Retried title')).toBeInTheDocument();
       expect(within(operationCard as HTMLElement).getByText('OP-100 — Retried title')).toBeInTheDocument();
     });

@@ -407,7 +407,7 @@ export default function Home() {
   };
 
   const onLoadOperations = async () => {
-    if (manualOperationLoadPendingRef.current) {
+    if (manualOperationLoadPendingRef.current || mutatingOperationIdRef.current !== null) {
       return;
     }
 
@@ -602,6 +602,8 @@ export default function Home() {
   };
 
   const controlsDisabled = !accessToken;
+  const loadOperationsDisabled =
+    controlsDisabled || operationLoadState === 'loading' || mutatingOperationId !== null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-8">
@@ -645,7 +647,7 @@ export default function Home() {
         <button
           className="rounded border px-3 py-2 disabled:opacity-50"
           type="button"
-          disabled={controlsDisabled || operationLoadState === 'loading'}
+          disabled={loadOperationsDisabled}
           onClick={onLoadOperations}
         >
           {operationLoadState === 'loading' ? 'Loading operations…' : 'Load operations'}
