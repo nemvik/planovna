@@ -68,6 +68,15 @@ const loginAndWaitForAutoLoad = async (
   });
 };
 
+const getOperationCard = (bucketLabel: string, operationText: string) => {
+  const bucket = screen.getByRole('region', { name: bucketLabel });
+  const card = within(bucket).getByText(operationText).closest('li');
+
+  expect(card).not.toBeNull();
+
+  return card as HTMLElement;
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
@@ -1588,7 +1597,8 @@ describe('homepage operations board', () => {
     expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByText('Saving…')).toBeInTheDocument();
     expect(within(secondOperationCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
-    expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
+    expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeEnabled();
+    expect(within(secondOperationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
 
@@ -1620,6 +1630,94 @@ describe('homepage operations board', () => {
       expect(within(operationCard as HTMLElement).getByDisplayValue('Retried title')).toBeInTheDocument();
       expect(within(operationCard as HTMLElement).getByText('OP-100 — Retried title')).toBeInTheDocument();
       expect(within(operationCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
+    });
+  });
+
+  it('locks non-active inline mutation controls during a pending save and re-enables them after success', async () => {
+    const client = createClient();
+    const deferredUpdate = createDeferred<{
+      id: string;
+      tenantId: string;
+      orderId: string;
+      code: string;
+      title: string;
+      status: 'READY';
+      sortIndex: number;
+      version: number;
+      dependencyCount: number;
+    }>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+        dependencyCount: 0,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'OP-200',
+        title: 'Second title',
+        status: 'READY',
+        sortIndex: 1,
+        version: 1,
+        dependencyCount: 0,
+      },
+    ]);
+    client.operation.update.mutate.mockReturnValueOnce(deferredUpdate.promise);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    const firstCard = getOperationCard('Backlog', 'OP-100 — Original title');
+    const secondCard = getOperationCard('Backlog', 'OP-200 — Second title');
+
+    await user.clear(within(firstCard).getByLabelText('Title'));
+    await user.type(within(firstCard).getByLabelText('Title'), 'Updated title');
+    await user.clear(within(secondCard).getByLabelText('Title'));
+    await user.type(within(secondCard).getByLabelText('Title'), 'Second updated title');
+    fireEvent.change(within(secondCard).getByLabelText('Schedule to date'), {
+      target: { value: '2026-03-08' },
+    });
+
+    await user.click(within(firstCard).getByRole('button', { name: 'Save title' }));
+
+    expect(within(firstCard).getByText('Saving…')).toBeInTheDocument();
+    expect(within(firstCard).getByLabelText('Title')).toBeEnabled();
+    expect(within(secondCard).getByLabelText('Title')).toBeDisabled();
+    expect(within(secondCard).getByRole('button', { name: 'Save title' })).toBeDisabled();
+    expect(within(secondCard).getByLabelText('Move to bucket')).toBeDisabled();
+    expect(within(secondCard).getByLabelText('Schedule to date')).toBeDisabled();
+    expect(within(secondCard).getByRole('button', { name: 'Schedule' })).toBeDisabled();
+
+    deferredUpdate.resolve({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Updated title',
+      status: 'READY',
+      sortIndex: 0,
+      version: 2,
+      dependencyCount: 0,
+    });
+
+    await waitFor(() => {
+      expect(within(firstCard).queryByText('Saving…')).not.toBeInTheDocument();
+      expect(within(firstCard).getByText('OP-100 — Updated title')).toBeInTheDocument();
+      expect(within(secondCard).getByLabelText('Title')).toBeEnabled();
+      expect(within(secondCard).getByRole('button', { name: 'Save title' })).toBeEnabled();
+      expect(within(secondCard).getByLabelText('Move to bucket')).toBeEnabled();
+      expect(within(secondCard).getByLabelText('Schedule to date')).toBeEnabled();
+      expect(within(secondCard).getByRole('button', { name: 'Schedule' })).toBeEnabled();
     });
   });
 
@@ -1711,6 +1809,65 @@ describe('homepage operations board', () => {
       expect(screen.queryByDisplayValue('Pending title')).not.toBeInTheDocument();
       expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('clears the non-active card lock when logout resets a pending inline save', async () => {
+    const client = createClient();
+    const deferredUpdate = createDeferred<never>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+        dependencyCount: 0,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'OP-200',
+        title: 'Second title',
+        status: 'READY',
+        sortIndex: 1,
+        version: 1,
+        dependencyCount: 0,
+      },
+    ]);
+    client.operation.update.mutate.mockReturnValue(deferredUpdate.promise);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    const firstCard = getOperationCard('Backlog', 'OP-100 — Original title');
+    const secondCard = getOperationCard('Backlog', 'OP-200 — Second title');
+
+    await user.clear(within(firstCard).getByLabelText('Title'));
+    await user.type(within(firstCard).getByLabelText('Title'), 'Pending title');
+    fireEvent.change(within(secondCard).getByLabelText('Schedule to date'), {
+      target: { value: '2026-03-08' },
+    });
+
+    await user.click(within(firstCard).getByRole('button', { name: 'Save title' }));
+
+    expect(within(firstCard).getByText('Saving…')).toBeInTheDocument();
+    expect(within(secondCard).getByLabelText('Move to bucket')).toBeDisabled();
+    expect(within(secondCard).getByLabelText('Schedule to date')).toBeDisabled();
+    expect(within(secondCard).getByRole('button', { name: 'Schedule' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Saving…')).not.toBeInTheDocument();
     });
   });
 
