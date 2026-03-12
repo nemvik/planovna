@@ -9,11 +9,52 @@ required_vars=(
 missing_vars=()
 invalid_vars=()
 
+optional_vars=(
+  'PORT (default: 3000)'
+  'NODE_ENV (recommended: production)'
+  'API_CORS_ALLOWED_ORIGINS (optional comma-separated http/https origins)'
+)
+
 trimmed_value() {
   local value="${1-}"
   value="${value#"${value%%[![:space:]]*}"}"
   value="${value%"${value##*[![:space:]]}"}"
   printf '%s' "$value"
+}
+
+validate_cors_allowed_origins() {
+  local raw_value="$1"
+  local value
+  local origin
+
+  value="$(trimmed_value "$raw_value")"
+
+  if [[ -z "$value" ]]; then
+    invalid_vars+=(
+      'API_CORS_ALLOWED_ORIGINS (must not be empty when set)'
+    )
+    return
+  fi
+
+  IFS=',' read -r -a cors_origins <<< "$raw_value"
+
+  for origin in "${cors_origins[@]}"; do
+    origin="$(trimmed_value "$origin")"
+
+    if [[ -z "$origin" ]]; then
+      invalid_vars+=(
+        'API_CORS_ALLOWED_ORIGINS (must not contain empty entries)'
+      )
+      return
+    fi
+
+    if [[ ! "$origin" =~ ^https?://[^/,:?#[:space:]]+(:[0-9]{1,5})?$ ]] && [[ ! "$origin" =~ ^https?://\[[0-9A-Fa-f:]+\](:[0-9]{1,5})?$ ]]; then
+      invalid_vars+=(
+        'API_CORS_ALLOWED_ORIGINS (entries must be comma-separated http/https origins without paths, queries, or fragments)'
+      )
+      return
+    fi
+  done
 }
 
 for var_name in "${required_vars[@]}"; do
@@ -34,6 +75,10 @@ for var_name in "${required_vars[@]}"; do
   esac
 done
 
+if [[ ${API_CORS_ALLOWED_ORIGINS+x} ]]; then
+  validate_cors_allowed_origins "$API_CORS_ALLOWED_ORIGINS"
+fi
+
 if (( ${#missing_vars[@]} == 0 )) && (( ${#invalid_vars[@]} == 0 )); then
   echo 'Production config preflight OK'
   echo
@@ -43,8 +88,9 @@ if (( ${#missing_vars[@]} == 0 )) && (( ${#invalid_vars[@]} == 0 )); then
   done
   echo
   echo 'Optional variables:'
-  echo '- PORT (default: 3000)'
-  echo '- NODE_ENV (recommended: production)'
+  for item in "${optional_vars[@]}"; do
+    echo "- $item"
+  done
   exit 0
 fi
 

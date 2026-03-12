@@ -27,6 +27,12 @@ This runbook makes the production runtime contract explicit before boot.
 - Recommended value: `production`.
 - The app already enforces the `AUTH_TOKEN_SECRET` production guardrail when `NODE_ENV=production`.
 
+### `API_CORS_ALLOWED_ORIGINS`
+- Optional.
+- When set, use a comma-separated list of explicit `http://` or `https://` origins.
+- Each entry must be a single origin only; do not include empty entries, paths, query strings, or fragments.
+- Example: `API_CORS_ALLOWED_ORIGINS=https://app.planovna.example,https://admin.planovna.example`
+
 ## Probe contract
 
 ### `GET /health`
@@ -106,7 +112,8 @@ npm run prod:preflight
 The preflight script:
 - fails with a non-zero exit code when required values are missing,
 - prints a clear missing-keys summary,
-- rejects the development fallback auth secret.
+- rejects the development fallback auth secret,
+- treats `API_CORS_ALLOWED_ORIGINS` as optional, but validates it when present.
 
 Direct invocation is also supported:
 
