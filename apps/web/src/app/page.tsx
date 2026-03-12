@@ -644,6 +644,7 @@ export default function Home() {
           <input
             className="rounded border px-2 py-1"
             value={email}
+            disabled={loginPending}
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
@@ -654,6 +655,7 @@ export default function Home() {
             className="rounded border px-2 py-1"
             type="password"
             value={password}
+            disabled={loginPending}
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>

@@ -165,12 +165,16 @@ describe('homepage operations board', () => {
     expect(client.auth.login.mutate).toHaveBeenCalledTimes(1);
     expect(client.operation.list.query).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Logging in...' })).toBeDisabled();
+    expect(screen.getByLabelText('Email')).toBeDisabled();
+    expect(screen.getByLabelText('Password')).toBeDisabled();
     expect(loadOperationsButton).toBeDisabled();
 
     deferredLogin.reject(new Error('invalid'));
 
     expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Login' })).toBeEnabled();
+    expect(screen.getByLabelText('Email')).toBeEnabled();
+    expect(screen.getByLabelText('Password')).toBeEnabled();
     expect(client.operation.list.query).not.toHaveBeenCalled();
 
     await login();
