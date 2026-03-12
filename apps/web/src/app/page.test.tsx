@@ -7,6 +7,8 @@ jest.mock('../lib/trpc/client', () => ({
   createTrpcClient: jest.fn(),
 }));
 
+const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
+
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;
@@ -43,7 +45,7 @@ const createClient = () => ({
 const renderWithClient = (client: ReturnType<typeof createClient>) => {
   const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
   createTrpcClientMock.mockImplementation(() => client as never);
-  render(<Home />);
+  return render(<Home />);
 };
 
 const login = async (email = 'owner@tenant-a.local', password = 'tenant-a-pass') => {
@@ -68,6 +70,7 @@ const loginAndWaitForAutoLoad = async (
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.localStorage.clear();
   window.history.replaceState({}, '', '/');
 });
 
@@ -98,6 +101,16 @@ describe('homepage operations board', () => {
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
   });
 
+  it('persists the homepage access token after a successful login', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-owner');
+  });
+
   it('does not auto-load operations after a failed login', async () => {
     const client = createClient();
     client.auth.login.mutate.mockRejectedValue(new Error('invalid'));
@@ -120,6 +133,30 @@ describe('homepage operations board', () => {
 
     deferred.resolve([]);
     expect(await screen.findByText('No operations found.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('hydrates stored auth and auto-loads operations exactly once after reload', async () => {
+    const client = createClient();
+    const deferred = createDeferred<unknown[]>();
+    client.operation.list.query.mockReturnValue(deferred.promise);
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+
+    renderWithClient(client);
+
+    await waitFor(() => {
+      expect(client.auth.login.mutate).not.toHaveBeenCalled();
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    deferred.resolve([]);
+
+    expect(await screen.findByText('Logged in')).toBeInTheDocument();
+    expect(await screen.findByText('No operations found.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+
     await waitFor(() => {
       expect(client.operation.list.query).toHaveBeenCalledTimes(1);
     });

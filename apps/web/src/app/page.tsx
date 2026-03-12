@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyBoardFilters,
   BACKLOG_BUCKET,
@@ -61,6 +61,8 @@ const DEFAULT_BOARD_FILTERS: BoardFilters = {
   bucket: 'ALL',
   query: '',
 };
+
+const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
 
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
@@ -213,6 +215,7 @@ export default function Home() {
   const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
   const [sortIndexDrafts, setSortIndexDrafts] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
+  const hydrationAutoLoadPendingRef = useRef(false);
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -240,6 +243,35 @@ export default function Home() {
       setFilters((currentFilters) => ({ ...currentFilters, bucket: 'ALL' }));
     }
   }, [availableBucketFilters, filters.bucket, operationLoadState]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const storedAccessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
+
+    if (!storedAccessToken) {
+      return;
+    }
+
+    hydrationAutoLoadPendingRef.current = true;
+    setAccessToken(storedAccessToken);
+    setAuthMessage('Logged in');
+  }, []);
+
+  useEffect(() => {
+    if (!accessToken || !hydrationAutoLoadPendingRef.current) {
+      return;
+    }
+
+    hydrationAutoLoadPendingRef.current = false;
+    resetOperationsState();
+
+    void loadOperations(createTrpcClient(accessToken)).catch(() => {
+      // state is already updated in loadOperations
+    });
+  }, [accessToken]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -297,6 +329,7 @@ export default function Home() {
     try {
       const result = await trpcClient.auth.login.mutate({ email, password });
       const nextAccessToken = result.accessToken;
+      window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, nextAccessToken);
       setAccessToken(nextAccessToken);
       resetOperationsState();
       setAuthMessage('Logged in');
@@ -307,6 +340,7 @@ export default function Home() {
         // state is already updated in loadOperations
       }
     } catch {
+      window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
       setAccessToken(null);
       resetOperationsState();
       setAuthMessage('Invalid credentials');
