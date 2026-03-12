@@ -152,4 +152,55 @@ describe('AppController (e2e)', () => {
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
     expect(response.headers['access-control-allow-credentials']).toBeUndefined();
   });
+
+  it('allows configured CORS origins for tRPC preflight requests', async () => {
+    process.env.API_CORS_ALLOWED_ORIGINS = 'https://allowed.planovna.test';
+
+    await createApp({
+      status: 'ready',
+      service: 'api',
+      dependencies: {
+        database: {
+          status: 'up',
+        },
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .options('/trpc/auth.login')
+      .set('Origin', 'https://allowed.planovna.test')
+      .set('Access-Control-Request-Method', 'POST')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'https://allowed.planovna.test',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  it('does not add CORS headers for disallowed origins on tRPC requests', async () => {
+    process.env.API_CORS_ALLOWED_ORIGINS = 'https://allowed.planovna.test';
+
+    await createApp({
+      status: 'ready',
+      service: 'api',
+      dependencies: {
+        database: {
+          status: 'up',
+        },
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/trpc/auth.login')
+      .set('Origin', 'https://blocked.planovna.test')
+      .send({
+        email: 'owner@tenant-a.local',
+        password: 'tenant-a-pass',
+      })
+      .expect(200);
+
+    expect(response.headers['access-control-allow-origin']).toBeUndefined();
+    expect(response.headers['access-control-allow-credentials']).toBeUndefined();
+  });
 });
