@@ -269,11 +269,11 @@ export default function Home() {
     setOperationLoadState('idle');
   };
 
-  const loadOperations = async () => {
+  const loadOperations = async (client = trpcClient) => {
     setOperationLoadState('loading');
 
     try {
-      const result = await trpcClient.operation.list.query();
+      const result = await client.operation.list.query();
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
       setEndDateDrafts(buildEndDateDrafts(loadedOperations));
@@ -296,9 +296,16 @@ export default function Home() {
 
     try {
       const result = await trpcClient.auth.login.mutate({ email, password });
-      setAccessToken(result.accessToken);
+      const nextAccessToken = result.accessToken;
+      setAccessToken(nextAccessToken);
       resetOperationsState();
       setAuthMessage('Logged in');
+
+      try {
+        await loadOperations(createTrpcClient(nextAccessToken));
+      } catch {
+        // state is already updated in loadOperations
+      }
     } catch {
       setAccessToken(null);
       resetOperationsState();

@@ -32,7 +32,7 @@ const createClient = () => ({
   },
   operation: {
     list: {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue([]),
     },
     update: {
       mutate: jest.fn(),
@@ -53,6 +53,17 @@ const login = async (email = 'owner@tenant-a.local', password = 'tenant-a-pass')
   await user.clear(screen.getByLabelText('Password'));
   await user.type(screen.getByLabelText('Password'), password);
   await user.click(screen.getByRole('button', { name: 'Login' }));
+};
+
+const loginAndWaitForAutoLoad = async (
+  client: ReturnType<typeof createClient>,
+  email = 'owner@tenant-a.local',
+  password = 'tenant-a-pass',
+) => {
+  await login(email, password);
+  await waitFor(() => {
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
 };
 
 beforeEach(() => {
@@ -76,6 +87,44 @@ describe('homepage operations board', () => {
     expect(await screen.findByText('Logged in')).toBeInTheDocument();
   });
 
+  it('auto-loads operations once after a successful login', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(await screen.findByText('No operations found.')).toBeInTheDocument();
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not auto-load operations after a failed login', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockRejectedValue(new Error('invalid'));
+
+    renderWithClient(client);
+    await login('owner@tenant-a.local', 'bad-pass');
+
+    expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
+    expect(client.operation.list.query).not.toHaveBeenCalled();
+  });
+
+  it('does not duplicate the initial auto-load after a successful login', async () => {
+    const client = createClient();
+    const deferred = createDeferred<unknown[]>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockReturnValue(deferred.promise);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    deferred.resolve([]);
+    expect(await screen.findByText('No operations found.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('shows operation loading state', async () => {
     const client = createClient();
     const deferred = createDeferred<unknown[]>();
@@ -83,10 +132,9 @@ describe('homepage operations board', () => {
     client.operation.list.query.mockReturnValue(deferred.promise);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     expect(screen.getAllByText('Loading operations…').length).toBeGreaterThan(0);
 
@@ -102,10 +150,9 @@ describe('homepage operations board', () => {
     client.operation.list.query.mockResolvedValue([]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     expect(await screen.findByText('No operations found.')).toBeInTheDocument();
   });
@@ -169,10 +216,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const firstDateBucket = screen.getByRole('region', { name: '2026-03-06' });
@@ -212,10 +258,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     expect(
@@ -262,10 +307,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -327,10 +371,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
 
@@ -408,10 +451,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
 
@@ -454,10 +496,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
     await user.type(screen.getByLabelText('Code or title'), 'missing');
 
     expect(await screen.findByText('Showing 0 of 2 operations.')).toBeInTheDocument();
@@ -516,10 +557,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
     await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
     await user.type(screen.getByLabelText('Code or title'), 'frame');
@@ -592,10 +632,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
     await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
     await user.type(screen.getByLabelText('Code or title'), 'cut');
@@ -669,10 +708,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
     await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
     await user.type(screen.getByLabelText('Code or title'), 'cut');
@@ -725,10 +763,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -786,10 +823,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -846,10 +882,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -904,10 +939,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -961,10 +995,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1017,10 +1050,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1083,10 +1115,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1156,10 +1187,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1216,10 +1246,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const dateBucket = await screen.findByRole('region', { name: '2026-03-06' });
     const operationCard = within(dateBucket)
@@ -1310,10 +1339,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1377,10 +1405,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1450,10 +1477,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1525,10 +1551,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1599,10 +1624,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1674,10 +1698,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1750,10 +1773,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1824,10 +1846,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1917,10 +1938,9 @@ describe('homepage operations board', () => {
     });
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1988,10 +2008,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     const statusSelect = (await screen.findAllByLabelText('Status'))[0];
     const bucketSelect = screen.getByLabelText('Date bucket');
@@ -2057,10 +2076,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     expect((await screen.findAllByLabelText('Status'))[0]).toHaveValue('BLOCKED');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('Backlog');
@@ -2111,10 +2129,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     await waitFor(() => {
       expect(screen.getAllByLabelText('Status')[0]).toHaveValue('DONE');
@@ -2155,10 +2172,9 @@ describe('homepage operations board', () => {
     ]);
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     await user.selectOptions((await screen.findAllByLabelText('Status'))[0], 'BLOCKED');
 
@@ -2187,10 +2203,9 @@ describe('homepage operations board', () => {
     client.operation.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
 
     renderWithClient(client);
-    await login('planner@tenant-a.local', 'tenant-a-pass');
+    await loginAndWaitForAutoLoad(client, 'planner@tenant-a.local', 'tenant-a-pass');
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     expect(
       await screen.findByText('Forbidden: your role is not allowed to view operations.'),
@@ -2203,10 +2218,9 @@ describe('homepage operations board', () => {
     client.operation.list.query.mockRejectedValue(new Error('boom'));
 
     renderWithClient(client);
-    await login();
+    await loginAndWaitForAutoLoad(client);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Load operations' }));
 
     expect(await screen.findByText('Failed to load operations.')).toBeInTheDocument();
   });
