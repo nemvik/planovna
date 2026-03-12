@@ -311,6 +311,120 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('sends only one manual operations reload while a prior manual reload is still pending', async () => {
+    const client = createClient();
+    const deferredReload = createDeferred<unknown[]>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Existing board item',
+          status: 'READY',
+          sortIndex: 0,
+          dependencyCount: 0,
+          version: 1,
+        },
+      ])
+      .mockReturnValueOnce(deferredReload.promise);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(await screen.findByText('OP-100 — Existing board item')).toBeInTheDocument();
+
+    const loadOperationsButton = screen.getByRole('button', { name: 'Load operations' });
+
+    fireEvent.click(loadOperationsButton);
+    fireEvent.click(loadOperationsButton);
+
+    expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Loading operations…' })).toBeDisabled();
+    expect(screen.getByText('Logged in')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+
+    deferredReload.resolve([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Reloaded board item',
+        status: 'READY',
+        sortIndex: 0,
+        dependencyCount: 0,
+        version: 2,
+      },
+    ]);
+
+    expect(await screen.findByText('OP-100 — Reloaded board item')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+    });
+  });
+
+  it('allows retrying a manual operations reload after a failed manual reload', async () => {
+    const client = createClient();
+    const deferredReload = createDeferred<unknown[]>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Existing board item',
+          status: 'READY',
+          sortIndex: 0,
+          dependencyCount: 0,
+          version: 1,
+        },
+      ])
+      .mockReturnValueOnce(deferredReload.promise)
+      .mockResolvedValueOnce([
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-2',
+          code: 'OP-200',
+          title: 'Retry board item',
+          status: 'READY',
+          sortIndex: 0,
+          dependencyCount: 0,
+          version: 1,
+        },
+      ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(await screen.findByText('OP-100 — Existing board item')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    expect(screen.getByRole('button', { name: 'Loading operations…' })).toBeDisabled();
+
+    deferredReload.reject(new Error('manual reload failed'));
+
+    expect(await screen.findByText('Failed to load operations.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+    expect(screen.getByText('Logged in')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    expect(await screen.findByText('OP-200 — Retry board item')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(3);
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+    });
+  });
+
   it('shows operation empty state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

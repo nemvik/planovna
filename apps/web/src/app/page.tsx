@@ -219,6 +219,7 @@ export default function Home() {
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
   const hydrationAutoLoadPendingRef = useRef(false);
   const loginPendingRef = useRef(false);
+  const manualOperationLoadPendingRef = useRef(false);
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -380,10 +381,18 @@ export default function Home() {
   };
 
   const onLoadOperations = async () => {
+    if (manualOperationLoadPendingRef.current) {
+      return;
+    }
+
+    manualOperationLoadPendingRef.current = true;
+
     try {
       await loadOperations();
     } catch {
       // state is already updated in loadOperations
+    } finally {
+      manualOperationLoadPendingRef.current = false;
     }
   };
 
