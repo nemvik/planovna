@@ -109,3 +109,58 @@ test('logs in from the homepage and renders the first board bucket', async ({ pa
   expect(boardLoadRequestCount).toBe(2);
   expect(operationUpdateRequestCount).toBe(1);
 });
+
+test('logs in from the homepage and shows the empty board state when no operations exist', async ({ page }) => {
+  let loginRequestCount = 0;
+  let boardLoadRequestCount = 0;
+
+  await page.route('**/trpc/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+
+    if (url.pathname.includes('auth.login')) {
+      loginRequestCount += 1;
+
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify([{ result: { data: { accessToken: 'token-owner' } } }]),
+      });
+      return;
+    }
+
+    if (url.pathname.includes('operation.list')) {
+      boardLoadRequestCount += 1;
+      await expect(request.headerValue('authorization')).resolves.toBe('Bearer token-owner');
+
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            result: {
+              data: [],
+            },
+          },
+        ]),
+      });
+      return;
+    }
+
+    await route.abort();
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Planovna operations board' })).toBeVisible();
+  await page.getByLabel('Email').fill('owner@tenant-a.local');
+  await page.getByLabel('Password').fill('tenant-a-pass');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+  await expect(page.getByText('Logged in')).toBeVisible();
+  await expect(page.getByText('No operations found.')).toBeVisible();
+  await expect(page.evaluate(() => window.localStorage.getItem('planovna.homepage.accessToken'))).resolves.toBe(
+    'token-owner',
+  );
+
+  expect(loginRequestCount).toBe(1);
+  expect(boardLoadRequestCount).toBe(1);
+});
