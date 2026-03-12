@@ -164,3 +164,65 @@ test('logs in from the homepage and shows the empty board state when no operatio
   expect(loginRequestCount).toBe(1);
   expect(boardLoadRequestCount).toBe(1);
 });
+
+test('logs in from the homepage and shows the board error state when operations fail to load', async ({ page }) => {
+  let loginRequestCount = 0;
+  let boardLoadRequestCount = 0;
+
+  await page.route('**/trpc/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+
+    if (url.pathname.includes('auth.login')) {
+      loginRequestCount += 1;
+
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify([{ result: { data: { accessToken: 'token-owner' } } }]),
+      });
+      return;
+    }
+
+    if (url.pathname.includes('operation.list')) {
+      boardLoadRequestCount += 1;
+      await expect(request.headerValue('authorization')).resolves.toBe('Bearer token-owner');
+
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            error: {
+              message: 'boom',
+              code: -32603,
+              data: {
+                code: 'INTERNAL_SERVER_ERROR',
+                httpStatus: 500,
+                path: 'operation.list',
+              },
+            },
+          },
+        ]),
+      });
+      return;
+    }
+
+    await route.abort();
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Planovna operations board' })).toBeVisible();
+  await page.getByLabel('Email').fill('owner@tenant-a.local');
+  await page.getByLabel('Password').fill('tenant-a-pass');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+  await expect(page.getByText('Logged in')).toBeVisible();
+  await expect(page.getByText('Failed to load operations.')).toBeVisible();
+  await expect(page.evaluate(() => window.localStorage.getItem('planovna.homepage.accessToken'))).resolves.toBe(
+    'token-owner',
+  );
+
+  expect(loginRequestCount).toBe(1);
+  expect(boardLoadRequestCount).toBe(1);
+});
