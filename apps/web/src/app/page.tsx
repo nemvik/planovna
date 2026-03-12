@@ -301,6 +301,17 @@ export default function Home() {
     setOperationLoadState('idle');
   };
 
+  const resetSession = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
+    }
+
+    hydrationAutoLoadPendingRef.current = false;
+    setAccessToken(null);
+    resetOperationsState();
+    setAuthMessage('Logged out');
+  };
+
   const loadOperations = async (client = trpcClient) => {
     setOperationLoadState('loading');
 
@@ -340,9 +351,7 @@ export default function Home() {
         // state is already updated in loadOperations
       }
     } catch {
-      window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
-      setAccessToken(null);
-      resetOperationsState();
+      resetSession();
       setAuthMessage('Invalid credentials');
     }
   };
@@ -573,6 +582,15 @@ export default function Home() {
         >
           {operationLoadState === 'loading' ? 'Loading operations…' : 'Load operations'}
         </button>
+        {accessToken ? (
+          <button
+            className="rounded border border-slate-400 px-3 py-2 text-slate-900"
+            type="button"
+            onClick={resetSession}
+          >
+            Logout and reset session
+          </button>
+        ) : null}
       </div>
 
       {authMessage ? <p>{authMessage}</p> : null}

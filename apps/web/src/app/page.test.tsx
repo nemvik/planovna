@@ -162,6 +162,85 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('clears the persisted homepage token and resets loaded board state on logout', async () => {
+    const client = createClient();
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Loaded backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        dependencyCount: 0,
+        version: 1,
+      },
+    ]);
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+
+    renderWithClient(client);
+
+    expect(await screen.findByText('OP-100 — Loaded backlog item')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByText('OP-100 — Loaded backlog item')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps load operations disabled after logout until a fresh login succeeds', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-fresh' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Loaded backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          dependencyCount: 0,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+
+    renderWithClient(client);
+
+    expect(await screen.findByText('OP-100 — Loaded backlog item')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+    });
+
+    await login('owner@tenant-a.local', 'tenant-a-pass');
+
+    await waitFor(() => {
+      expect(client.auth.login.mutate).toHaveBeenCalledTimes(1);
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+    });
+
+    expect(await screen.findByText('No operations found.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-fresh');
+  });
+
   it('shows operation loading state', async () => {
     const client = createClient();
     const deferred = createDeferred<unknown[]>();
@@ -170,8 +249,6 @@ describe('homepage operations board', () => {
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
-
-    const user = userEvent.setup();
 
     expect(screen.getAllByText('Loading operations…').length).toBeGreaterThan(0);
 
@@ -188,8 +265,6 @@ describe('homepage operations board', () => {
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
-
-    const user = userEvent.setup();
 
     expect(await screen.findByText('No operations found.')).toBeInTheDocument();
   });
@@ -255,8 +330,6 @@ describe('homepage operations board', () => {
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
 
-    const user = userEvent.setup();
-
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const firstDateBucket = screen.getByRole('region', { name: '2026-03-06' });
     const secondDateBucket = screen.getByRole('region', { name: '2026-03-07' });
@@ -296,8 +369,6 @@ describe('homepage operations board', () => {
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
-
-    const user = userEvent.setup();
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     expect(
@@ -1285,8 +1356,6 @@ describe('homepage operations board', () => {
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
 
-    const user = userEvent.setup();
-
     const dateBucket = await screen.findByRole('region', { name: '2026-03-06' });
     const operationCard = within(dateBucket)
       .getByText('OP-100 — Loaded dated item')
@@ -2115,8 +2184,6 @@ describe('homepage operations board', () => {
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
 
-    const user = userEvent.setup();
-
     expect((await screen.findAllByLabelText('Status'))[0]).toHaveValue('BLOCKED');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('Backlog');
     expect(screen.getByLabelText('Code or title')).toHaveValue('press');
@@ -2167,8 +2234,6 @@ describe('homepage operations board', () => {
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
-
-    const user = userEvent.setup();
 
     await waitFor(() => {
       expect(screen.getAllByLabelText('Status')[0]).toHaveValue('DONE');
@@ -2242,8 +2307,6 @@ describe('homepage operations board', () => {
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client, 'planner@tenant-a.local', 'tenant-a-pass');
 
-    const user = userEvent.setup();
-
     expect(
       await screen.findByText('Forbidden: your role is not allowed to view operations.'),
     ).toBeInTheDocument();
@@ -2256,8 +2319,6 @@ describe('homepage operations board', () => {
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
-
-    const user = userEvent.setup();
 
     expect(await screen.findByText('Failed to load operations.')).toBeInTheDocument();
   });
