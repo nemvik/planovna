@@ -170,12 +170,16 @@ describe('AppController (e2e)', () => {
       .options('/trpc/auth.login')
       .set('Origin', 'https://allowed.planovna.test')
       .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'authorization,content-type')
       .expect(204);
 
     expect(response.headers['access-control-allow-origin']).toBe(
       'https://allowed.planovna.test',
     );
     expect(response.headers['access-control-allow-credentials']).toBe('true');
+    expect(response.headers['access-control-allow-headers']).toBe(
+      'authorization,content-type',
+    );
   });
 
   it('does not add CORS headers for disallowed origins on tRPC requests', async () => {
