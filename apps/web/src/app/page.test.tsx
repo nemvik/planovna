@@ -272,6 +272,144 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('ignores an in-flight manual load response after logout resets the session', async () => {
+    const client = createClient();
+    const deferredReload = createDeferred<unknown[]>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Existing board item',
+          status: 'READY',
+          sortIndex: 0,
+          dependencyCount: 0,
+          version: 1,
+        },
+      ])
+      .mockReturnValueOnce(deferredReload.promise);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(await screen.findByText('OP-100 — Existing board item')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    expect(screen.getByRole('button', { name: 'Loading operations…' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    deferredReload.resolve([
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'OP-200',
+        title: 'Stale reloaded item',
+        status: 'READY',
+        sortIndex: 0,
+        dependencyCount: 0,
+        version: 1,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByText('OP-100 — Existing board item')).not.toBeInTheDocument();
+      expect(screen.queryByText('OP-200 — Stale reloaded item')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('ignores a hydrated auto-load response after logout resets the session mid-load', async () => {
+    const client = createClient();
+    const deferredLoad = createDeferred<unknown[]>();
+    client.operation.list.query.mockReturnValue(deferredLoad.promise);
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+
+    renderWithClient(client);
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    deferredLoad.resolve([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Hydrated stale item',
+        status: 'READY',
+        sortIndex: 0,
+        dependencyCount: 0,
+        version: 1,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByText('Hydrated stale item')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('ignores a post-login auto-load response after logout resets the session mid-load', async () => {
+    const client = createClient();
+    const deferredLoad = createDeferred<unknown[]>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockReturnValue(deferredLoad.promise);
+
+    renderWithClient(client);
+    await login('owner@tenant-a.local', 'tenant-a-pass');
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    deferredLoad.resolve([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Post-login stale item',
+        status: 'READY',
+        sortIndex: 0,
+        dependencyCount: 0,
+        version: 1,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByText('Post-login stale item')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+    });
+  });
+
   it('keeps load operations disabled after logout until a fresh login succeeds', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-fresh' });

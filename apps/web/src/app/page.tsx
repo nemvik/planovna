@@ -227,6 +227,7 @@ export default function Home() {
   const loginPendingRef = useRef(false);
   const manualOperationLoadPendingRef = useRef(false);
   const mutatingOperationIdRef = useRef<string | null>(null);
+  const operationLoadSessionRef = useRef(0);
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -313,11 +314,16 @@ export default function Home() {
     setOperationLoadState('idle');
   };
 
+  const invalidateOperationLoads = () => {
+    operationLoadSessionRef.current += 1;
+  };
+
   const resetSession = (message = 'Logged out') => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
     }
 
+    invalidateOperationLoads();
     hydrationAutoLoadPendingRef.current = false;
     setAccessToken(null);
     resetOperationsState();
@@ -325,10 +331,15 @@ export default function Home() {
   };
 
   const loadOperations = async (client = trpcClient) => {
+    const loadSession = operationLoadSessionRef.current;
     setOperationLoadState('loading');
 
     try {
       const result = await client.operation.list.query();
+      if (loadSession !== operationLoadSessionRef.current) {
+        return [];
+      }
+
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
       setScheduleDates(buildScheduleDateDrafts(loadedOperations));
@@ -340,6 +351,10 @@ export default function Home() {
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
       return loadedOperations;
     } catch (error) {
+      if (loadSession !== operationLoadSessionRef.current) {
+        return [];
+      }
+
       if (hasForbiddenCode(error)) {
         resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
       } else {
