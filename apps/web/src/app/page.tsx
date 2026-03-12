@@ -63,6 +63,7 @@ const DEFAULT_BOARD_FILTERS: BoardFilters = {
 };
 
 const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
+const SESSION_EXPIRED_AUTH_MESSAGE = 'Session expired. Please log in again.';
 
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
@@ -268,7 +269,7 @@ export default function Home() {
     hydrationAutoLoadPendingRef.current = false;
     resetOperationsState();
 
-    void loadOperations(createTrpcClient(accessToken)).catch(() => {
+    void loadOperations(createTrpcClient(accessToken), true).catch(() => {
       // state is already updated in loadOperations
     });
   }, [accessToken]);
@@ -301,7 +302,7 @@ export default function Home() {
     setOperationLoadState('idle');
   };
 
-  const resetSession = () => {
+  const resetSession = (message = 'Logged out') => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
     }
@@ -309,10 +310,10 @@ export default function Home() {
     hydrationAutoLoadPendingRef.current = false;
     setAccessToken(null);
     resetOperationsState();
-    setAuthMessage('Logged out');
+    setAuthMessage(message);
   };
 
-  const loadOperations = async (client = trpcClient) => {
+  const loadOperations = async (client = trpcClient, expireSessionOnForbidden = false) => {
     setOperationLoadState('loading');
 
     try {
@@ -327,8 +328,18 @@ export default function Home() {
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
       return loadedOperations;
     } catch (error) {
-      setOperations([]);
-      setOperationLoadState(hasForbiddenCode(error) ? 'forbidden' : 'error');
+      if (hasForbiddenCode(error)) {
+        if (expireSessionOnForbidden) {
+          resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
+        } else {
+          setOperations([]);
+          setOperationLoadState('forbidden');
+        }
+      } else {
+        setOperations([]);
+        setOperationLoadState('error');
+      }
+
       throw error;
     }
   };
@@ -586,7 +597,7 @@ export default function Home() {
           <button
             className="rounded border border-slate-400 px-3 py-2 text-slate-900"
             type="button"
-            onClick={resetSession}
+            onClick={() => resetSession()}
           >
             Logout and reset session
           </button>

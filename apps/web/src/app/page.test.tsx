@@ -162,6 +162,25 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('expires a hydrated session when the first auto-load returns forbidden', async () => {
+    const client = createClient();
+    client.operation.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+
+    renderWithClient(client);
+
+    expect(await screen.findByText('Session expired. Please log in again.')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.auth.login.mutate).not.toHaveBeenCalled();
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Forbidden: your role is not allowed to view operations.')).not.toBeInTheDocument();
+    });
+  });
+
   it('clears the persisted homepage token and resets loaded board state on logout', async () => {
     const client = createClient();
     client.operation.list.query.mockResolvedValue([
