@@ -28,6 +28,7 @@ type Operation = {
   blockedReason?: string;
   version: number;
   dependencyCount: number;
+  prerequisiteCodes?: string[];
 };
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'empty' | 'forbidden' | 'error';
@@ -175,6 +176,14 @@ const buildSortIndexDrafts = (operations: Operation[]) =>
     drafts[operation.id] = String(operation.sortIndex);
     return drafts;
   }, {});
+
+const formatPrerequisiteSummary = (operation: Operation) => {
+  if (!operation.prerequisiteCodes || operation.prerequisiteCodes.length === 0) {
+    return null;
+  }
+
+  return `Waiting on ${operation.prerequisiteCodes.join(', ')}`;
+};
 
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
@@ -598,14 +607,20 @@ export default function Home() {
                       sortIndexValue.trim() !== '' &&
                       Number.isInteger(parsedSortIndex) &&
                       parsedSortIndex !== operation.sortIndex;
+                    const prerequisiteSummary = formatPrerequisiteSummary(operation);
 
                     return (
                       <li key={operation.id} className="rounded border bg-white p-3">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="font-medium">
-                            {operation.code} — {operation.title}
+                          <div>
+                            <div className="font-medium">
+                              {operation.code} — {operation.title}
+                            </div>
+                            {prerequisiteSummary ? (
+                              <p className="mt-1 text-sm text-amber-700">{prerequisiteSummary}</p>
+                            ) : null}
                           </div>
-                          {operation.dependencyCount > 0 ? (
+                          {operation.dependencyCount > 0 && !prerequisiteSummary ? (
                             <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
                               Blocked by {operation.dependencyCount}
                             </span>

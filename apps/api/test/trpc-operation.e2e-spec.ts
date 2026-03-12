@@ -427,24 +427,55 @@ describe('tRPC operation contracts (e2e)', () => {
     expect(tenantBList.some((operation) => operation.id === createdByTenantB.id)).toBe(true);
   });
 
-  it('exposes same-tenant dependency counts on operation.list payloads', async () => {
+  it('exposes capped same-tenant prerequisite codes on operation.list payloads', async () => {
     const tenantALogin = authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
+    const tenantBLogin = authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
 
     expect(tenantALogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
 
     const tenantAClient = createClient(tenantALogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
     const order = await createOperationOrder(tenantAClient, 'tenant-a');
+    const tenantBOrder = await createOperationOrder(tenantBClient, 'tenant-b');
 
-    const prerequisite = await tenantAClient.operation.create.mutate({
+    const prerequisiteOne = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-a',
       orderId: order.id,
-      code: `OP-A-PREREQ-${uniqueSuffix()}`,
-      title: 'Prerequisite operation',
+      code: 'OP-120',
+      title: 'Prerequisite operation 1',
       status: 'DONE',
       sortIndex: 1,
+    });
+    const prerequisiteTwo = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: 'OP-130',
+      title: 'Prerequisite operation 2',
+      status: 'DONE',
+      sortIndex: 2,
+    });
+    const prerequisiteThree = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: 'OP-140',
+      title: 'Prerequisite operation 3',
+      status: 'DONE',
+      sortIndex: 3,
+    });
+    const prerequisiteFour = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: 'OP-150',
+      title: 'Prerequisite operation 4',
+      status: 'DONE',
+      sortIndex: 4,
     });
     const blocked = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-a',
@@ -452,7 +483,7 @@ describe('tRPC operation contracts (e2e)', () => {
       code: `OP-A-BLOCKED-${uniqueSuffix()}`,
       title: 'Blocked operation',
       status: 'READY',
-      sortIndex: 2,
+      sortIndex: 5,
     });
     const unblocked = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-a',
@@ -460,7 +491,15 @@ describe('tRPC operation contracts (e2e)', () => {
       code: `OP-A-FREE-${uniqueSuffix()}`,
       title: 'Unblocked operation',
       status: 'READY',
-      sortIndex: 3,
+      sortIndex: 6,
+    });
+    const crossTenantPrerequisite = await tenantBClient.operation.create.mutate({
+      tenantId: 'tenant-b',
+      orderId: tenantBOrder.id,
+      code: 'OP-999',
+      title: 'Cross-tenant prerequisite',
+      status: 'DONE',
+      sortIndex: 1,
     });
 
     await prismaService.operationDependency.createMany({
@@ -468,12 +507,27 @@ describe('tRPC operation contracts (e2e)', () => {
         {
           tenantId: 'tenant-a',
           operationId: blocked.id,
-          dependsOnId: prerequisite.id,
+          dependsOnId: prerequisiteOne.id,
+        },
+        {
+          tenantId: 'tenant-a',
+          operationId: blocked.id,
+          dependsOnId: prerequisiteTwo.id,
+        },
+        {
+          tenantId: 'tenant-a',
+          operationId: blocked.id,
+          dependsOnId: prerequisiteThree.id,
+        },
+        {
+          tenantId: 'tenant-a',
+          operationId: blocked.id,
+          dependsOnId: prerequisiteFour.id,
         },
         {
           tenantId: 'tenant-b',
           operationId: blocked.id,
-          dependsOnId: prerequisite.id,
+          dependsOnId: crossTenantPrerequisite.id,
         },
       ],
     });
@@ -482,11 +536,13 @@ describe('tRPC operation contracts (e2e)', () => {
 
     expect(tenantAList.find((operation) => operation.id === blocked.id)).toMatchObject({
       id: blocked.id,
-      dependencyCount: 1,
+      dependencyCount: 4,
+      prerequisiteCodes: ['OP-120', 'OP-130', 'OP-140'],
     });
     expect(tenantAList.find((operation) => operation.id === unblocked.id)).toMatchObject({
       id: unblocked.id,
       dependencyCount: 0,
+      prerequisiteCodes: [],
     });
   });
 });

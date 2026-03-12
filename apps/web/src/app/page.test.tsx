@@ -136,6 +136,7 @@ describe('homepage operations board', () => {
         sortIndex: 2,
         blockedReason: 'Waiting for material',
         dependencyCount: 2,
+        prerequisiteCodes: ['OP-120', 'OP-130'],
         version: 1,
       },
       {
@@ -148,6 +149,7 @@ describe('homepage operations board', () => {
         startDate: '2026-03-06T12:00:00.000Z',
         sortIndex: 1,
         dependencyCount: 1,
+        prerequisiteCodes: ['OP-125'],
         version: 1,
       },
       {
@@ -176,16 +178,16 @@ describe('homepage operations board', () => {
 
     expect(within(backlogBucket).getByText('OP-200 — Backlog item')).toBeInTheDocument();
     expect(within(backlogBucket).getByText('Blocked: Waiting for material')).toBeInTheDocument();
-    expect(within(backlogBucket).getByText('Blocked by 2')).toBeInTheDocument();
+    expect(within(backlogBucket).getByText('Waiting on OP-120, OP-130')).toBeInTheDocument();
 
     const firstDateItems = within(firstDateBucket).getAllByRole('listitem');
     expect(firstDateItems[0]).toHaveTextContent('OP-100 — Same bucket lower sort index');
     expect(firstDateItems[1]).toHaveTextContent('OP-150 — First dated item');
-    expect(within(firstDateItems[1]).getByText('Blocked by 1')).toBeInTheDocument();
-    expect(within(firstDateItems[0]).queryByText(/Blocked by /)).not.toBeInTheDocument();
+    expect(within(firstDateItems[1]).getByText('Waiting on OP-125')).toBeInTheDocument();
+    expect(within(firstDateItems[0]).queryByText(/Waiting on /)).not.toBeInTheDocument();
 
     expect(within(secondDateBucket).getByText('OP-300 — Later bucket item')).toBeInTheDocument();
-    expect(within(secondDateBucket).queryByText(/Blocked by /)).not.toBeInTheDocument();
+    expect(within(secondDateBucket).queryByText(/Waiting on /)).not.toBeInTheDocument();
   });
 
   it('moves an operation into another loaded bucket using operation.update', async () => {
@@ -401,6 +403,7 @@ describe('homepage operations board', () => {
         status: 'READY',
         sortIndex: 0,
         dependencyCount: 3,
+        prerequisiteCodes: ['OP-120', 'OP-130', 'OP-140'],
         version: 1,
       },
     ]);
@@ -413,6 +416,7 @@ describe('homepage operations board', () => {
       status: 'READY',
       sortIndex: 0,
       dependencyCount: 3,
+      prerequisiteCodes: ['OP-120', 'OP-130', 'OP-140'],
       version: 2,
     });
 
@@ -444,7 +448,9 @@ describe('homepage operations board', () => {
     await waitFor(() => {
       expect(within(operationCard as HTMLElement).getByDisplayValue('Updated title')).toBeInTheDocument();
       expect(within(operationCard as HTMLElement).getByText('OP-100 — Updated title')).toBeInTheDocument();
-      expect(within(operationCard as HTMLElement).getByText('Blocked by 3')).toBeInTheDocument();
+      expect(
+        within(operationCard as HTMLElement).getByText('Waiting on OP-120, OP-130, OP-140'),
+      ).toBeInTheDocument();
     });
   });
 

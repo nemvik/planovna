@@ -7,7 +7,10 @@ type OperationRecord = CreateOperationDto & {
   id: string;
   version: number;
   dependencyCount: number;
+  prerequisiteCodes: string[];
 };
+
+const BOARD_PREREQUISITE_CODE_LIMIT = 3;
 
 type PrismaOperationRow = {
   id: string;
@@ -24,6 +27,11 @@ type PrismaOperationRow = {
   _count: {
     dependsOn: number;
   };
+  dependsOn: Array<{
+    dependsOn: {
+      code: string;
+    };
+  }>;
 };
 
 @Injectable()
@@ -60,6 +68,30 @@ export class OperationService {
             dependsOn: {
               where: {
                 tenantId: input.tenantId,
+                dependsOn: {
+                  tenantId: input.tenantId,
+                },
+              },
+            },
+          },
+        },
+        dependsOn: {
+          where: {
+            tenantId: input.tenantId,
+            dependsOn: {
+              tenantId: input.tenantId,
+            },
+          },
+          orderBy: {
+            dependsOn: {
+              code: 'asc',
+            },
+          },
+          take: BOARD_PREREQUISITE_CODE_LIMIT,
+          select: {
+            dependsOn: {
+              select: {
+                code: true,
               },
             },
           },
@@ -91,6 +123,30 @@ export class OperationService {
             dependsOn: {
               where: {
                 tenantId,
+                dependsOn: {
+                  tenantId,
+                },
+              },
+            },
+          },
+        },
+        dependsOn: {
+          where: {
+            tenantId,
+            dependsOn: {
+              tenantId,
+            },
+          },
+          orderBy: {
+            dependsOn: {
+              code: 'asc',
+            },
+          },
+          take: BOARD_PREREQUISITE_CODE_LIMIT,
+          select: {
+            dependsOn: {
+              select: {
+                code: true,
               },
             },
           },
@@ -177,6 +233,30 @@ export class OperationService {
             dependsOn: {
               where: {
                 tenantId: existing.tenantId,
+                dependsOn: {
+                  tenantId: existing.tenantId,
+                },
+              },
+            },
+          },
+        },
+        dependsOn: {
+          where: {
+            tenantId: existing.tenantId,
+            dependsOn: {
+              tenantId: existing.tenantId,
+            },
+          },
+          orderBy: {
+            dependsOn: {
+              code: 'asc',
+            },
+          },
+          take: BOARD_PREREQUISITE_CODE_LIMIT,
+          select: {
+            dependsOn: {
+              select: {
+                code: true,
               },
             },
           },
@@ -205,6 +285,7 @@ export class OperationService {
       blockedReason: row.blockedReason ?? undefined,
       version: row.version,
       dependencyCount: row._count.dependsOn,
+      prerequisiteCodes: row.dependsOn.map((dependency) => dependency.dependsOn.code),
     };
   }
 }
