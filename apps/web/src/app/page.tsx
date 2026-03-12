@@ -189,6 +189,12 @@ const buildSortIndexDrafts = (operations: Operation[]) =>
     return drafts;
   }, {});
 
+const buildScheduleDateDrafts = (operations: Operation[]) =>
+  operations.reduce<Record<string, string>>((drafts, operation) => {
+    drafts[operation.id] = operation.startDate?.slice(0, 10) ?? '';
+    return drafts;
+  }, {});
+
 const formatPrerequisiteSummary = (operation: Operation) => {
   if (!operation.prerequisiteCodes || operation.prerequisiteCodes.length === 0) {
     return null;
@@ -325,6 +331,7 @@ export default function Home() {
       const result = await client.operation.list.query();
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
+      setScheduleDates(buildScheduleDateDrafts(loadedOperations));
       setEndDateDrafts(buildEndDateDrafts(loadedOperations));
       setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
       setTitleDrafts(buildTitleDrafts(loadedOperations));

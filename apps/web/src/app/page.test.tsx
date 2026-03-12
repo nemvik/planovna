@@ -425,6 +425,97 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('rehydrates schedule inputs from freshly reloaded board data after a manual reload', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          version: 1,
+        },
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-2',
+          code: 'OP-200',
+          title: 'Loaded dated item',
+          status: 'READY',
+          startDate: '2026-03-06T08:00:00.000Z',
+          sortIndex: 1,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Backlog item',
+          status: 'READY',
+          startDate: '2026-03-08T00:00:00.000Z',
+          sortIndex: 0,
+          version: 2,
+        },
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-2',
+          code: 'OP-200',
+          title: 'Loaded dated item',
+          status: 'READY',
+          sortIndex: 1,
+          version: 2,
+        },
+      ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const backlogCard = within(backlogBucket).getByText('OP-100 — Backlog item').closest('li');
+    const datedBucket = screen.getByRole('region', { name: '2026-03-06' });
+    const datedCard = within(datedBucket).getByText('OP-200 — Loaded dated item').closest('li');
+
+    expect(backlogCard).not.toBeNull();
+    expect(datedCard).not.toBeNull();
+
+    fireEvent.change(within(backlogCard as HTMLElement).getByLabelText('Schedule to date'), {
+      target: { value: '2026-03-09' },
+    });
+    fireEvent.change(within(datedCard as HTMLElement).getByLabelText('Schedule to date'), {
+      target: { value: '2026-03-10' },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('region', { name: '2026-03-08' })).toBeInTheDocument();
+    });
+
+    const reloadedDatedBucket = screen.getByRole('region', { name: '2026-03-08' });
+    const reloadedBacklogBucket = screen.getByRole('region', { name: 'Backlog' });
+    const reloadedDatedCard = within(reloadedDatedBucket).getByText('OP-100 — Backlog item').closest('li');
+    const reloadedBacklogCard = within(reloadedBacklogBucket)
+      .getByText('OP-200 — Loaded dated item')
+      .closest('li');
+
+    expect(reloadedDatedCard).not.toBeNull();
+    expect(reloadedBacklogCard).not.toBeNull();
+    expect(within(reloadedDatedCard as HTMLElement).getByLabelText('Schedule to date')).toHaveValue('2026-03-08');
+    expect(within(reloadedBacklogCard as HTMLElement).getByLabelText('Schedule to date')).toHaveValue('');
+  });
+
   it('shows operation empty state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -1836,7 +1927,10 @@ describe('homepage operations board', () => {
     await waitFor(() => {
       expect(client.operation.list.query).toHaveBeenCalledTimes(2);
       const dateBucket = screen.getByRole('region', { name: '2026-03-08' });
-      expect(within(dateBucket).getByText('OP-100 — Backlog item')).toBeInTheDocument();
+      const refreshedCard = within(dateBucket).getByText('OP-100 — Backlog item').closest('li');
+
+      expect(refreshedCard).not.toBeNull();
+      expect(within(refreshedCard as HTMLElement).getByLabelText('Schedule to date')).toHaveValue('2026-03-08');
     });
   });
 
