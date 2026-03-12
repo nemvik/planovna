@@ -470,6 +470,20 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('shows an explicit error state when the first post-login load fails without prior board data', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockRejectedValueOnce(new Error('initial load failed'));
+
+    renderWithClient(client);
+    await login('owner@tenant-a.local', 'tenant-a-pass');
+
+    expect(await screen.findByText('Failed to load operations.')).toBeInTheDocument();
+    expect(screen.getByText('Logged in')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+    expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+  });
+
   it('sends only one manual operations reload while a prior manual reload is still pending', async () => {
     const client = createClient();
     const deferredReload = createDeferred<unknown[]>();
@@ -526,7 +540,7 @@ describe('homepage operations board', () => {
     });
   });
 
-  it('allows retrying a manual operations reload after a failed manual reload', async () => {
+  it('preserves the last loaded board when a manual reload fails and allows retrying', async () => {
     const client = createClient();
     const deferredReload = createDeferred<unknown[]>();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -570,10 +584,14 @@ describe('homepage operations board', () => {
 
     deferredReload.reject(new Error('manual reload failed'));
 
-    expect(await screen.findByText('Failed to load operations.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Failed to reload operations. Showing the last loaded board.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('OP-100 — Existing board item')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
     expect(screen.getByText('Logged in')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-owner');
 
     fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
 
@@ -581,6 +599,9 @@ describe('homepage operations board', () => {
     await waitFor(() => {
       expect(client.operation.list.query).toHaveBeenCalledTimes(3);
       expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+      expect(
+        screen.queryByText('Failed to reload operations. Showing the last loaded board.'),
+      ).not.toBeInTheDocument();
     });
   });
 

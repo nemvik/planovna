@@ -242,6 +242,8 @@ export default function Home() {
   const filteredOperations = useMemo(() => applyBoardFilters(operations, filters), [operations, filters]);
   const activeFilters = useMemo(() => getActiveBoardFilters(filters), [filters]);
   const operationBuckets = useMemo(() => buildBuckets(filteredOperations), [filteredOperations]);
+  const showOperationBoard =
+    operations.length > 0 && (operationLoadState === 'loaded' || operationLoadState === 'loading');
   const isFilteredEmptyState =
     operationLoadState === 'loaded' && operations.length > 0 && filteredOperations.length === 0;
   const showActiveFilterSummary = operationLoadState === 'loaded' && activeFilters.length > 0;
@@ -332,6 +334,7 @@ export default function Home() {
 
   const loadOperations = async (client = trpcClient) => {
     const loadSession = operationLoadSessionRef.current;
+    const hadLoadedBoard = operations.length > 0 && operationLoadState === 'loaded';
     setOperationLoadState('loading');
 
     try {
@@ -342,6 +345,7 @@ export default function Home() {
 
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
+      setBoardMessage('');
       setScheduleDates(buildScheduleDateDrafts(loadedOperations));
       setEndDateDrafts(buildEndDateDrafts(loadedOperations));
       setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
@@ -357,6 +361,9 @@ export default function Home() {
 
       if (hasForbiddenCode(error)) {
         resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
+      } else if (hadLoadedBoard) {
+        setBoardMessage('Failed to reload operations. Showing the last loaded board.');
+        setOperationLoadState('loaded');
       } else {
         setOperations([]);
         setOperationLoadState('error');
@@ -664,7 +671,7 @@ export default function Home() {
       ) : null}
       {operationLoadState === 'error' ? <p>Failed to load operations.</p> : null}
 
-      {operationLoadState === 'loaded' ? (
+      {showOperationBoard ? (
         <>
           <div className="flex flex-wrap items-end gap-3 rounded border bg-slate-50 p-4">
             <label className="flex flex-col gap-1 text-sm">
