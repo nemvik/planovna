@@ -1795,6 +1795,60 @@ describe('homepage operations board', () => {
     expect(screen.queryByText('OP-300 — Ready loaded bucket item')).not.toBeInTheDocument();
   });
 
+  it('shows a filtered empty state and clears filters back to the default URL without reloading', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Ready backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Done dated item',
+        status: 'DONE',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    await user.selectOptions((await screen.findAllByLabelText('Status'))[0], 'BLOCKED');
+
+    expect(await screen.findByText('No operations match the current filters.')).toBeInTheDocument();
+    expect(screen.getByText('Clear filters to return to the full board without reloading operations.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+    expect(window.location.search).toBe('?status=BLOCKED');
+
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByLabelText('Status')[0]).toHaveValue('ALL');
+      expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
+      expect(screen.getByLabelText('Code or title')).toHaveValue('');
+      expect(window.location.search).toBe('');
+      expect(screen.getByRole('region', { name: 'Backlog' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: '2026-03-06' })).toBeInTheDocument();
+    });
+
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+
   it('shows operation forbidden state for planner role', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-planner' });

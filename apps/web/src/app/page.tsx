@@ -54,9 +54,15 @@ type ConflictData = {
   actualVersion?: number;
 };
 
+const DEFAULT_BOARD_FILTERS: BoardFilters = {
+  status: 'ALL',
+  bucket: 'ALL',
+  query: '',
+};
+
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
-    return { status: 'ALL', bucket: 'ALL', query: '' };
+    return DEFAULT_BOARD_FILTERS;
   }
 
   return parseBoardFilters(new URLSearchParams(window.location.search));
@@ -218,6 +224,8 @@ export default function Home() {
   );
   const filteredOperations = useMemo(() => applyBoardFilters(operations, filters), [operations, filters]);
   const operationBuckets = useMemo(() => buildBuckets(filteredOperations), [filteredOperations]);
+  const isFilteredEmptyState =
+    operationLoadState === 'loaded' && operations.length > 0 && filteredOperations.length === 0;
 
   useEffect(() => {
     if (
@@ -590,46 +598,62 @@ export default function Home() {
                 ))}
               </select>
             </label>
+
+            <button
+              className="rounded border px-3 py-2 text-sm"
+              type="button"
+              onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
+            >
+              Clear filters
+            </button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {operationBuckets.map((bucket) => (
-              <section
-                key={bucket.label}
-                aria-label={bucket.label}
-                className="rounded border bg-slate-50 p-4"
-              >
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h2 className="text-lg font-medium">{bucket.label}</h2>
-                  <span className="text-sm text-slate-500">{bucket.operations.length}</span>
-                </div>
+          {isFilteredEmptyState ? (
+            <div className="rounded border bg-slate-50 p-4">
+              <p className="font-medium">No operations match the current filters.</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Clear filters to return to the full board without reloading operations.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {operationBuckets.map((bucket) => (
+                <section
+                  key={bucket.label}
+                  aria-label={bucket.label}
+                  className="rounded border bg-slate-50 p-4"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h2 className="text-lg font-medium">{bucket.label}</h2>
+                    <span className="text-sm text-slate-500">{bucket.operations.length}</span>
+                  </div>
 
-                <ul className="space-y-2">
-                  {bucket.operations.map((operation) => {
-                    const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
-                    const endDateValue = getEndDateValue(operation, endDateDrafts);
-                    const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
-                    const titleValue = getTitleValue(operation, titleDrafts);
-                    const codeValue = getCodeValue(operation, codeDrafts);
-                    const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
-                    const canSaveTitle = titleValue.trim() !== '' && titleValue !== operation.title;
-                    const canSaveCode = codeValue.trim() !== '' && codeValue !== operation.code;
-                    const canSchedule =
-                      isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
-                    const canSaveEndDate =
-                      isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
-                    const canClearEndDate = operation.endDate !== undefined;
-                    const canClearBlockedReason = operation.blockedReason !== undefined;
-                    const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
-                    const parsedSortIndex = Number(sortIndexValue.trim());
-                    const canSaveSortIndex =
-                      sortIndexValue.trim() !== '' &&
-                      Number.isInteger(parsedSortIndex) &&
-                      parsedSortIndex !== operation.sortIndex;
-                    const prerequisiteSummary = formatPrerequisiteSummary(operation);
+                  <ul className="space-y-2">
+                    {bucket.operations.map((operation) => {
+                      const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
+                      const endDateValue = getEndDateValue(operation, endDateDrafts);
+                      const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
+                      const titleValue = getTitleValue(operation, titleDrafts);
+                      const codeValue = getCodeValue(operation, codeDrafts);
+                      const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
+                      const canSaveTitle = titleValue.trim() !== '' && titleValue !== operation.title;
+                      const canSaveCode = codeValue.trim() !== '' && codeValue !== operation.code;
+                      const canSchedule =
+                        isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
+                      const canSaveEndDate =
+                        isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
+                      const canClearEndDate = operation.endDate !== undefined;
+                      const canClearBlockedReason = operation.blockedReason !== undefined;
+                      const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
+                      const parsedSortIndex = Number(sortIndexValue.trim());
+                      const canSaveSortIndex =
+                        sortIndexValue.trim() !== '' &&
+                        Number.isInteger(parsedSortIndex) &&
+                        parsedSortIndex !== operation.sortIndex;
+                      const prerequisiteSummary = formatPrerequisiteSummary(operation);
 
-                    return (
-                      <li key={operation.id} className="rounded border bg-white p-3">
+                      return (
+                        <li key={operation.id} className="rounded border bg-white p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="font-medium">
@@ -879,13 +903,14 @@ export default function Home() {
                              Schedule
                            </button>
                         </form>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))}
-          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
         </>
       ) : null}
     </main>
