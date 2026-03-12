@@ -220,6 +220,7 @@ export default function Home() {
   const hydrationAutoLoadPendingRef = useRef(false);
   const loginPendingRef = useRef(false);
   const manualOperationLoadPendingRef = useRef(false);
+  const mutatingOperationIdRef = useRef<string | null>(null);
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -295,6 +296,7 @@ export default function Home() {
   const resetOperationsState = () => {
     setOperations([]);
     setBoardMessage('');
+    mutatingOperationIdRef.current = null;
     setMutatingOperationId(null);
     setScheduleDates({});
     setEndDateDrafts({});
@@ -401,7 +403,12 @@ export default function Home() {
     updates: OperationUpdate,
     failureMessage: string,
   ) => {
+    if (mutatingOperationIdRef.current !== null) {
+      return;
+    }
+
     setBoardMessage('');
+    mutatingOperationIdRef.current = operation.id;
     setMutatingOperationId(operation.id);
 
     try {
@@ -453,6 +460,7 @@ export default function Home() {
         setBoardMessage(failureMessage);
       }
     } finally {
+      mutatingOperationIdRef.current = null;
       setMutatingOperationId(null);
     }
   };

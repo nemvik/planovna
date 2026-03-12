@@ -1130,6 +1130,102 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('guards duplicate inline operation updates while a homepage mutation is still pending and allows retry after failure', async () => {
+    const client = createClient();
+    const deferredUpdate = createDeferred<{
+      id: string;
+      tenantId: string;
+      orderId: string;
+      code: string;
+      title: string;
+      status: 'READY';
+      sortIndex: number;
+      version: number;
+    }>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+        dependencyCount: 0,
+      },
+    ]);
+    client.operation.update.mutate
+      .mockReturnValueOnce(deferredUpdate.promise)
+      .mockResolvedValueOnce({
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Retried title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 2,
+      });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const titleInput = within(operationCard as HTMLElement).getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Pending title');
+
+    const saveTitleButton = within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' });
+    fireEvent.click(saveTitleButton);
+    fireEvent.click(saveTitleButton);
+
+    expect(client.operation.update.mutate).toHaveBeenCalledTimes(1);
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      title: 'Pending title',
+    });
+    expect(screen.getByText('Logged in')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
+    expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
+    expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
+
+    deferredUpdate.reject(new Error('slow failure'));
+
+    expect(await screen.findByText('Failed to update title.')).toBeInTheDocument();
+    expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeEnabled();
+    expect(within(operationCard as HTMLElement).getByDisplayValue('Pending title')).toBeInTheDocument();
+    expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
+
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Retried title');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledTimes(2);
+    expect(client.operation.update.mutate).toHaveBeenLastCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      title: 'Retried title',
+    });
+
+    await waitFor(() => {
+      expect(within(operationCard as HTMLElement).getByDisplayValue('Retried title')).toBeInTheDocument();
+      expect(within(operationCard as HTMLElement).getByText('OP-100 — Retried title')).toBeInTheDocument();
+    });
+  });
+
   it('persists a code edit and merges the returned operation into board state immediately', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
