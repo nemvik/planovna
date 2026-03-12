@@ -1643,7 +1643,7 @@ describe('homepage operations board', () => {
     expect(scheduleButton).toBeEnabled();
   });
 
-  it('reloads operations once and shows a resync message on version conflict', async () => {
+  it('reloads operations exactly once and shows the resync message when a direct bucket move hits a version conflict', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
     client.operation.list.query
@@ -1721,6 +1721,14 @@ describe('homepage operations board', () => {
 
     await user.selectOptions(within(operationCard as HTMLElement).getByLabelText('Move to bucket'), '2026-03-06');
 
+    expect(client.operation.update.mutate).toHaveBeenCalledTimes(1);
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      startDate: '2026-03-06T00:00:00.000Z',
+    });
+
     expect(
       await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
     ).toBeInTheDocument();
@@ -1728,6 +1736,106 @@ describe('homepage operations board', () => {
     await waitFor(() => {
       expect(client.operation.list.query).toHaveBeenCalledTimes(2);
       const dateBucket = screen.getByRole('region', { name: '2026-03-06' });
+      expect(within(dateBucket).getByText('OP-100 — Backlog item')).toBeInTheDocument();
+    });
+  });
+
+  it('reloads operations exactly once and shows the resync message when schedule to date hits a version conflict', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Backlog item',
+          status: 'READY',
+          sortIndex: 0,
+          version: 1,
+        },
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-200',
+          title: 'Dated item',
+          status: 'READY',
+          startDate: '2026-03-06T08:00:00.000Z',
+          sortIndex: 1,
+          version: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Backlog item',
+          status: 'READY',
+          startDate: '2026-03-08T00:00:00.000Z',
+          sortIndex: 0,
+          version: 2,
+        },
+        {
+          id: 'op-2',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-200',
+          title: 'Dated item',
+          status: 'READY',
+          startDate: '2026-03-06T08:00:00.000Z',
+          sortIndex: 1,
+          version: 1,
+        },
+      ]);
+    client.operation.update.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Backlog item')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    fireEvent.change(within(operationCard as HTMLElement).getByLabelText('Schedule to date'), {
+      target: { value: '2026-03-08' },
+    });
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Schedule' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledTimes(1);
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      startDate: '2026-03-08T00:00:00.000Z',
+    });
+
+    expect(
+      await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      const dateBucket = screen.getByRole('region', { name: '2026-03-08' });
       expect(within(dateBucket).getByText('OP-100 — Backlog item')).toBeInTheDocument();
     });
   });
