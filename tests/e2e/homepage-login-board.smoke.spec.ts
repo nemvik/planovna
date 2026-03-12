@@ -3,6 +3,19 @@ import { expect, test } from '@playwright/test';
 test('logs in from the homepage and renders the first board bucket', async ({ page }) => {
   let loginRequestCount = 0;
   let boardLoadRequestCount = 0;
+  let operationUpdateRequestCount = 0;
+  let boardOperation = {
+    id: 'op-100',
+    tenantId: 'tenant-a',
+    orderId: 'order-100',
+    code: 'OP-100',
+    title: 'Existing board item',
+    status: 'READY',
+    startDate: '2026-03-12T00:00:00.000Z',
+    sortIndex: 10,
+    version: 1,
+    dependencyCount: 0,
+  };
 
   await page.route('**/trpc/**', async (route) => {
     const request = route.request();
@@ -27,23 +40,32 @@ test('logs in from the homepage and renders the first board bucket', async ({ pa
         body: JSON.stringify([
           {
             result: {
-              data: [
-                {
-                  id: 'op-100',
-                  tenantId: 'tenant-a',
-                  orderId: 'order-100',
-                  code: 'OP-100',
-                  title: 'Existing board item',
-                  status: 'READY',
-                  startDate: '2026-03-12T00:00:00.000Z',
-                  sortIndex: 10,
-                  version: 1,
-                  dependencyCount: 0,
-                },
-              ],
+              data: [boardOperation],
             },
           },
         ]),
+      });
+      return;
+    }
+
+    if (url.pathname.includes('operation.update')) {
+      operationUpdateRequestCount += 1;
+      await expect(request.headerValue('authorization')).resolves.toBe('Bearer token-owner');
+
+      const requestBody = request.postData() ?? '';
+      expect(requestBody).toContain('op-100');
+      expect(requestBody).toContain('tenant-a');
+      expect(requestBody).toContain('Existing board item renamed');
+
+      boardOperation = {
+        ...boardOperation,
+        title: 'Existing board item renamed',
+        version: 2,
+      };
+
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify([{ result: { data: boardOperation } }]),
       });
       return;
     }
@@ -66,16 +88,24 @@ test('logs in from the homepage and renders the first board bucket', async ({ pa
     'token-owner',
   );
 
+  const firstBoardBucket = page.getByRole('region', { name: '2026-03-12' });
+  await firstBoardBucket.getByLabel('Title').fill('Existing board item renamed');
+  await firstBoardBucket.getByRole('button', { name: 'Save title' }).click();
+
+  await expect(firstBoardBucket).toContainText('OP-100 — Existing board item renamed');
+
   expect(loginRequestCount).toBe(1);
   expect(boardLoadRequestCount).toBe(1);
+  expect(operationUpdateRequestCount).toBe(1);
 
   await page.reload();
 
   await expect(page.getByText('Logged in')).toBeVisible();
   await expect(page.getByRole('region', { name: '2026-03-12' })).toContainText(
-    'OP-100 — Existing board item',
+    'OP-100 — Existing board item renamed',
   );
 
   expect(loginRequestCount).toBe(1);
   expect(boardLoadRequestCount).toBe(2);
+  expect(operationUpdateRequestCount).toBe(1);
 });
