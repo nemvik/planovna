@@ -1,6 +1,7 @@
 import {
   applyBoardFilters,
   BACKLOG_BUCKET,
+  getActiveBoardFilters,
   getAvailableBucketFilters,
   parseBoardFilters,
   serializeBoardFilters,
@@ -97,6 +98,22 @@ describe('board-filters', () => {
     ]);
     expect(applyBoardFilters(operations, { status: 'ALL', bucket: 'ALL', query: '  READY  ' })).toEqual([
       operations[0],
+    ]);
+  });
+
+  it('returns only non-default active filters with trimmed query values', () => {
+    expect(getActiveBoardFilters({ status: 'ALL', bucket: 'ALL', query: '   ' })).toEqual([]);
+
+    expect(
+      getActiveBoardFilters({
+        status: 'BLOCKED',
+        bucket: BACKLOG_BUCKET,
+        query: '  OP-200  ',
+      }),
+    ).toEqual([
+      { key: 'status', label: 'Status', value: 'BLOCKED' },
+      { key: 'bucket', label: 'Bucket', value: BACKLOG_BUCKET },
+      { key: 'query', label: 'Query', value: 'OP-200' },
     ]);
   });
 });

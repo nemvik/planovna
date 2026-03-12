@@ -334,6 +334,8 @@ describe('homepage operations board', () => {
 
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
 
+    expect(await screen.findByText('Showing 1 of 2 operations.')).toBeInTheDocument();
+
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
       .getByText('OP-100 — Ready backlog item')
@@ -351,10 +353,15 @@ describe('homepage operations board', () => {
     });
 
     await waitFor(() => {
+      expect(screen.getByText('Showing 0 of 2 operations.')).toBeInTheDocument();
       expect(screen.queryByText('OP-100 — Ready backlog item')).not.toBeInTheDocument();
     });
 
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'DONE');
+
+    expect(await screen.findByText('Showing 1 of 2 operations.')).toBeInTheDocument();
 
     const updatedCard = await within(screen.getByRole('region', { name: 'Backlog' }))
       .findByText('OP-100 — Ready backlog item')
@@ -362,6 +369,101 @@ describe('homepage operations board', () => {
 
     expect(updatedCard).not.toBeNull();
     expect(within(updatedCard as HTMLElement).getByLabelText('Status')).toHaveValue('DONE');
+  });
+
+  it('shows an active-filter summary that updates counts from loaded board data without refetching', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Cut steel',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Paint frame',
+        status: 'BLOCKED',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Weld frame',
+        status: 'READY',
+        sortIndex: 2,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
+
+    expect(await screen.findByText('Showing 2 of 3 operations.')).toBeInTheDocument();
+    expect(screen.getByText('Status: READY')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Code or title'), 'weld');
+
+    expect(screen.getByText('Showing 1 of 3 operations.')).toBeInTheDocument();
+    expect(screen.getByText('Query: weld')).toBeInTheDocument();
+    expect(screen.getByText('OP-300 — Weld frame')).toBeInTheDocument();
+    expect(screen.queryByText('OP-100 — Cut steel')).not.toBeInTheDocument();
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the active-filter summary visible in the filtered-empty state', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Cut steel',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Paint frame',
+        status: 'BLOCKED',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+    await user.type(screen.getByLabelText('Code or title'), 'missing');
+
+    expect(await screen.findByText('Showing 0 of 2 operations.')).toBeInTheDocument();
+    expect(screen.getByText('Query: missing')).toBeInTheDocument();
+    expect(screen.getByText('No operations match the current filters.')).toBeInTheDocument();
+    expect(screen.getByText('Clear filters to return to the full board without reloading operations.')).toBeInTheDocument();
   });
 
   it('persists a blocked reason edit and merges the returned operation into board state', async () => {

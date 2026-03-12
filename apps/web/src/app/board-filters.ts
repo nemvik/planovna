@@ -10,6 +10,12 @@ export type BoardFilters = {
   query: string;
 };
 
+export type ActiveBoardFilter = {
+  key: 'status' | 'bucket' | 'query';
+  label: string;
+  value: string;
+};
+
 type FilterableOperation = {
   status: BoardStatus;
   startDate?: string;
@@ -126,4 +132,22 @@ export const applyBoardFilters = <T extends FilterableOperation>(
 
     return true;
   });
+};
+
+export const getActiveBoardFilters = (filters: BoardFilters): ActiveBoardFilter[] => {
+  const activeFilters: ActiveBoardFilter[] = [];
+
+  if (filters.status !== ALL_FILTER) {
+    activeFilters.push({ key: 'status', label: 'Status', value: filters.status });
+  }
+
+  if (filters.bucket !== ALL_FILTER) {
+    activeFilters.push({ key: 'bucket', label: 'Bucket', value: filters.bucket });
+  }
+
+  if (filters.query.trim() !== '') {
+    activeFilters.push({ key: 'query', label: 'Query', value: filters.query.trim() });
+  }
+
+  return activeFilters;
 };

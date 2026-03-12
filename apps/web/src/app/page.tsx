@@ -6,6 +6,7 @@ import {
   BACKLOG_BUCKET,
   BOARD_STATUS_VALUES,
   compareBucketLabels,
+  getActiveBoardFilters,
   getAvailableBucketFilters,
   getOperationBucketLabel,
   type BoardFilters,
@@ -223,9 +224,11 @@ export default function Home() {
     [availableBucketFilters],
   );
   const filteredOperations = useMemo(() => applyBoardFilters(operations, filters), [operations, filters]);
+  const activeFilters = useMemo(() => getActiveBoardFilters(filters), [filters]);
   const operationBuckets = useMemo(() => buildBuckets(filteredOperations), [filteredOperations]);
   const isFilteredEmptyState =
     operationLoadState === 'loaded' && operations.length > 0 && filteredOperations.length === 0;
+  const showActiveFilterSummary = operationLoadState === 'loaded' && activeFilters.length > 0;
 
   useEffect(() => {
     if (
@@ -607,6 +610,22 @@ export default function Home() {
               Clear filters
             </button>
           </div>
+
+          {showActiveFilterSummary ? (
+            <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium">Showing {filteredOperations.length} of {operations.length} operations.</p>
+                {activeFilters.map((filter) => (
+                  <span
+                    key={filter.key}
+                    className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium text-amber-900"
+                  >
+                    {filter.label}: {filter.value}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {isFilteredEmptyState ? (
             <div className="rounded border bg-slate-50 p-4">
