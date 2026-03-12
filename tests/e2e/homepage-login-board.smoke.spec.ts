@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test';
 
 test('logs in from the homepage and renders the first board bucket', async ({ page }) => {
-  let sawLoginRequest = false;
-  let sawBoardLoadRequest = false;
+  let loginRequestCount = 0;
+  let boardLoadRequestCount = 0;
 
   await page.route('**/trpc/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 
     if (url.pathname.includes('auth.login')) {
-      sawLoginRequest = true;
+      loginRequestCount += 1;
 
       await route.fulfill({
         contentType: 'application/json',
@@ -19,7 +19,7 @@ test('logs in from the homepage and renders the first board bucket', async ({ pa
     }
 
     if (url.pathname.includes('operation.list')) {
-      sawBoardLoadRequest = true;
+      boardLoadRequestCount += 1;
       await expect(request.headerValue('authorization')).resolves.toBe('Bearer token-owner');
 
       await route.fulfill({
@@ -66,6 +66,16 @@ test('logs in from the homepage and renders the first board bucket', async ({ pa
     'token-owner',
   );
 
-  expect(sawLoginRequest).toBe(true);
-  expect(sawBoardLoadRequest).toBe(true);
+  expect(loginRequestCount).toBe(1);
+  expect(boardLoadRequestCount).toBe(1);
+
+  await page.reload();
+
+  await expect(page.getByText('Logged in')).toBeVisible();
+  await expect(page.getByRole('region', { name: '2026-03-12' })).toContainText(
+    'OP-100 — Existing board item',
+  );
+
+  expect(loginRequestCount).toBe(1);
+  expect(boardLoadRequestCount).toBe(2);
 });
