@@ -138,6 +138,40 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('guards homepage login while a pending submit is still in flight and allows retry after failure', async () => {
+    const client = createClient();
+    const deferredLogin = createDeferred<{ accessToken: string }>();
+    client.auth.login.mutate
+      .mockReturnValueOnce(deferredLogin.promise)
+      .mockResolvedValueOnce({ accessToken: 'token-owner' });
+
+    renderWithClient(client);
+
+    const loginButton = screen.getByRole('button', { name: 'Login' });
+    const loadOperationsButton = screen.getByRole('button', { name: 'Load operations' });
+
+    fireEvent.click(loginButton);
+    fireEvent.click(loginButton);
+
+    expect(client.auth.login.mutate).toHaveBeenCalledTimes(1);
+    expect(client.operation.list.query).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Logging in...' })).toBeDisabled();
+    expect(loadOperationsButton).toBeDisabled();
+
+    deferredLogin.reject(new Error('invalid'));
+
+    expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Login' })).toBeEnabled();
+    expect(client.operation.list.query).not.toHaveBeenCalled();
+
+    await login();
+
+    await waitFor(() => {
+      expect(client.auth.login.mutate).toHaveBeenCalledTimes(2);
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('hydrates stored auth and auto-loads operations exactly once after reload', async () => {
     const client = createClient();
     const deferred = createDeferred<unknown[]>();

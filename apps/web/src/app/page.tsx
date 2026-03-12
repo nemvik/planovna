@@ -204,6 +204,7 @@ export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [loginPending, setLoginPending] = useState(false);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [authMessage, setAuthMessage] = useState('');
   const [boardMessage, setBoardMessage] = useState('');
@@ -217,6 +218,7 @@ export default function Home() {
   const [sortIndexDrafts, setSortIndexDrafts] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
   const hydrationAutoLoadPendingRef = useRef(false);
+  const loginPendingRef = useRef(false);
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -346,6 +348,13 @@ export default function Home() {
 
   const onLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (loginPendingRef.current) {
+      return;
+    }
+
+    loginPendingRef.current = true;
+    setLoginPending(true);
     setAuthMessage('');
 
     try {
@@ -364,6 +373,9 @@ export default function Home() {
     } catch {
       resetSession();
       setAuthMessage('Invalid credentials');
+    } finally {
+      loginPendingRef.current = false;
+      setLoginPending(false);
     }
   };
 
@@ -579,8 +591,12 @@ export default function Home() {
           />
         </label>
 
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
-          Login
+        <button
+          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+          type="submit"
+          disabled={loginPending}
+        >
+          {loginPending ? 'Logging in...' : 'Login'}
         </button>
       </form>
 
