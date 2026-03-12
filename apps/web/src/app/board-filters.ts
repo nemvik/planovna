@@ -7,11 +7,14 @@ export type BucketFilter = 'ALL' | 'Backlog' | `${number}-${number}-${number}`;
 export type BoardFilters = {
   status: StatusFilter;
   bucket: BucketFilter;
+  query: string;
 };
 
 type FilterableOperation = {
   status: BoardStatus;
   startDate?: string;
+  code: string;
+  title: string;
 };
 
 export const BACKLOG_BUCKET = 'Backlog';
@@ -54,6 +57,7 @@ export const parseBucketFilter = (value: string | null | undefined): BucketFilte
 export const parseBoardFilters = (searchParams: URLSearchParams): BoardFilters => ({
   status: parseStatusFilter(searchParams.get('status')),
   bucket: parseBucketFilter(searchParams.get('bucket')),
+  query: searchParams.get('query')?.trim() ?? '',
 });
 
 export const serializeBoardFilters = (
@@ -72,6 +76,12 @@ export const serializeBoardFilters = (
     nextSearchParams.delete('bucket');
   } else {
     nextSearchParams.set('bucket', filters.bucket);
+  }
+
+  if (filters.query === '') {
+    nextSearchParams.delete('query');
+  } else {
+    nextSearchParams.set('query', filters.query);
   }
 
   return nextSearchParams;
@@ -93,8 +103,10 @@ export const getAvailableBucketFilters = <T extends Pick<FilterableOperation, 's
 export const applyBoardFilters = <T extends FilterableOperation>(
   operations: T[],
   filters: BoardFilters,
-): T[] =>
-  operations.filter((operation) => {
+): T[] => {
+  const normalizedQuery = filters.query.trim().toLocaleLowerCase();
+
+  return operations.filter((operation) => {
     if (filters.status !== ALL_FILTER && operation.status !== filters.status) {
       return false;
     }
@@ -103,5 +115,15 @@ export const applyBoardFilters = <T extends FilterableOperation>(
       return false;
     }
 
+    if (normalizedQuery !== '') {
+      const normalizedCode = operation.code.toLocaleLowerCase();
+      const normalizedTitle = operation.title.toLocaleLowerCase();
+
+      if (!normalizedCode.includes(normalizedQuery) && !normalizedTitle.includes(normalizedQuery)) {
+        return false;
+      }
+    }
+
     return true;
   });
+};

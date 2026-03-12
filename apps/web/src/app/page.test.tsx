@@ -1663,9 +1663,11 @@ describe('homepage operations board', () => {
 
     const statusSelect = (await screen.findAllByLabelText('Status'))[0];
     const bucketSelect = screen.getByLabelText('Date bucket');
+    const queryInput = screen.getByLabelText('Code or title');
 
     expect(statusSelect).toHaveValue('ALL');
     expect(bucketSelect).toHaveValue('ALL');
+    expect(queryInput).toHaveValue('');
     expect(within(bucketSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'All',
       'Backlog',
@@ -1675,15 +1677,16 @@ describe('homepage operations board', () => {
 
     await user.selectOptions(statusSelect, 'DONE');
     await user.selectOptions(bucketSelect, '2026-03-06');
+    await user.type(queryInput, 'op-200');
 
     expect(screen.queryByText('OP-100 — Ready backlog item')).not.toBeInTheDocument();
     expect(screen.getByText('OP-200 — Done dated item')).toBeInTheDocument();
     expect(screen.queryByText('OP-300 — Done later item')).not.toBeInTheDocument();
-    expect(window.location.search).toBe('?status=DONE&bucket=2026-03-06');
+    expect(window.location.search).toBe('?status=DONE&bucket=2026-03-06&query=op-200');
   });
 
-  it('hydrates the initial status and bucket filters from URL search params', async () => {
-    window.history.replaceState({}, '', '/?status=BLOCKED&bucket=Backlog');
+  it('hydrates the initial status, bucket, and text filters from URL search params', async () => {
+    window.history.replaceState({}, '', '/?status=BLOCKED&bucket=Backlog&query=press');
 
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -1693,7 +1696,7 @@ describe('homepage operations board', () => {
         tenantId: 'tenant-a',
         orderId: 'ord-1',
         code: 'OP-100',
-        title: 'Blocked backlog item',
+        title: 'Press blocked backlog item',
         status: 'BLOCKED',
         sortIndex: 0,
         version: 1,
@@ -1729,7 +1732,8 @@ describe('homepage operations board', () => {
 
     expect((await screen.findAllByLabelText('Status'))[0]).toHaveValue('BLOCKED');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('Backlog');
-    expect(screen.getByText('OP-100 — Blocked backlog item')).toBeInTheDocument();
+    expect(screen.getByLabelText('Code or title')).toHaveValue('press');
+    expect(screen.getByText('OP-100 — Press blocked backlog item')).toBeInTheDocument();
     expect(screen.queryByText('OP-200 — Blocked dated item')).not.toBeInTheDocument();
     expect(screen.queryByText('OP-300 — Ready backlog item')).not.toBeInTheDocument();
   });

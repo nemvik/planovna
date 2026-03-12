@@ -56,7 +56,7 @@ type ConflictData = {
 
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
-    return { status: 'ALL', bucket: 'ALL' };
+    return { status: 'ALL', bucket: 'ALL', query: '' };
   }
 
   return parseBoardFilters(new URLSearchParams(window.location.search));
@@ -535,6 +535,21 @@ export default function Home() {
       {operationLoadState === 'loaded' ? (
         <>
           <div className="flex flex-wrap items-end gap-3 rounded border bg-slate-50 p-4">
+            <label className="flex flex-col gap-1 text-sm">
+              Code or title
+              <input
+                className="rounded border bg-white px-2 py-1"
+                type="search"
+                value={filters.query}
+                onChange={(event) =>
+                  setFilters((currentFilters) => ({
+                    ...currentFilters,
+                    query: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
             <label className="flex flex-col gap-1 text-sm">
               Status
               <select
