@@ -1544,6 +1544,95 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('ignores a pending inline update response after logout resets the session', async () => {
+    const client = createClient();
+    const deferredUpdate = createDeferred<{
+      id: string;
+      tenantId: string;
+      orderId: string;
+      code: string;
+      title: string;
+      status: 'READY';
+      sortIndex: number;
+      version: number;
+      dependencyCount: number;
+    }>();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+        dependencyCount: 0,
+      },
+    ]);
+    client.operation.update.mutate.mockReturnValue(deferredUpdate.promise);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const titleInput = within(operationCard as HTMLElement).getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Pending title');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
+
+    expect(client.operation.update.mutate).toHaveBeenCalledWith({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      version: 1,
+      title: 'Pending title',
+    });
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+      expect(screen.queryByText('OP-100 — Original title')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Pending title')).not.toBeInTheDocument();
+    });
+
+    deferredUpdate.resolve({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Updated title',
+      status: 'READY',
+      sortIndex: 0,
+      version: 2,
+      dependencyCount: 0,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Logged out')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByText('OP-100 — Original title')).not.toBeInTheDocument();
+      expect(screen.queryByText('OP-100 — Updated title')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Updated title')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Pending title')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+    });
+  });
+
   it('persists a code edit and merges the returned operation into board state immediately', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

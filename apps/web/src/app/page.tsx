@@ -434,6 +434,7 @@ export default function Home() {
     setBoardMessage('');
     mutatingOperationIdRef.current = operation.id;
     setMutatingOperationId(operation.id);
+    const mutationSession = operationLoadSessionRef.current;
 
     try {
       const updatedOperation = (await trpcClient.operation.update.mutate({
@@ -442,6 +443,10 @@ export default function Home() {
         version: operation.version,
         ...updates,
       })) as Operation;
+
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
 
       setOperations((currentOperations) =>
         currentOperations.map((currentOperation) =>
@@ -473,17 +478,34 @@ export default function Home() {
         [updatedOperation.id]: String(updatedOperation.sortIndex),
       }));
     } catch (error) {
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
+
       if (extractConflictData(error)) {
         try {
           await loadOperations();
+
+          if (mutationSession !== operationLoadSessionRef.current) {
+            return;
+          }
+
           setBoardMessage('Board was out of date. Reloaded latest operations, please try again.');
         } catch {
+          if (mutationSession !== operationLoadSessionRef.current) {
+            return;
+          }
+
           setBoardMessage('Board was out of date and reload failed. Please reload operations again.');
         }
       } else {
         setBoardMessage(failureMessage);
       }
     } finally {
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
+
       mutatingOperationIdRef.current = null;
       setMutatingOperationId(null);
     }
