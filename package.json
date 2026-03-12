@@ -12,6 +12,7 @@
     "build": "npm run -ws build",
     "test": "npm run -ws test",
     "prod:preflight": "bash ./scripts/prod_config_preflight.sh",
+    "smoke:cors:auth-login": "bash ./scripts/trpc_auth_login_cors_smoke.sh",
     "gate:local": "bash ./scripts/ci_local_gate.sh"
   },
   "devDependencies": {

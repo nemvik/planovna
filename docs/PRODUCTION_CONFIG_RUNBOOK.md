@@ -121,6 +121,35 @@ Direct invocation is also supported:
 bash ./scripts/prod_config_preflight.sh
 ```
 
+## CORS smoke check
+
+Use this after deploys, ingress changes, or CORS allowlist updates to confirm the live `POST /trpc/auth.login` endpoint answers preflight requests correctly.
+
+Run from the repo root:
+
+```bash
+npm run smoke:cors:auth-login
+```
+
+Default behavior:
+- boots the production API locally when `PLANOVNA_CORS_SMOKE_API_URL` is unset,
+- checks an allowed origin preflight against `/trpc/auth.login`,
+- checks a blocked origin preflight against the same endpoint.
+
+Common overrides:
+- `PLANOVNA_CORS_SMOKE_API_URL`: target an already running API instead of booting a local one.
+- `PLANOVNA_CORS_SMOKE_ALLOWED_ORIGIN`: override the origin expected to be allowed.
+- `PLANOVNA_CORS_SMOKE_BLOCKED_ORIGIN`: override the origin expected to remain blocked.
+
+Example against a live API:
+
+```bash
+PLANOVNA_CORS_SMOKE_API_URL=https://api.planovna.example \
+PLANOVNA_CORS_SMOKE_ALLOWED_ORIGIN=https://app.planovna.example \
+PLANOVNA_CORS_SMOKE_BLOCKED_ORIGIN=https://blocked.planovna.example \
+npm run smoke:cors:auth-login
+```
+
 ## Prisma migration commands
 
 Run these from the repo root or via `npm -w apps/api run ...`.
