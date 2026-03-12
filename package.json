@@ -11,11 +11,14 @@
     "dev:api": "npm -w apps/api run start:dev",
     "build": "npm run -ws build",
     "test": "npm run -ws test",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/homepage-login-board.smoke.spec.ts",
     "prod:preflight": "bash ./scripts/prod_config_preflight.sh",
     "smoke:cors:auth-login": "bash ./scripts/trpc_auth_login_cors_smoke.sh",
     "gate:local": "bash ./scripts/ci_local_gate.sh"
   },
   "devDependencies": {
-    "@next/swc-linux-x64-gnu": "^16.1.6"
+    "@next/swc-linux-x64-gnu": "^16.1.6",
+    "@playwright/test": "^1.51.1"
   }
 }
