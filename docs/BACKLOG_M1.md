@@ -17,7 +17,7 @@
 - [ ] Integration tests for version conflict
 - [ ] Smoke test: create customer/order/operation flow
 - [x] Cross-origin smoke test: web -> API works on different domains without CORS failure
-- [ ] Add frontend E2E smoke tests (Playwright): login, board load, operation edit, persistence after reload
+- [x] Add frontend E2E smoke tests (Playwright): login, board load, operation edit, persistence after reload
 - [ ] Add UX regression checks for key flows (empty state, loading state, error state, responsive layout)
 
 ## Exit criteria M1
