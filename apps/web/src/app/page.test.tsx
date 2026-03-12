@@ -215,6 +215,27 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('expires the session when the post-login auto-load returns forbidden', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
+
+    renderWithClient(client);
+
+    await login('owner@tenant-a.local', 'tenant-a-pass');
+
+    expect(await screen.findByText('Session expired. Please log in again.')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.auth.login.mutate).toHaveBeenCalledTimes(1);
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Forbidden: your role is not allowed to view operations.')).not.toBeInTheDocument();
+    });
+  });
+
   it('clears the persisted homepage token and resets loaded board state on logout', async () => {
     const client = createClient();
     client.operation.list.query.mockResolvedValue([
@@ -422,6 +443,45 @@ describe('homepage operations board', () => {
     await waitFor(() => {
       expect(client.operation.list.query).toHaveBeenCalledTimes(3);
       expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
+    });
+  });
+
+  it('expires the session when a manual load returns forbidden after board data was loaded', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query
+      .mockResolvedValueOnce([
+        {
+          id: 'op-1',
+          tenantId: 'tenant-a',
+          orderId: 'ord-1',
+          code: 'OP-100',
+          title: 'Existing board item',
+          status: 'READY',
+          sortIndex: 0,
+          dependencyCount: 0,
+          version: 1,
+        },
+      ])
+      .mockRejectedValueOnce({ data: { code: 'FORBIDDEN' } });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(await screen.findByText('OP-100 — Existing board item')).toBeInTheDocument();
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-owner');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    expect(await screen.findByText('Session expired. Please log in again.')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByText('OP-100 — Existing board item')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Forbidden: your role is not allowed to view operations.')).not.toBeInTheDocument();
     });
   });
 
@@ -2764,7 +2824,7 @@ describe('homepage operations board', () => {
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
   });
 
-  it('shows operation forbidden state for planner role', async () => {
+  it('expires the session when planner role auto-load is forbidden', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-planner' });
     client.operation.list.query.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
@@ -2772,9 +2832,9 @@ describe('homepage operations board', () => {
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client, 'planner@tenant-a.local', 'tenant-a-pass');
 
-    expect(
-      await screen.findByText('Forbidden: your role is not allowed to view operations.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Session expired. Please log in again.')).toBeInTheDocument();
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
   });
 
   it('shows operation error state', async () => {

@@ -279,7 +279,7 @@ export default function Home() {
     hydrationAutoLoadPendingRef.current = false;
     resetOperationsState();
 
-    void loadOperations(createTrpcClient(accessToken), true).catch(() => {
+    void loadOperations(createTrpcClient(accessToken)).catch(() => {
       // state is already updated in loadOperations
     });
   }, [accessToken]);
@@ -324,7 +324,7 @@ export default function Home() {
     setAuthMessage(message);
   };
 
-  const loadOperations = async (client = trpcClient, expireSessionOnForbidden = false) => {
+  const loadOperations = async (client = trpcClient) => {
     setOperationLoadState('loading');
 
     try {
@@ -341,12 +341,7 @@ export default function Home() {
       return loadedOperations;
     } catch (error) {
       if (hasForbiddenCode(error)) {
-        if (expireSessionOnForbidden) {
-          resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
-        } else {
-          setOperations([]);
-          setOperationLoadState('forbidden');
-        }
+        resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
       } else {
         setOperations([]);
         setOperationLoadState('error');
