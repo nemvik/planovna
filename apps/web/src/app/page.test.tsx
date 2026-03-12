@@ -1597,7 +1597,7 @@ describe('homepage operations board', () => {
     expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByText('Saving…')).toBeInTheDocument();
     expect(within(secondOperationCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
-    expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeEnabled();
+    expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
     expect(within(secondOperationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
@@ -1691,7 +1691,11 @@ describe('homepage operations board', () => {
     await user.click(within(firstCard).getByRole('button', { name: 'Save title' }));
 
     expect(within(firstCard).getByText('Saving…')).toBeInTheDocument();
-    expect(within(firstCard).getByLabelText('Title')).toBeEnabled();
+    expect(within(firstCard).getByLabelText('Title')).toBeDisabled();
+    expect(within(firstCard).getByRole('button', { name: 'Save title' })).toBeDisabled();
+    expect(within(firstCard).getByLabelText('Move to bucket')).toBeDisabled();
+    expect(within(firstCard).getByLabelText('Schedule to date')).toBeDisabled();
+    expect(within(firstCard).getByRole('button', { name: 'Schedule' })).toBeDisabled();
     expect(within(secondCard).getByLabelText('Title')).toBeDisabled();
     expect(within(secondCard).getByRole('button', { name: 'Save title' })).toBeDisabled();
     expect(within(secondCard).getByLabelText('Move to bucket')).toBeDisabled();

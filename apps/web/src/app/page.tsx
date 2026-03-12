@@ -816,8 +816,8 @@ export default function Home() {
                   <ul className="space-y-2">
                     {bucket.operations.map((operation) => {
                       const isMutatingOperation = mutatingOperationId === operation.id;
-                      const isOtherOperationLocked =
-                        mutatingOperationId !== null && !isMutatingOperation;
+                      const isOperationLocked = mutatingOperationId !== null;
+                      const isOtherOperationLocked = isOperationLocked && !isMutatingOperation;
                       const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
                       const endDateValue = getEndDateValue(operation, endDateDrafts);
                       const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
@@ -869,7 +869,7 @@ export default function Home() {
                             <input
                               className="rounded border bg-white px-2 py-1"
                               value={codeValue}
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                               onChange={(event) =>
                                 setCodeDrafts((currentCodeDrafts) => ({
                                   ...currentCodeDrafts,
@@ -881,7 +881,7 @@ export default function Home() {
                           <button
                             className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                             type="submit"
-                            disabled={isOtherOperationLocked || !canSaveCode}
+                             disabled={isOperationLocked || !canSaveCode}
                           >
                             Save code
                           </button>
@@ -895,7 +895,7 @@ export default function Home() {
                             <input
                               className="rounded border bg-white px-2 py-1"
                               value={titleValue}
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                               onChange={(event) =>
                                 setTitleDrafts((currentTitleDrafts) => ({
                                   ...currentTitleDrafts,
@@ -907,7 +907,7 @@ export default function Home() {
                           <button
                             className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                             type="submit"
-                            disabled={isOtherOperationLocked || !canSaveTitle}
+                             disabled={isOperationLocked || !canSaveTitle}
                           >
                             Save title
                           </button>
@@ -922,7 +922,7 @@ export default function Home() {
                               className="rounded border bg-white px-2 py-1"
                               type="date"
                               value={endDateValue}
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                               onChange={(event) =>
                                 setEndDateDrafts((currentEndDateDrafts) => ({
                                   ...currentEndDateDrafts,
@@ -934,7 +934,7 @@ export default function Home() {
                           <button
                             className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                             type="submit"
-                            disabled={isOtherOperationLocked || !canSaveEndDate}
+                             disabled={isOperationLocked || !canSaveEndDate}
                           >
                             Save end
                           </button>
@@ -942,7 +942,7 @@ export default function Home() {
                             <button
                               className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                               type="button"
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                               onClick={() => void onClearEndDate(operation)}
                             >
                               Clear end
@@ -960,7 +960,7 @@ export default function Home() {
                               type="number"
                               inputMode="numeric"
                               value={sortIndexValue}
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                               onChange={(event) =>
                                 setSortIndexDrafts((currentSortIndexDrafts) => ({
                                   ...currentSortIndexDrafts,
@@ -972,7 +972,7 @@ export default function Home() {
                           <button
                             className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                             type="submit"
-                            disabled={isOtherOperationLocked || !canSaveSortIndex}
+                             disabled={isOperationLocked || !canSaveSortIndex}
                           >
                             Save sort
                           </button>
@@ -984,7 +984,7 @@ export default function Home() {
                               <button
                                 className="rounded border px-3 py-1.5 text-sm text-slate-900 disabled:opacity-50"
                                 type="button"
-                                disabled={isOtherOperationLocked}
+                                 disabled={isOperationLocked}
                                 onClick={() => void onClearBlockedReason(operation)}
                               >
                                 Clear reason
@@ -1002,7 +1002,7 @@ export default function Home() {
                                 <input
                                   className="rounded border bg-white px-2 py-1"
                                   value={blockedReasonValue}
-                                  disabled={isOtherOperationLocked}
+                                   disabled={isOperationLocked}
                                   onChange={(event) =>
                                     setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
                                       ...currentBlockedReasonDrafts,
@@ -1014,7 +1014,7 @@ export default function Home() {
                               <button
                                 className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                                 type="submit"
-                                disabled={isOtherOperationLocked || !canSaveBlockedReason}
+                                 disabled={isOperationLocked || !canSaveBlockedReason}
                               >
                                 Save reason
                               </button>
@@ -1022,7 +1022,7 @@ export default function Home() {
                                 <button
                                   className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                                   type="button"
-                                  disabled={isOtherOperationLocked}
+                                   disabled={isOperationLocked}
                                   onClick={() => void onClearBlockedReason(operation)}
                                 >
                                   Clear reason
@@ -1035,7 +1035,7 @@ export default function Home() {
                            <select
                              className="max-w-[11rem] rounded border bg-white px-2 py-1"
                              value={operation.status}
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                              onChange={(event) =>
                                void onStatusChange(operation, event.target.value as Operation['status'])
                              }
@@ -1052,7 +1052,7 @@ export default function Home() {
                            <select
                              className="rounded border bg-white px-2 py-1"
                              value={getOperationBucketLabel(operation.startDate)}
-                              disabled={isOtherOperationLocked}
+                               disabled={isOperationLocked}
                              onChange={(event) =>
                                void onMoveOperation(
                                  operation,
@@ -1077,7 +1077,7 @@ export default function Home() {
                                className="rounded border bg-white px-2 py-1"
                                type="date"
                                value={scheduledDateValue}
-                                disabled={isOtherOperationLocked}
+                                 disabled={isOperationLocked}
                                onChange={(event) =>
                                  setScheduleDates((currentScheduleDates) => ({
                                    ...currentScheduleDates,
@@ -1089,7 +1089,7 @@ export default function Home() {
                           <button
                              className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
                              type="submit"
-                              disabled={isOtherOperationLocked || !canSchedule}
+                               disabled={isOperationLocked || !canSchedule}
                            >
                              Schedule
                            </button>
