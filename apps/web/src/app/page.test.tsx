@@ -1442,6 +1442,7 @@ describe('homepage operations board', () => {
 
   it('expires the session when an inline title edit returns forbidden', async () => {
     const client = createClient();
+    const deferredUpdate = createDeferred<never>();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
     client.operation.list.query.mockResolvedValue([
       {
@@ -1456,7 +1457,7 @@ describe('homepage operations board', () => {
         dependencyCount: 0,
       },
     ]);
-    client.operation.update.mutate.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
+    client.operation.update.mutate.mockReturnValue(deferredUpdate.promise);
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
@@ -1474,6 +1475,10 @@ describe('homepage operations board', () => {
     await user.clear(titleInput);
     await user.type(titleInput, 'Expired title');
     await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
+
+    expect(within(operationCard as HTMLElement).getByText('Saving…')).toBeInTheDocument();
+
+    deferredUpdate.reject({ data: { code: 'FORBIDDEN' } });
 
     expect(await screen.findByText('Session expired. Please log in again.')).toBeInTheDocument();
 
@@ -1520,6 +1525,17 @@ describe('homepage operations board', () => {
         version: 1,
         dependencyCount: 0,
       },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'OP-200',
+        title: 'Second title',
+        status: 'READY',
+        sortIndex: 1,
+        version: 1,
+        dependencyCount: 0,
+      },
     ]);
     client.operation.update.mutate
       .mockReturnValueOnce(deferredUpdate.promise)
@@ -1543,8 +1559,12 @@ describe('homepage operations board', () => {
     const operationCard = within(backlogBucket)
       .getByText('OP-100 — Original title')
       .closest('li');
+    const secondOperationCard = within(backlogBucket)
+      .getByText('OP-200 — Second title')
+      .closest('li');
 
     expect(operationCard).not.toBeNull();
+    expect(secondOperationCard).not.toBeNull();
 
     const titleInput = within(operationCard as HTMLElement).getByLabelText('Title');
     await user.clear(titleInput);
@@ -1566,6 +1586,8 @@ describe('homepage operations board', () => {
     expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Logout and reset session' })).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
+    expect(within(operationCard as HTMLElement).getByText('Saving…')).toBeInTheDocument();
+    expect(within(secondOperationCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load operations' }));
@@ -1579,6 +1601,7 @@ describe('homepage operations board', () => {
     expect(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' })).toBeEnabled();
     expect(within(operationCard as HTMLElement).getByDisplayValue('Pending title')).toBeInTheDocument();
     expect(within(operationCard as HTMLElement).getByText('OP-100 — Original title')).toBeInTheDocument();
+    expect(within(operationCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
 
     await user.clear(titleInput);
     await user.type(titleInput, 'Retried title');
@@ -1596,6 +1619,7 @@ describe('homepage operations board', () => {
       expect(screen.getByRole('button', { name: 'Load operations' })).toBeEnabled();
       expect(within(operationCard as HTMLElement).getByDisplayValue('Retried title')).toBeInTheDocument();
       expect(within(operationCard as HTMLElement).getByText('OP-100 — Retried title')).toBeInTheDocument();
+      expect(within(operationCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
     });
   });
 
@@ -1652,6 +1676,7 @@ describe('homepage operations board', () => {
       title: 'Pending title',
     });
     expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+    expect(within(operationCard as HTMLElement).getByText('Saving…')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Logout and reset session' }));
 
@@ -1662,6 +1687,7 @@ describe('homepage operations board', () => {
       expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
       expect(screen.queryByText('OP-100 — Original title')).not.toBeInTheDocument();
       expect(screen.queryByDisplayValue('Pending title')).not.toBeInTheDocument();
+      expect(screen.queryByText('Saving…')).not.toBeInTheDocument();
     });
 
     deferredUpdate.resolve({
@@ -2453,6 +2479,7 @@ describe('homepage operations board', () => {
 
   it('reloads operations and shows the resync message when a title edit hits a version conflict', async () => {
     const client = createClient();
+    const deferredUpdate = createDeferred<never>();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
     client.operation.list.query
       .mockResolvedValueOnce([
@@ -2479,18 +2506,7 @@ describe('homepage operations board', () => {
           version: 2,
         },
       ]);
-    client.operation.update.mutate.mockRejectedValue({
-      data: {
-        code: 'CONFLICT',
-        conflict: {
-          code: 'VERSION_CONFLICT',
-          entity: 'Operation',
-          id: 'op-1',
-          expectedVersion: 1,
-          actualVersion: 2,
-        },
-      },
-    });
+    client.operation.update.mutate.mockReturnValue(deferredUpdate.promise);
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
@@ -2509,6 +2525,21 @@ describe('homepage operations board', () => {
     await user.type(titleInput, 'Client edited title');
     await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
 
+    expect(within(operationCard as HTMLElement).getByText('Saving…')).toBeInTheDocument();
+
+    deferredUpdate.reject({
+      data: {
+        code: 'CONFLICT',
+        conflict: {
+          code: 'VERSION_CONFLICT',
+          entity: 'Operation',
+          id: 'op-1',
+          expectedVersion: 1,
+          actualVersion: 2,
+        },
+      },
+    });
+
     expect(
       await screen.findByText('Board was out of date. Reloaded latest operations, please try again.'),
     ).toBeInTheDocument();
@@ -2521,6 +2552,7 @@ describe('homepage operations board', () => {
 
       expect(refreshedCard).not.toBeNull();
       expect(within(refreshedCard as HTMLElement).getByDisplayValue('Server updated title')).toBeInTheDocument();
+      expect(within(refreshedCard as HTMLElement).queryByText('Saving…')).not.toBeInTheDocument();
     });
   });
 

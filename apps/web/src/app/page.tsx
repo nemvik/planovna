@@ -815,6 +815,7 @@ export default function Home() {
 
                   <ul className="space-y-2">
                     {bucket.operations.map((operation) => {
+                      const isMutatingOperation = mutatingOperationId === operation.id;
                       const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
                       const endDateValue = getEndDateValue(operation, endDateDrafts);
                       const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
@@ -846,6 +847,9 @@ export default function Home() {
                             </div>
                             {prerequisiteSummary ? (
                               <p className="mt-1 text-sm text-amber-700">{prerequisiteSummary}</p>
+                            ) : null}
+                            {isMutatingOperation ? (
+                              <p className="mt-1 text-sm font-medium text-slate-600">Saving…</p>
                             ) : null}
                           </div>
                           {operation.dependencyCount > 0 && !prerequisiteSummary ? (
