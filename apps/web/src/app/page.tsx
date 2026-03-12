@@ -5,6 +5,7 @@ import {
   applyBoardFilters,
   BACKLOG_BUCKET,
   BOARD_STATUS_VALUES,
+  clearBoardFilter,
   compareBucketLabels,
   getActiveBoardFilters,
   getAvailableBucketFilters,
@@ -618,9 +619,21 @@ export default function Home() {
                 {activeFilters.map((filter) => (
                   <span
                     key={filter.key}
-                    className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium text-amber-900"
+                    className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium text-amber-900"
                   >
-                    {filter.label}: {filter.value}
+                    <span>
+                      {filter.label}: {filter.value}
+                    </span>
+                    <button
+                      className="rounded-full border border-amber-300 px-1 text-[10px] leading-none text-amber-900"
+                      type="button"
+                      aria-label={`Clear ${filter.label.toLowerCase()} filter`}
+                      onClick={() =>
+                        setFilters((currentFilters) => clearBoardFilter(currentFilters, filter.key))
+                      }
+                    >
+                      x
+                    </button>
                   </span>
                 ))}
               </div>

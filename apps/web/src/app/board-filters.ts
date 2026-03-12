@@ -16,6 +16,8 @@ export type ActiveBoardFilter = {
   value: string;
 };
 
+export type ActiveBoardFilterKey = ActiveBoardFilter['key'];
+
 type FilterableOperation = {
   status: BoardStatus;
   startDate?: string;
@@ -150,4 +152,20 @@ export const getActiveBoardFilters = (filters: BoardFilters): ActiveBoardFilter[
   }
 
   return activeFilters;
+};
+
+export const clearBoardFilter = (
+  filters: BoardFilters,
+  filterKey: ActiveBoardFilterKey,
+): BoardFilters => {
+  switch (filterKey) {
+    case 'status':
+      return { ...filters, status: ALL_FILTER };
+    case 'bucket':
+      return { ...filters, bucket: ALL_FILTER };
+    case 'query':
+      return { ...filters, query: '' };
+    default:
+      return filters;
+  }
 };

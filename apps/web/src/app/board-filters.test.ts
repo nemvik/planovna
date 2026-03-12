@@ -1,6 +1,7 @@
 import {
   applyBoardFilters,
   BACKLOG_BUCKET,
+  clearBoardFilter,
   getActiveBoardFilters,
   getAvailableBucketFilters,
   parseBoardFilters,
@@ -115,5 +116,31 @@ describe('board-filters', () => {
       { key: 'bucket', label: 'Bucket', value: BACKLOG_BUCKET },
       { key: 'query', label: 'Query', value: 'OP-200' },
     ]);
+  });
+
+  it('clears one active filter at a time while preserving the others', () => {
+    const filters = {
+      status: 'BLOCKED' as const,
+      bucket: BACKLOG_BUCKET,
+      query: 'OP-200',
+    };
+
+    expect(clearBoardFilter(filters, 'status')).toEqual({
+      status: 'ALL',
+      bucket: BACKLOG_BUCKET,
+      query: 'OP-200',
+    });
+
+    expect(clearBoardFilter(filters, 'bucket')).toEqual({
+      status: 'BLOCKED',
+      bucket: 'ALL',
+      query: 'OP-200',
+    });
+
+    expect(clearBoardFilter(filters, 'query')).toEqual({
+      status: 'BLOCKED',
+      bucket: BACKLOG_BUCKET,
+      query: '',
+    });
   });
 });

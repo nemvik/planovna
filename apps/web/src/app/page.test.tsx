@@ -466,6 +466,236 @@ describe('homepage operations board', () => {
     expect(screen.getByText('Clear filters to return to the full board without reloading operations.')).toBeInTheDocument();
   });
 
+  it('clears only the status chip and preserves bucket and query filters', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Cut steel',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Cut frame blocked',
+        status: 'BLOCKED',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Cut frame',
+        status: 'READY',
+        startDate: '2026-03-06T09:00:00.000Z',
+        sortIndex: 2,
+        version: 1,
+      },
+      {
+        id: 'op-4',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-400',
+        title: 'Weld frame',
+        status: 'READY',
+        startDate: '2026-03-06T10:00:00.000Z',
+        sortIndex: 3,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+    await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
+    await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
+    await user.type(screen.getByLabelText('Code or title'), 'frame');
+
+    expect(await screen.findByText('Showing 2 of 4 operations.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear status filter' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Showing 3 of 4 operations.')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByLabelText('Status')[0]).toHaveValue('ALL');
+    expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
+    expect(screen.getByLabelText('Code or title')).toHaveValue('frame');
+    expect(screen.queryByText('Status: READY')).not.toBeInTheDocument();
+    expect(screen.getByText('Bucket: 2026-03-06')).toBeInTheDocument();
+    expect(screen.getByText('Query: frame')).toBeInTheDocument();
+    expect(screen.getByText('OP-200 — Cut frame blocked')).toBeInTheDocument();
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears only the bucket chip and preserves status and query filters', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Cut steel',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Cut frame blocked',
+        status: 'BLOCKED',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Cut frame',
+        status: 'READY',
+        startDate: '2026-03-06T09:00:00.000Z',
+        sortIndex: 2,
+        version: 1,
+      },
+      {
+        id: 'op-4',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-400',
+        title: 'Weld frame',
+        status: 'READY',
+        startDate: '2026-03-06T10:00:00.000Z',
+        sortIndex: 3,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+    await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
+    await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
+    await user.type(screen.getByLabelText('Code or title'), 'cut');
+
+    expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear bucket filter' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByLabelText('Status')[0]).toHaveValue('READY');
+    expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
+    expect(screen.getByLabelText('Code or title')).toHaveValue('cut');
+    expect(screen.getByText('Status: READY')).toBeInTheDocument();
+    expect(screen.queryByText('Bucket: 2026-03-06')).not.toBeInTheDocument();
+    expect(screen.getByText('Query: cut')).toBeInTheDocument();
+    expect(screen.getByText('OP-100 — Cut steel')).toBeInTheDocument();
+    expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears only the query chip and preserves status and bucket filters', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Cut steel',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Cut frame blocked',
+        status: 'BLOCKED',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-300',
+        title: 'Cut frame',
+        status: 'READY',
+        startDate: '2026-03-06T09:00:00.000Z',
+        sortIndex: 2,
+        version: 1,
+      },
+      {
+        id: 'op-4',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-400',
+        title: 'Weld frame',
+        status: 'READY',
+        startDate: '2026-03-06T10:00:00.000Z',
+        sortIndex: 3,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+    await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
+    await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
+    await user.type(screen.getByLabelText('Code or title'), 'cut');
+
+    expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear query filter' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByLabelText('Status')[0]).toHaveValue('READY');
+    expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
+    expect(screen.getByLabelText('Code or title')).toHaveValue('');
+    expect(screen.getByText('Status: READY')).toBeInTheDocument();
+    expect(screen.getByText('Bucket: 2026-03-06')).toBeInTheDocument();
+    expect(screen.queryByText('Query: cut')).not.toBeInTheDocument();
+    expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
+    expect(screen.getByText('OP-400 — Weld frame')).toBeInTheDocument();
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+
   it('persists a blocked reason edit and merges the returned operation into board state', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
