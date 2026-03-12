@@ -1440,6 +1440,61 @@ describe('homepage operations board', () => {
     });
   });
 
+  it('expires the session when an inline title edit returns forbidden', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Original title',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+        dependencyCount: 0,
+      },
+    ]);
+    client.operation.update.mutate.mockRejectedValue({ data: { code: 'FORBIDDEN' } });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket)
+      .getByText('OP-100 — Original title')
+      .closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    const titleInput = within(operationCard as HTMLElement).getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Expired title');
+    await user.click(within(operationCard as HTMLElement).getByRole('button', { name: 'Save title' }));
+
+    expect(await screen.findByText('Session expired. Please log in again.')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(client.operation.update.mutate).toHaveBeenCalledWith({
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        version: 1,
+        title: 'Expired title',
+      });
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(screen.getByRole('button', { name: 'Load operations' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+      expect(screen.queryByText('OP-100 — Original title')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Expired title')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed to update title.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Board was out of date. Reloaded latest operations, please try again.')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
+    });
+  });
+
   it('guards duplicate inline operation updates while a homepage mutation is still pending and allows retry after failure', async () => {
     const client = createClient();
     const deferredUpdate = createDeferred<{

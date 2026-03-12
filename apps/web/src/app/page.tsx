@@ -482,7 +482,9 @@ export default function Home() {
         return;
       }
 
-      if (extractConflictData(error)) {
+      if (hasForbiddenCode(error)) {
+        resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
+      } else if (extractConflictData(error)) {
         try {
           await loadOperations();
 
