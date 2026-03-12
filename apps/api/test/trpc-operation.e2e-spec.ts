@@ -538,11 +538,13 @@ describe('tRPC operation contracts (e2e)', () => {
       id: blocked.id,
       dependencyCount: 4,
       prerequisiteCodes: ['OP-120', 'OP-130', 'OP-140'],
+      prerequisiteOverflowCount: 1,
     });
     expect(tenantAList.find((operation) => operation.id === unblocked.id)).toMatchObject({
       id: unblocked.id,
       dependencyCount: 0,
       prerequisiteCodes: [],
+      prerequisiteOverflowCount: 0,
     });
   });
 });

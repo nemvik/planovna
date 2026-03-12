@@ -29,6 +29,7 @@ type Operation = {
   version: number;
   dependencyCount: number;
   prerequisiteCodes?: string[];
+  prerequisiteOverflowCount?: number;
 };
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'empty' | 'forbidden' | 'error';
@@ -182,7 +183,10 @@ const formatPrerequisiteSummary = (operation: Operation) => {
     return null;
   }
 
-  return `Waiting on ${operation.prerequisiteCodes.join(', ')}`;
+  const overflowCount = operation.prerequisiteOverflowCount ?? 0;
+  const overflowSuffix = overflowCount > 0 ? ` +${overflowCount} more` : '';
+
+  return `Waiting on ${operation.prerequisiteCodes.join(', ')}${overflowSuffix}`;
 };
 
 export default function Home() {

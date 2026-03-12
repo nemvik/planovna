@@ -8,6 +8,7 @@ type OperationRecord = CreateOperationDto & {
   version: number;
   dependencyCount: number;
   prerequisiteCodes: string[];
+  prerequisiteOverflowCount: number;
 };
 
 const BOARD_PREREQUISITE_CODE_LIMIT = 3;
@@ -286,6 +287,7 @@ export class OperationService {
       version: row.version,
       dependencyCount: row._count.dependsOn,
       prerequisiteCodes: row.dependsOn.map((dependency) => dependency.dependsOn.code),
+      prerequisiteOverflowCount: Math.max(0, row._count.dependsOn - row.dependsOn.length),
     };
   }
 }

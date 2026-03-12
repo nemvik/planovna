@@ -137,6 +137,7 @@ describe('homepage operations board', () => {
         blockedReason: 'Waiting for material',
         dependencyCount: 2,
         prerequisiteCodes: ['OP-120', 'OP-130'],
+        prerequisiteOverflowCount: 0,
         version: 1,
       },
       {
@@ -150,6 +151,7 @@ describe('homepage operations board', () => {
         sortIndex: 1,
         dependencyCount: 1,
         prerequisiteCodes: ['OP-125'],
+        prerequisiteOverflowCount: 0,
         version: 1,
       },
       {
@@ -188,6 +190,37 @@ describe('homepage operations board', () => {
 
     expect(within(secondDateBucket).getByText('OP-300 — Later bucket item')).toBeInTheDocument();
     expect(within(secondDateBucket).queryByText(/Waiting on /)).not.toBeInTheDocument();
+  });
+
+  it('renders a compact prerequisite overflow suffix only when more same-tenant prerequisites exist beyond the cap', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Overflow item',
+        status: 'BLOCKED',
+        sortIndex: 0,
+        dependencyCount: 5,
+        prerequisiteCodes: ['OP-120', 'OP-130', 'OP-140'],
+        prerequisiteOverflowCount: 2,
+        version: 1,
+      },
+    ]);
+
+    renderWithClient(client);
+    await login();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Load operations' }));
+
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    expect(
+      within(backlogBucket).getByText('Waiting on OP-120, OP-130, OP-140 +2 more'),
+    ).toBeInTheDocument();
   });
 
   it('moves an operation into another loaded bucket using operation.update', async () => {
