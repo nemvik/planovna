@@ -759,9 +759,14 @@ export default function Home() {
           <div className="mt-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium">Next cashflow items</p>
-              <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
-                Open cashflow page
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
+                  Open cashflow page
+                </Link>
+                <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
+                  Open invoices page
+                </Link>
+              </div>
             </div>
             {cashflowSummary.nextItems.length === 0 ? (
               <p className="mt-1 text-sm text-slate-600">No cashflow items yet.</p>
