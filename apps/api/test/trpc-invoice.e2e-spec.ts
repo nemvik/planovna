@@ -292,6 +292,45 @@ describe('tRPC invoice contracts (e2e)', () => {
     expect(tenantBAfterPaid.some((invoice) => invoice.id === issued.id)).toBe(false);
   });
 
+  it('exposes the shipped invoice pdf path in tRPC invoice responses', async () => {
+    const ownerLogin = authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    expect(ownerLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const order = await createInvoiceOrder(ownerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
+
+    const issued = await ownerClient.invoice.issue.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      number: `INV-TRPC-PDF-${suffix}`,
+      currency: 'CZK',
+      amountGross: 4444,
+      dueAt: new Date('2026-04-22').toISOString(),
+    });
+
+    expect(issued.pdfPath).toBe(`/invoices/${issued.id}/pdf`);
+
+    const listed = await ownerClient.invoice.list.query();
+    expect(listed).toContainEqual(
+      expect.objectContaining({
+        id: issued.id,
+        pdfPath: `/invoices/${issued.id}/pdf`,
+      }),
+    );
+
+    const paid = await ownerClient.invoice.paid.mutate({
+      invoiceId: issued.id,
+      paidAt: new Date('2026-04-23').toISOString(),
+      version: issued.version,
+    });
+
+    expect(paid.pdfPath).toBe(`/invoices/${issued.id}/pdf`);
+  });
+
   it('resolves tenant from token and blocks cross-tenant paid side effects', async () => {
     const tenantALogin = authService.login({
       email: 'owner@tenant-a.local',

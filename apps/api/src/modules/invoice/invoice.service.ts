@@ -8,6 +8,7 @@ type Invoice = CreateInvoiceDto & {
   id: string;
   status: 'DRAFT' | 'ISSUED' | 'PAID';
   paidAt?: string;
+  pdfPath: string;
   version: number;
 };
 
@@ -230,8 +231,13 @@ export class InvoiceService {
       issuedAt: row.issuedAt?.toISOString(),
       dueAt: row.dueAt?.toISOString(),
       paidAt: row.paidAt?.toISOString(),
+      pdfPath: this.toInvoicePdfPath(row.id),
       version: row.version,
     };
+  }
+
+  private toInvoicePdfPath(invoiceId: string): string {
+    return `/invoices/${encodeURIComponent(invoiceId)}/pdf`;
   }
 
   private buildInvoicePdf(invoice: Invoice): Buffer {
