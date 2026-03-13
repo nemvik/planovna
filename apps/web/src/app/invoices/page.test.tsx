@@ -16,6 +16,10 @@ describe('invoices page', () => {
     expect(
       screen.getByText('Dedicated invoice view built on the same shipped homepage finance and export contract.'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Invoice export actions' })).toHaveTextContent(
+      '/invoices/<invoiceId>/pdf',
+    );
+    expect(screen.getByRole('link', { name: 'Open homepage finance workspace' })).toHaveAttribute('href', '/');
     expect(screen.getByTestId('homepage-shell')).toBeInTheDocument();
   });
 });
