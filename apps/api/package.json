@@ -16,6 +16,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:status": "prisma migrate status",
+    "prisma:seed:demo": "ts-node --project tsconfig.json prisma/seed-demo-tenant.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
