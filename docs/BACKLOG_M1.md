@@ -13,8 +13,8 @@
 - [x] Configure CORS for split frontend/backend domains (stage/prod), including credentials/origin allowlist from env
 
 ## Tests
-- [ ] Integration tests for tenant isolation
-- [ ] Integration tests for version conflict
+- [x] Integration tests for tenant isolation
+- [x] Integration tests for version conflict
 - [ ] Smoke test: create customer/order/operation flow
 - [x] Cross-origin smoke test: web -> API works on different domains without CORS failure
 - [x] Add frontend E2E smoke tests (Playwright): login, board load, operation edit, persistence after reload
