@@ -15,7 +15,7 @@
 ## Tests
 - [x] Integration tests for tenant isolation
 - [x] Integration tests for version conflict
-- [ ] Smoke test: create customer/order/operation flow
+- [x] Smoke test: create customer/order/operation flow
 - [x] Cross-origin smoke test: web -> API works on different domains without CORS failure
 - [x] Add frontend E2E smoke tests (Playwright): login, board load, operation edit, persistence after reload
 - [x] Add UX regression checks for key flows (empty state, loading state, error state, responsive layout)
