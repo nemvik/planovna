@@ -214,6 +214,19 @@ Expected visible markers:
 - section `Next cashflow items`
 - up to three dated cashflow rows rendered from the shipped `cashflow.list` contract
 
+### Verify dedicated `/cashflow` page
+Use the dedicated cashflow route to confirm the app now exposes a cashflow-specific entrypoint beyond the homepage summary.
+
+Minimal verification path:
+1. Start the app stack locally.
+2. Open `http://127.0.0.1:${PORT:-3000}/cashflow`.
+3. Confirm the page renders without a 404 and mounts the shared app shell.
+
+Expected visible markers:
+- heading `Cashflow`
+- text `Dedicated cashflow view built on the same shipped homepage snapshot contract.`
+- existing homepage/app shell content rendered beneath the cashflow header
+
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
 ## Recommended deployment order
