@@ -182,6 +182,24 @@ npm run seed:demo
 
 The root `seed:demo` command delegates to the shipped Prisma seed entrypoint in `apps/api` and is safe to re-run because it uses idempotent upserts for the demo baseline.
 
+### Export invoice PDF baseline
+Use the authenticated invoice PDF endpoint to verify the minimal PDF export path.
+
+Example against a running API:
+```bash
+curl -sS \
+  -H "Authorization: Bearer <token>" \
+  -o invoice.pdf \
+  -D - \
+  http://127.0.0.1:${PORT:-3000}/invoices/<invoiceId>/pdf
+```
+
+Expected result:
+- HTTP `200`
+- header `Content-Type: application/pdf`
+- header `Content-Disposition: attachment; filename="invoice-...pdf"`
+- saved file starts with the PDF signature `%PDF-`
+
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
 ## Recommended deployment order
