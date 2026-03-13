@@ -227,6 +227,19 @@ Expected visible markers:
 - text `Dedicated cashflow view built on the same shipped homepage snapshot contract.`
 - existing homepage/app shell content rendered beneath the cashflow header
 
+### Verify dedicated `/invoices` page
+Use the dedicated invoice route to confirm the app now exposes an invoice-specific entrypoint beyond API-only export paths.
+
+Minimal verification path:
+1. Start the app stack locally.
+2. Open `http://127.0.0.1:${PORT:-3000}/invoices`.
+3. Confirm the page renders without a 404 and mounts the shared app shell.
+
+Expected visible markers:
+- heading `Invoices`
+- text `Dedicated invoice view built on the same shipped homepage finance and export contract.`
+- existing homepage/app shell content rendered beneath the invoice header
+
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
 ## Recommended deployment order
