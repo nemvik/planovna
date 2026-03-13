@@ -36,6 +36,16 @@ type Operation = {
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'empty' | 'forbidden' | 'error';
 
+type CashflowItem = {
+  id: string;
+  tenantId: string;
+  invoiceId: string;
+  kind: 'PLANNED_IN' | 'ACTUAL_IN';
+  amount: number;
+  currency: 'CZK' | 'EUR';
+  date: string;
+};
+
 type OperationBucket = {
   label: string;
   operations: Operation[];
@@ -206,12 +216,21 @@ const formatPrerequisiteSummary = (operation: Operation) => {
   return `Waiting on ${operation.prerequisiteCodes.join(', ')}${overflowSuffix}`;
 };
 
+const formatMoney = (amount: number, currency: CashflowItem['currency']) =>
+  new Intl.NumberFormat('cs-CZ', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loginPending, setLoginPending] = useState(false);
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
   const [authMessage, setAuthMessage] = useState('');
   const [boardMessage, setBoardMessage] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
@@ -242,6 +261,22 @@ export default function Home() {
   const filteredOperations = useMemo(() => applyBoardFilters(operations, filters), [operations, filters]);
   const activeFilters = useMemo(() => getActiveBoardFilters(filters), [filters]);
   const operationBuckets = useMemo(() => buildBuckets(filteredOperations), [filteredOperations]);
+  const cashflowSummary = useMemo(() => {
+    const plannedIn = cashflowItems
+      .filter((item) => item.kind === 'PLANNED_IN')
+      .reduce((sum, item) => sum + item.amount, 0);
+    const actualIn = cashflowItems
+      .filter((item) => item.kind === 'ACTUAL_IN')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    return {
+      plannedIn,
+      actualIn,
+      nextItems: [...cashflowItems]
+        .sort((left, right) => left.date.localeCompare(right.date))
+        .slice(0, 3),
+    };
+  }, [cashflowItems]);
   const showOperationBoard =
     operations.length > 0 && (operationLoadState === 'loaded' || operationLoadState === 'loading');
   const isFilteredEmptyState =
@@ -282,7 +317,9 @@ export default function Home() {
     hydrationAutoLoadPendingRef.current = false;
     resetOperationsState();
 
-    void loadOperations(createTrpcClient(accessToken)).catch(() => {
+    const hydratedClient = createTrpcClient(accessToken);
+    void loadCashflow(hydratedClient);
+    void loadOperations(hydratedClient).catch(() => {
       // state is already updated in loadOperations
     });
   }, [accessToken]);
@@ -304,6 +341,7 @@ export default function Home() {
 
   const resetOperationsState = () => {
     setOperations([]);
+    setCashflowItems([]);
     setBoardMessage('');
     mutatingOperationIdRef.current = null;
     setMutatingOperationId(null);
@@ -330,6 +368,15 @@ export default function Home() {
     setAccessToken(null);
     resetOperationsState();
     setAuthMessage(message);
+  };
+
+  const loadCashflow = async (client = trpcClient) => {
+    try {
+      const result = await client.cashflow.list.query();
+      setCashflowItems(result as CashflowItem[]);
+    } catch {
+      setCashflowItems([]);
+    }
   };
 
   const loadOperations = async (client = trpcClient) => {
@@ -392,8 +439,11 @@ export default function Home() {
       resetOperationsState();
       setAuthMessage('Logged in');
 
+      const authenticatedClient = createTrpcClient(nextAccessToken);
+      void loadCashflow(authenticatedClient);
+
       try {
-        await loadOperations(createTrpcClient(nextAccessToken));
+        await loadOperations(authenticatedClient);
       } catch {
         // state is already updated in loadOperations
       }
@@ -691,6 +741,37 @@ export default function Home() {
 
       {authMessage ? <p>{authMessage}</p> : null}
       {boardMessage ? <p>{boardMessage}</p> : null}
+
+      {accessToken ? (
+        <section aria-label="Cashflow summary" className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">Cashflow snapshot</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Planned in</p>
+              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK')}</p>
+            </div>
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Actual in</p>
+              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK')}</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-sm font-medium">Next cashflow items</p>
+            {cashflowSummary.nextItems.length === 0 ? (
+              <p className="mt-1 text-sm text-slate-600">No cashflow items yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                {cashflowSummary.nextItems.map((item) => (
+                  <li key={item.id}>
+                    {item.date.slice(0, 10)} — {item.kind === 'PLANNED_IN' ? 'Planned in' : 'Actual in'} —{' '}
+                    {formatMoney(item.amount, item.currency)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {operationLoadState === 'loading' ? <p>Loading operations…</p> : null}
       {operationLoadState === 'empty' ? <p>No operations found.</p> : null}

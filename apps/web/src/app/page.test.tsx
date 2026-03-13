@@ -40,6 +40,11 @@ const createClient = () => ({
       mutate: jest.fn(),
     },
   },
+  cashflow: {
+    list: {
+      query: jest.fn().mockResolvedValue([]),
+    },
+  },
 });
 
 const renderWithClient = (client: ReturnType<typeof createClient>) => {
@@ -97,6 +102,44 @@ describe('homepage operations board', () => {
 
     await login('owner@tenant-a.local', 'tenant-a-pass');
     expect(await screen.findByText('Logged in')).toBeInTheDocument();
+  });
+
+  it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([
+      {
+        id: 'cf-planned',
+        tenantId: 'tenant-a',
+        invoiceId: 'inv-1',
+        kind: 'PLANNED_IN',
+        amount: 121000,
+        currency: 'CZK',
+        date: '2026-03-15T00:00:00.000Z',
+      },
+      {
+        id: 'cf-actual',
+        tenantId: 'tenant-a',
+        invoiceId: 'inv-1',
+        kind: 'ACTUAL_IN',
+        amount: 60000,
+        currency: 'CZK',
+        date: '2026-03-10T00:00:00.000Z',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toBeInTheDocument();
+    expect(cashflowSummary).toHaveTextContent('Planned in');
+    expect(cashflowSummary).toHaveTextContent('121');
+    expect(cashflowSummary).toHaveTextContent('Actual in');
+    expect(cashflowSummary).toHaveTextContent('60');
+    expect(cashflowSummary).toHaveTextContent('2026-03-10');
+    expect(cashflowSummary).toHaveTextContent('Next cashflow items');
+    expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
   });
 
   it('auto-loads operations once after a successful login', async () => {
