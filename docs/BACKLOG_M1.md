@@ -3,7 +3,7 @@
 ## P0
 - [x] Setup monorepo scripts and shared lint/test commands
 - [x] Add Prisma + Postgres connection + initial migration
-- [ ] Implement Tenant/User/Role model
+- [x] Implement Tenant/User/Role model
 - [x] Implement auth skeleton (email+password + magic-link token tables)
 - [x] CRUD: Customer
 - [x] CRUD: Order
