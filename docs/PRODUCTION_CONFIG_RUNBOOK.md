@@ -169,6 +169,19 @@ npm -w apps/api run prisma:migrate:deploy
 npm -w apps/api run prisma:migrate:status
 ```
 
+### Seed demo tenant baseline
+Dry-run without DB writes:
+```bash
+npm run seed:demo -- --dry-run
+```
+
+Apply the demo tenant seed:
+```bash
+npm run seed:demo
+```
+
+The root `seed:demo` command delegates to the shipped Prisma seed entrypoint in `apps/api` and is safe to re-run because it uses idempotent upserts for the demo baseline.
+
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
 ## Recommended deployment order
