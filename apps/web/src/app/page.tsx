@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyBoardFilters,
@@ -756,7 +757,12 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-sm font-medium">Next cashflow items</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium">Next cashflow items</p>
+              <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
+                Open cashflow page
+              </Link>
+            </div>
             {cashflowSummary.nextItems.length === 0 ? (
               <p className="mt-1 text-sm text-slate-600">No cashflow items yet.</p>
             ) : (

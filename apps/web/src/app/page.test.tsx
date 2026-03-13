@@ -139,6 +139,7 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('60');
     expect(cashflowSummary).toHaveTextContent('2026-03-10');
     expect(cashflowSummary).toHaveTextContent('Next cashflow items');
+    expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
     expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
   });
 
