@@ -1,14 +1,14 @@
 # M1 Backlog (Week 1)
 
 ## P0
-- [ ] Setup monorepo scripts and shared lint/test commands
-- [ ] Add Prisma + Postgres connection + initial migration
+- [x] Setup monorepo scripts and shared lint/test commands
+- [x] Add Prisma + Postgres connection + initial migration
 - [ ] Implement Tenant/User/Role model
-- [ ] Implement auth skeleton (email+password + magic-link token tables)
-- [ ] CRUD: Customer
-- [ ] CRUD: Order
-- [ ] CRUD: Operation
-- [ ] Add optimistic lock helper (`version` checks)
+- [x] Implement auth skeleton (email+password + magic-link token tables)
+- [x] CRUD: Customer
+- [x] CRUD: Order
+- [x] CRUD: Operation
+- [x] Add optimistic lock helper (`version` checks)
 - [ ] Seed script for demo tenant
 - [x] Configure CORS for split frontend/backend domains (stage/prod), including credentials/origin allowlist from env
 
