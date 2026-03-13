@@ -200,6 +200,20 @@ Expected result:
 - header `Content-Disposition: attachment; filename="invoice-...pdf"`
 - saved file starts with the PDF signature `%PDF-`
 
+### Verify homepage cashflow summary baseline
+Use the existing demo/homepage flow to confirm the user-visible cashflow snapshot is present.
+
+Minimal verification path:
+1. Start the app stack locally.
+2. Log in on the homepage with a tenant that already has cashflow-backed invoices.
+3. Confirm the homepage shows a `Cashflow snapshot` section.
+
+Expected visible markers:
+- card `Planned in`
+- card `Actual in`
+- section `Next cashflow items`
+- up to three dated cashflow rows rendered from the shipped `cashflow.list` contract
+
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
 ## Recommended deployment order
