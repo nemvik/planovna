@@ -9,7 +9,7 @@
 - [x] CRUD: Order
 - [x] CRUD: Operation
 - [x] Add optimistic lock helper (`version` checks)
-- [ ] Seed script for demo tenant
+- [x] Seed script for demo tenant
 - [x] Configure CORS for split frontend/backend domains (stage/prod), including credentials/origin allowlist from env
 
 ## Tests
