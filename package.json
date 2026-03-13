@@ -15,6 +15,7 @@
     "test:e2e:smoke": "playwright test tests/e2e/homepage-login-board.smoke.spec.ts",
     "prod:preflight": "bash ./scripts/prod_config_preflight.sh",
     "smoke:cors:auth-login": "bash ./scripts/trpc_auth_login_cors_smoke.sh",
+    "seed:demo": "npm -w apps/api run prisma:seed:demo --",
     "gate:local": "bash ./scripts/ci_local_gate.sh"
   },
   "devDependencies": {
