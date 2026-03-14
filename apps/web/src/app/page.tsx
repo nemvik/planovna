@@ -803,7 +803,11 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              Review invoice status here, then jump directly to the dedicated invoice or cashflow pages
+              for the next finance step.
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
               <p className="text-sm font-medium">Next cashflow items</p>
               <div className="flex items-center gap-3">
                 <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">

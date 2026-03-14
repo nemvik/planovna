@@ -166,6 +166,9 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('Invoice status');
     expect(cashflowSummary).toHaveTextContent('1 issued / 1 paid');
     expect(cashflowSummary).toHaveTextContent('2 invoices loaded');
+    expect(cashflowSummary).toHaveTextContent(
+      'Review invoice status here, then jump directly to the dedicated invoice or cashflow pages for the next finance step.',
+    );
     expect(cashflowSummary).toHaveTextContent('2026-03-10');
     expect(cashflowSummary).toHaveTextContent('Next cashflow items');
     expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
