@@ -45,6 +45,11 @@ const createClient = () => ({
       query: jest.fn().mockResolvedValue([]),
     },
   },
+  invoice: {
+    list: {
+      query: jest.fn().mockResolvedValue([]),
+    },
+  },
 });
 
 const renderWithClient = (client: ReturnType<typeof createClient>) => {
@@ -127,6 +132,26 @@ describe('homepage operations board', () => {
         date: '2026-03-10T00:00:00.000Z',
       },
     ]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'PAID',
+        amountGross: 50000,
+        currency: 'CZK',
+        dueAt: '2026-03-10T00:00:00.000Z',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
 
     renderWithClient(client);
     await loginAndWaitForAutoLoad(client);
@@ -138,6 +163,9 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('Actual in');
     expect(cashflowSummary).toHaveTextContent('60');
     expect(cashflowSummary).toHaveTextContent('Invoice workspace');
+    expect(cashflowSummary).toHaveTextContent('Invoice status');
+    expect(cashflowSummary).toHaveTextContent('1 issued / 1 paid');
+    expect(cashflowSummary).toHaveTextContent('2 invoices loaded');
     expect(cashflowSummary).toHaveTextContent('2026-03-10');
     expect(cashflowSummary).toHaveTextContent('Next cashflow items');
     expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');

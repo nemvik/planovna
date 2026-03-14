@@ -47,6 +47,16 @@ type CashflowItem = {
   date: string;
 };
 
+type InvoiceSummary = {
+  id: string;
+  number: string;
+  status: 'DRAFT' | 'ISSUED' | 'PAID';
+  amountGross: number;
+  currency: 'CZK' | 'EUR';
+  dueAt?: string;
+  pdfPath: string;
+};
+
 type OperationBucket = {
   label: string;
   operations: Operation[];
@@ -232,6 +242,7 @@ export default function Home() {
   const [loginPending, setLoginPending] = useState(false);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
+  const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
   const [authMessage, setAuthMessage] = useState('');
   const [boardMessage, setBoardMessage] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
@@ -278,6 +289,16 @@ export default function Home() {
         .slice(0, 3),
     };
   }, [cashflowItems]);
+  const invoiceSummary = useMemo(() => {
+    const issuedCount = invoiceSummaries.filter((invoice) => invoice.status === 'ISSUED').length;
+    const paidCount = invoiceSummaries.filter((invoice) => invoice.status === 'PAID').length;
+
+    return {
+      totalCount: invoiceSummaries.length,
+      issuedCount,
+      paidCount,
+    };
+  }, [invoiceSummaries]);
   const showOperationBoard =
     operations.length > 0 && (operationLoadState === 'loaded' || operationLoadState === 'loading');
   const isFilteredEmptyState =
@@ -320,6 +341,7 @@ export default function Home() {
 
     const hydratedClient = createTrpcClient(accessToken);
     void loadCashflow(hydratedClient);
+    void loadInvoices(hydratedClient);
     void loadOperations(hydratedClient).catch(() => {
       // state is already updated in loadOperations
     });
@@ -343,6 +365,7 @@ export default function Home() {
   const resetOperationsState = () => {
     setOperations([]);
     setCashflowItems([]);
+    setInvoiceSummaries([]);
     setBoardMessage('');
     mutatingOperationIdRef.current = null;
     setMutatingOperationId(null);
@@ -377,6 +400,15 @@ export default function Home() {
       setCashflowItems(result as CashflowItem[]);
     } catch {
       setCashflowItems([]);
+    }
+  };
+
+  const loadInvoices = async (client = trpcClient) => {
+    try {
+      const result = await client.invoice.list.query();
+      setInvoiceSummaries((result as InvoiceSummary[]).slice(0, 5));
+    } catch {
+      setInvoiceSummaries([]);
     }
   };
 
@@ -442,6 +474,7 @@ export default function Home() {
 
       const authenticatedClient = createTrpcClient(nextAccessToken);
       void loadCashflow(authenticatedClient);
+      void loadInvoices(authenticatedClient);
 
       try {
         await loadOperations(authenticatedClient);
@@ -746,7 +779,7 @@ export default function Home() {
       {accessToken ? (
         <section aria-label="Cashflow summary" className="rounded border bg-slate-50 p-4">
           <h2 className="text-lg font-medium">Cashflow snapshot</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">Planned in</p>
               <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK')}</p>
@@ -754,6 +787,13 @@ export default function Home() {
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">Actual in</p>
               <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK')}</p>
+            </div>
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Invoice status</p>
+              <p className="text-lg font-semibold">
+                {invoiceSummary.issuedCount} issued / {invoiceSummary.paidCount} paid
+              </p>
+              <p className="text-xs text-slate-500">{invoiceSummary.totalCount} invoices loaded</p>
             </div>
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">Invoice workspace</p>
