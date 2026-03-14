@@ -1,10 +1,54 @@
 "use client";
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createTrpcClient } from '../../lib/trpc/client';
 import Home from '../page';
 
+const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
+
+type InvoiceSummary = {
+  id: string;
+  number: string;
+  status: 'DRAFT' | 'ISSUED' | 'PAID';
+  amountGross: number;
+  currency: 'CZK' | 'EUR';
+  dueAt?: string;
+  pdfPath: string;
+};
+
+const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
+  new Intl.NumberFormat('cs-CZ', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
 export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const accessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
+    setHasToken(Boolean(accessToken));
+
+    if (!accessToken) {
+      setInvoices([]);
+      return;
+    }
+
+    const client = createTrpcClient(accessToken);
+    void client.invoice.list
+      .query()
+      .then((result) => setInvoices((result as InvoiceSummary[]).slice(0, 5)))
+      .catch(() => setInvoices([]));
+  }, []);
+
   const content = useMemo(
     () => (
       <div className="space-y-4">
@@ -29,10 +73,33 @@ export default function InvoicesPage() {
             </Link>
           </div>
         </section>
+        <section aria-label="Invoice list" className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">Recent invoices</h2>
+          {!hasToken ? (
+            <p className="mt-1 text-sm text-slate-600">Log in on the homepage to load invoice data.</p>
+          ) : invoices.length === 0 ? (
+            <p className="mt-1 text-sm text-slate-600">No invoices available yet.</p>
+          ) : (
+            <ul className="mt-3 space-y-2 text-sm text-slate-700">
+              {invoices.map((invoice) => (
+                <li key={invoice.id} className="rounded border bg-white px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{invoice.number}</span>
+                    <span>{invoice.status}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-3 text-slate-600">
+                    <span>{formatMoney(invoice.amountGross, invoice.currency)}</span>
+                    <span>{invoice.dueAt ? invoice.dueAt.slice(0, 10) : 'No due date'}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
         <Home />
       </div>
     ),
-    [],
+    [hasToken, invoices],
   );
 
   return content;
