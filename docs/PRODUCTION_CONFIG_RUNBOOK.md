@@ -212,6 +212,7 @@ Expected visible markers:
 - card `Planned in`
 - card `Actual in`
 - invoice guidance text `Review invoice status here, then jump directly to the dedicated invoice or cashflow pages for the next finance step.`
+- direct links `Open cashflow page` and `Open invoices page`
 - section `Next cashflow items`
 - up to three dated cashflow rows rendered from the shipped `cashflow.list` contract
 
