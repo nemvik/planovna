@@ -137,10 +137,12 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('121');
     expect(cashflowSummary).toHaveTextContent('Actual in');
     expect(cashflowSummary).toHaveTextContent('60');
+    expect(cashflowSummary).toHaveTextContent('Invoice workspace');
     expect(cashflowSummary).toHaveTextContent('2026-03-10');
     expect(cashflowSummary).toHaveTextContent('Next cashflow items');
     expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
     expect(screen.getByRole('link', { name: 'Open invoices page' })).toHaveAttribute('href', '/invoices');
+    expect(screen.getByRole('link', { name: 'Open invoices workspace' })).toHaveAttribute('href', '/invoices');
     expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
   });
 

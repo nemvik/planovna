@@ -746,7 +746,7 @@ export default function Home() {
       {accessToken ? (
         <section aria-label="Cashflow summary" className="rounded border bg-slate-50 p-4">
           <h2 className="text-lg font-medium">Cashflow snapshot</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">Planned in</p>
               <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK')}</p>
@@ -754,6 +754,12 @@ export default function Home() {
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">Actual in</p>
               <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK')}</p>
+            </div>
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Invoice workspace</p>
+              <Link className="mt-1 inline-block text-sm font-medium text-sky-700 underline" href="/invoices">
+                Open invoices workspace
+              </Link>
             </div>
           </div>
           <div className="mt-3">
