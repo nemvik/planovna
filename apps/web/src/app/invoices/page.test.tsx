@@ -58,6 +58,7 @@ describe('invoices page', () => {
       '/invoices/<invoiceId>/pdf',
     );
     expect(screen.getByRole('link', { name: 'Open homepage finance workspace' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
     expect(await screen.findByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Total invoices');
     expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('2');
     expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Issued');

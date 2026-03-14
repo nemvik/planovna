@@ -78,9 +78,12 @@ export default function InvoicesPage() {
           <code className="mt-3 block rounded bg-white px-3 py-2 text-sm text-slate-800">
             /invoices/&lt;invoiceId&gt;/pdf
           </code>
-          <div className="mt-3">
+          <div className="mt-3 flex items-center gap-3">
             <Link className="text-sm font-medium text-sky-700 underline" href="/">
               Open homepage finance workspace
+            </Link>
+            <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
+              Open cashflow page
             </Link>
           </div>
         </section>
