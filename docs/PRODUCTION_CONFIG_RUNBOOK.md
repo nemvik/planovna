@@ -226,6 +226,7 @@ Minimal verification path:
 Expected visible markers:
 - heading `Cashflow`
 - text `Dedicated cashflow view built on the same shipped homepage snapshot contract.`
+- direct link `Open invoices page`
 - existing homepage/app shell content rendered beneath the cashflow header
 
 ### Verify dedicated `/invoices` page
