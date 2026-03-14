@@ -16,6 +16,10 @@ describe('cashflow page', () => {
     expect(
       screen.getByText('Dedicated cashflow view built on the same shipped homepage snapshot contract.'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Finance navigation' })).toHaveTextContent(
+      'Jump directly to the dedicated invoice workspace without returning to the homepage.',
+    );
+    expect(screen.getByRole('link', { name: 'Open invoices page' })).toHaveAttribute('href', '/invoices');
     expect(screen.getByTestId('homepage-shell')).toBeInTheDocument();
   });
 });
