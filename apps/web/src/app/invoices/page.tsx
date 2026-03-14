@@ -91,6 +91,14 @@ export default function InvoicesPage() {
                     <span>{formatMoney(invoice.amountGross, invoice.currency)}</span>
                     <span>{invoice.dueAt ? invoice.dueAt.slice(0, 10) : 'No due date'}</span>
                   </div>
+                  <div className="mt-2">
+                    <Link
+                      className="text-sm font-medium text-sky-700 underline"
+                      href={invoice.pdfPath}
+                    >
+                      Export PDF for {invoice.number}
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>
