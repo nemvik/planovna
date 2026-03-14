@@ -240,6 +240,7 @@ Minimal verification path:
 Expected visible markers:
 - heading `Invoices`
 - text `Dedicated invoice view built on the same shipped homepage finance and export contract.`
+- direct link `Open cashflow page`
 - existing homepage/app shell content rendered beneath the invoice header
 
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
