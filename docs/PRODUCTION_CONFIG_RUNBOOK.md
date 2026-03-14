@@ -245,6 +245,7 @@ Expected visible markers:
 - direct link `Open cashflow page`
 - link `Open homepage finance workspace`
 - block `Invoice status summary`
+- block `Recent invoices`
 - logged-out marker `Log in on the homepage to load invoice data.`
 - empty-data marker `No invoices available yet.`
 - existing homepage/app shell content rendered beneath the invoice header
