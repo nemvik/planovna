@@ -34,6 +34,15 @@ describe('invoices page', () => {
               dueAt: '2026-03-15T00:00:00.000Z',
               pdfPath: '/invoices/inv-1/pdf',
             },
+            {
+              id: 'inv-2',
+              number: '2026-0002',
+              status: 'PAID',
+              amountGross: 50000,
+              currency: 'CZK',
+              dueAt: '2026-03-10T00:00:00.000Z',
+              pdfPath: '/invoices/inv-2/pdf',
+            },
           ]),
         },
       },
@@ -49,6 +58,11 @@ describe('invoices page', () => {
       '/invoices/<invoiceId>/pdf',
     );
     expect(screen.getByRole('link', { name: 'Open homepage finance workspace' })).toHaveAttribute('href', '/');
+    expect(await screen.findByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Total invoices');
+    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('2');
+    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Issued');
+    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('1');
+    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Paid');
     expect(await screen.findByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-0001');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('121');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-03-15');

@@ -49,6 +49,17 @@ export default function InvoicesPage() {
       .catch(() => setInvoices([]));
   }, []);
 
+  const invoiceSummary = useMemo(() => {
+    const issuedCount = invoices.filter((invoice) => invoice.status === 'ISSUED').length;
+    const paidCount = invoices.filter((invoice) => invoice.status === 'PAID').length;
+
+    return {
+      issuedCount,
+      paidCount,
+      totalCount: invoices.length,
+    };
+  }, [invoices]);
+
   const content = useMemo(
     () => (
       <div className="space-y-4">
@@ -71,6 +82,23 @@ export default function InvoicesPage() {
             <Link className="text-sm font-medium text-sky-700 underline" href="/">
               Open homepage finance workspace
             </Link>
+          </div>
+        </section>
+        <section aria-label="Invoice status summary" className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">Invoice status summary</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Total invoices</p>
+              <p className="text-lg font-semibold">{invoiceSummary.totalCount}</p>
+            </div>
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Issued</p>
+              <p className="text-lg font-semibold">{invoiceSummary.issuedCount}</p>
+            </div>
+            <div className="rounded border bg-white p-3">
+              <p className="text-sm text-slate-500">Paid</p>
+              <p className="text-lg font-semibold">{invoiceSummary.paidCount}</p>
+            </div>
           </div>
         </section>
         <section aria-label="Invoice list" className="rounded border bg-slate-50 p-4">
@@ -107,7 +135,7 @@ export default function InvoicesPage() {
         <Home />
       </div>
     ),
-    [hasToken, invoices],
+    [hasToken, invoiceSummary, invoices],
   );
 
   return content;
