@@ -242,6 +242,7 @@ Minimal verification path:
 Expected visible markers:
 - heading `Invoices`
 - text `Dedicated invoice view built on the same shipped homepage finance and export contract.`
+- block `Invoice export actions`
 - direct link `Open cashflow page`
 - link `Open homepage finance workspace`
 - block `Invoice status summary`
