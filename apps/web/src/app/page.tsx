@@ -123,6 +123,9 @@ type HomepageAuthLocaleStrings = {
   openCashflowPageLink: string;
   openInvoicesPageLink: string;
   noCashflowItems: string;
+  invoiceIssuedSuffix: string;
+  invoicePaidSuffix: string;
+  invoicesLoadedSuffix: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -166,6 +169,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     openCashflowPageLink: 'Otevřít stránku cashflow',
     openInvoicesPageLink: 'Otevřít stránku faktur',
     noCashflowItems: 'Zatím nejsou žádné položky cashflow.',
+    invoiceIssuedSuffix: 'vystaveno',
+    invoicePaidSuffix: 'zaplaceno',
+    invoicesLoadedSuffix: 'faktur načteno',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -207,6 +213,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     openCashflowPageLink: 'Open cashflow page',
     openInvoicesPageLink: 'Open invoices page',
     noCashflowItems: 'No cashflow items yet.',
+    invoiceIssuedSuffix: 'issued',
+    invoicePaidSuffix: 'paid',
+    invoicesLoadedSuffix: 'invoices loaded',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -248,6 +257,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     openCashflowPageLink: 'Cashflow-Seite öffnen',
     openInvoicesPageLink: 'Rechnungsseite öffnen',
     noCashflowItems: 'Noch keine Cashflow-Positionen.',
+    invoiceIssuedSuffix: 'ausgestellt',
+    invoicePaidSuffix: 'bezahlt',
+    invoicesLoadedSuffix: 'Rechnungen geladen',
   },
 };
 
@@ -1075,9 +1087,12 @@ export default function Home() {
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceStatusLabel}</p>
               <p className="text-lg font-semibold">
-                {invoiceSummary.issuedCount} issued / {invoiceSummary.paidCount} paid
+                {invoiceSummary.issuedCount} {homepageAuthCopy.invoiceIssuedSuffix} / {invoiceSummary.paidCount}{' '}
+                {homepageAuthCopy.invoicePaidSuffix}
               </p>
-              <p className="text-xs text-slate-500">{invoiceSummary.totalCount} invoices loaded</p>
+              <p className="text-xs text-slate-500">
+                {invoiceSummary.totalCount} {homepageAuthCopy.invoicesLoadedSuffix}
+              </p>
             </div>
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceWorkspaceLabel}</p>
