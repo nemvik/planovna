@@ -139,11 +139,17 @@ beforeEach(() => {
 });
 
 describe('homepage operations board', () => {
-  it('renders default English auth and registration labels from locale copy', () => {
+  it('renders default English homepage header and auth labels from locale copy', () => {
     const client = createClient();
 
     renderWithClient(client);
 
+    expect(screen.getByRole('heading', { name: 'Planovna operations board' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Lightweight planning board for moving operations between backlog and loaded start-date buckets.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();

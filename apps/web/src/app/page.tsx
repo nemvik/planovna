@@ -86,6 +86,8 @@ const DEFAULT_BOARD_FILTERS: BoardFilters = {
 const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
 
 type HomepageAuthLocaleStrings = {
+  boardTitle: string;
+  boardIntro: string;
   sessionExpired: string;
   invalidCredentials: string;
   registrationDuplicateEmail: string;
@@ -104,6 +106,9 @@ type HomepageAuthLocaleStrings = {
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
   cs: {
+    boardTitle: 'Planovna plánovací nástěnka',
+    boardIntro:
+      'Lehká plánovací nástěnka pro přesouvání operací mezi backlogem a načtenými koši podle data startu.',
     sessionExpired: 'Relace vypršela. Přihlaste se prosím znovu.',
     invalidCredentials: 'Neplatné přihlašovací údaje',
     registrationDuplicateEmail: 'Tento e-mail je již registrovaný. Přihlaste se prosím.',
@@ -120,6 +125,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registerPendingButton: 'Probíhá registrace...',
   },
   en: {
+    boardTitle: 'Planovna operations board',
+    boardIntro:
+      'Lightweight planning board for moving operations between backlog and loaded start-date buckets.',
     sessionExpired: 'Session expired. Please log in again.',
     invalidCredentials: 'Invalid credentials',
     registrationDuplicateEmail: 'This email is already registered. Please log in instead.',
@@ -136,6 +144,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registerPendingButton: 'Registering...',
   },
   de: {
+    boardTitle: 'Planovna-Operationsboard',
+    boardIntro:
+      'Leichtgewichtiges Planungsboard zum Verschieben von Vorgängen zwischen Backlog und geladenen Startdatum-Buckets.',
     sessionExpired: 'Sitzung abgelaufen. Bitte melden Sie sich erneut an.',
     invalidCredentials: 'Ungültige Anmeldedaten',
     registrationDuplicateEmail: 'Diese E-Mail ist bereits registriert. Bitte melden Sie sich stattdessen an.',
@@ -853,10 +864,8 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Planovna operations board</h1>
-        <p className="text-sm text-slate-600">
-          Lightweight planning board for moving operations between backlog and loaded start-date buckets.
-        </p>
+        <h1 className="text-2xl font-semibold">{homepageAuthCopy.boardTitle}</h1>
+        <p className="text-sm text-slate-600">{homepageAuthCopy.boardIntro}</p>
       </div>
 
       {!accessToken ? (
@@ -1437,5 +1446,6 @@ export default function Home() {
     </main>
   );
 }
+
 
 
