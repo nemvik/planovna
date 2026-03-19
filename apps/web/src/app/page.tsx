@@ -143,6 +143,14 @@ type HomepageAuthLocaleStrings = {
   operationStatusDone: string;
   operationStatusBlocked: string;
   operationCardStatusLabel: string;
+  operationBlockedByTemplate: string;
+  operationBlockedReasonPrefix: string;
+  operationClearReasonButton: string;
+  operationBlockedReasonLabel: string;
+  operationSaveReasonButton: string;
+  operationMoveToBucketLabel: string;
+  operationScheduleToDateLabel: string;
+  operationScheduleButton: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -206,6 +214,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationStatusDone: 'Hotovo',
     operationStatusBlocked: 'Blokováno',
     operationCardStatusLabel: 'Stav',
+    operationBlockedByTemplate: 'Blokováno {count}',
+    operationBlockedReasonPrefix: 'Blokováno:',
+    operationClearReasonButton: 'Vymazat důvod',
+    operationBlockedReasonLabel: 'Důvod blokace',
+    operationSaveReasonButton: 'Uložit důvod',
+    operationMoveToBucketLabel: 'Přesunout do koše',
+    operationScheduleToDateLabel: 'Naplánovat na datum',
+    operationScheduleButton: 'Naplánovat',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -267,6 +283,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationStatusDone: 'Done',
     operationStatusBlocked: 'Blocked',
     operationCardStatusLabel: 'Status',
+    operationBlockedByTemplate: 'Blocked by {count}',
+    operationBlockedReasonPrefix: 'Blocked:',
+    operationClearReasonButton: 'Clear reason',
+    operationBlockedReasonLabel: 'Blocked reason',
+    operationSaveReasonButton: 'Save reason',
+    operationMoveToBucketLabel: 'Move to bucket',
+    operationScheduleToDateLabel: 'Schedule to date',
+    operationScheduleButton: 'Schedule',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -328,6 +352,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationStatusDone: 'Erledigt',
     operationStatusBlocked: 'Blockiert',
     operationCardStatusLabel: 'Status',
+    operationBlockedByTemplate: 'Blockiert durch {count}',
+    operationBlockedReasonPrefix: 'Blockiert:',
+    operationClearReasonButton: 'Grund löschen',
+    operationBlockedReasonLabel: 'Sperrgrund',
+    operationSaveReasonButton: 'Grund speichern',
+    operationMoveToBucketLabel: 'In Bucket verschieben',
+    operationScheduleToDateLabel: 'Für Datum planen',
+    operationScheduleButton: 'Planen',
   },
 };
 
@@ -1396,7 +1428,10 @@ export default function Home() {
                           </div>
                           {operation.dependencyCount > 0 && !prerequisiteSummary ? (
                             <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
-                              Blocked by {operation.dependencyCount}
+                              {homepageAuthCopy.operationBlockedByTemplate.replace(
+                                '{count}',
+                                String(operation.dependencyCount),
+                              )}
                             </span>
                           ) : null}
                         </div>
@@ -1519,7 +1554,9 @@ export default function Home() {
                         </form>
                         {operation.blockedReason ? (
                           <div className="mt-3 flex items-center gap-2 text-sm text-amber-700">
-                            <span className="min-w-0 flex-1">Blocked: {operation.blockedReason}</span>
+                            <span className="min-w-0 flex-1">
+                              {homepageAuthCopy.operationBlockedReasonPrefix} {operation.blockedReason}
+                            </span>
                             {operation.status !== 'BLOCKED' ? (
                               <button
                                 className="rounded border px-3 py-1.5 text-sm text-slate-900 disabled:opacity-50"
@@ -1527,7 +1564,7 @@ export default function Home() {
                                  disabled={isOperationLocked}
                                 onClick={() => void onClearBlockedReason(operation)}
                               >
-                                Clear reason
+                                {homepageAuthCopy.operationClearReasonButton}
                               </button>
                             ) : null}
                           </div>
@@ -1538,7 +1575,7 @@ export default function Home() {
                               onSubmit={(event) => void onSaveBlockedReason(event, operation)}
                             >
                               <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                                Blocked reason
+                                {homepageAuthCopy.operationBlockedReasonLabel}
                                 <input
                                   className="rounded border bg-white px-2 py-1"
                                   value={blockedReasonValue}
@@ -1556,7 +1593,7 @@ export default function Home() {
                                 type="submit"
                                  disabled={isOperationLocked || !canSaveBlockedReason}
                               >
-                                Save reason
+                                {homepageAuthCopy.operationSaveReasonButton}
                               </button>
                               {canClearBlockedReason ? (
                                 <button
@@ -1565,7 +1602,7 @@ export default function Home() {
                                    disabled={isOperationLocked}
                                   onClick={() => void onClearBlockedReason(operation)}
                                 >
-                                  Clear reason
+                                  {homepageAuthCopy.operationClearReasonButton}
                                 </button>
                               ) : null}
                             </form>
@@ -1588,7 +1625,7 @@ export default function Home() {
                            </select>
                          </label>
                          <label className="mt-3 flex flex-col gap-1 text-sm">
-                           Move to bucket
+                           {homepageAuthCopy.operationMoveToBucketLabel}
                            <select
                              className="rounded border bg-white px-2 py-1"
                              value={getOperationBucketLabel(operation.startDate)}
@@ -1612,7 +1649,7 @@ export default function Home() {
                           onSubmit={(event) => void onScheduleOperation(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            Schedule to date
+                            {homepageAuthCopy.operationScheduleToDateLabel}
                             <input
                                className="rounded border bg-white px-2 py-1"
                                type="date"
@@ -1631,7 +1668,7 @@ export default function Home() {
                              type="submit"
                                disabled={isOperationLocked || !canSchedule}
                            >
-                             Schedule
+                             {homepageAuthCopy.operationScheduleButton}
                            </button>
                         </form>
                         </li>
@@ -1647,3 +1684,4 @@ export default function Home() {
     </main>
   );
 }
+
