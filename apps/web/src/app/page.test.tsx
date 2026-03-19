@@ -178,6 +178,16 @@ describe('homepage operations board', () => {
     }
   });
 
+  it('marks registration inputs as required to block empty browser submits', () => {
+    const client = createClient();
+
+    renderWithClient(client);
+
+    expect(screen.getByLabelText('Registration email')).toBeRequired();
+    expect(screen.getByLabelText('Registration password')).toBeRequired();
+    expect(screen.getByLabelText('Company name')).toBeRequired();
+  });
+
   it('shows a safe error when registering an already used email', async () => {
     const client = createClient();
     const fetchStub = setFetchMock(

@@ -834,6 +834,8 @@ export default function Home() {
               Registration email
               <input
                 className="rounded border px-2 py-1"
+                type="email"
+                required
                 value={registerEmail}
                 disabled={authOperationDisabled}
                 onChange={(event) => setRegisterEmail(event.target.value)}
@@ -845,6 +847,7 @@ export default function Home() {
               <input
                 className="rounded border px-2 py-1"
                 type="password"
+                required
                 value={registerPassword}
                 disabled={authOperationDisabled}
                 onChange={(event) => setRegisterPassword(event.target.value)}
@@ -855,6 +858,7 @@ export default function Home() {
               Company name
               <input
                 className="rounded border px-2 py-1"
+                required
                 value={registerCompanyName}
                 disabled={authOperationDisabled}
                 onChange={(event) => setRegisterCompanyName(event.target.value)}
