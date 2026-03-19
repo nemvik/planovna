@@ -18,6 +18,7 @@ type InvoiceSummary = {
 };
 
 type InvoicesPageLocaleStrings = {
+  localeTag: string;
   sectionEyebrow: string;
   pageTitle: string;
   pageIntro: string;
@@ -45,6 +46,7 @@ type InvoicesPageLocaleStrings = {
 
 const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleStrings> = {
   cs: {
+    localeTag: 'cs-CZ',
     sectionEyebrow: 'Finance',
     pageTitle: 'Faktury',
     pageIntro: 'Dedikovaný přehled faktur postavený na stejném nasazeném kontraktu homepage financí a exportu.',
@@ -70,6 +72,7 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     exportPdfForTemplate: 'Exportovat PDF pro {invoiceNumber}',
   },
   en: {
+    localeTag: 'en-US',
     sectionEyebrow: 'Finance',
     pageTitle: 'Invoices',
     pageIntro: 'Dedicated invoice view built on the same shipped homepage finance and export contract.',
@@ -95,6 +98,7 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     exportPdfForTemplate: 'Export PDF for {invoiceNumber}',
   },
   de: {
+    localeTag: 'de-DE',
     sectionEyebrow: 'Finanzen',
     pageTitle: 'Rechnungen',
     pageIntro: 'Dedizierte Rechnungsansicht auf Basis desselben ausgelieferten Homepage-Finanz- und Export-Vertrags.',
@@ -121,8 +125,12 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
   },
 };
 
-const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
-  new Intl.NumberFormat('cs-CZ', {
+const formatMoney = (
+  amount: number,
+  currency: InvoiceSummary['currency'],
+  localeTag: string,
+) =>
+  new Intl.NumberFormat(localeTag, {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
@@ -235,7 +243,7 @@ export default function InvoicesPage() {
                     <span>{getLocalizedInvoiceStatus(invoice.status)}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-3 text-slate-600">
-                    <span>{formatMoney(invoice.amountGross, invoice.currency)}</span>
+                    <span>{formatMoney(invoice.amountGross, invoice.currency, invoicesCopy.localeTag)}</span>
                     <span>{invoice.dueAt ? invoice.dueAt.slice(0, 10) : invoicesCopy.noDueDate}</span>
                   </div>
                   <div className="mt-2">
