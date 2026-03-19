@@ -161,6 +161,13 @@ type HomepageAuthLocaleStrings = {
   operationSaveSortButton: string;
   operationPrerequisiteSummaryTemplate: string;
   operationPrerequisiteOverflowTemplate: string;
+  operationMoveFailed: string;
+  operationUpdateStatusFailed: string;
+  operationUpdateBlockedReasonFailed: string;
+  operationUpdateTitleFailed: string;
+  operationUpdateCodeFailed: string;
+  operationUpdateEndDateFailed: string;
+  operationUpdateSortIndexFailed: string;
   operationEndDateLabel: string;
   operationSaveEndButton: string;
   operationClearEndButton: string;
@@ -245,6 +252,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveSortButton: 'Uložit pořadí',
     operationPrerequisiteSummaryTemplate: 'Čeká na {codes}{overflow}',
     operationPrerequisiteOverflowTemplate: ' +{count} dalších',
+    operationMoveFailed: 'Přesun operace se nepodařil.',
+    operationUpdateStatusFailed: 'Nepodařilo se aktualizovat stav operace.',
+    operationUpdateBlockedReasonFailed: 'Nepodařilo se aktualizovat důvod blokace.',
+    operationUpdateTitleFailed: 'Nepodařilo se aktualizovat název.',
+    operationUpdateCodeFailed: 'Nepodařilo se aktualizovat kód.',
+    operationUpdateEndDateFailed: 'Nepodařilo se aktualizovat datum dokončení.',
+    operationUpdateSortIndexFailed: 'Nepodařilo se aktualizovat pořadí.',
     operationEndDateLabel: 'Datum dokončení',
     operationSaveEndButton: 'Uložit datum',
     operationClearEndButton: 'Vymazat datum',
@@ -327,6 +341,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveSortButton: 'Save sort',
     operationPrerequisiteSummaryTemplate: 'Waiting on {codes}{overflow}',
     operationPrerequisiteOverflowTemplate: ' +{count} more',
+    operationMoveFailed: 'Failed to move operation.',
+    operationUpdateStatusFailed: 'Failed to update operation status.',
+    operationUpdateBlockedReasonFailed: 'Failed to update blocked reason.',
+    operationUpdateTitleFailed: 'Failed to update title.',
+    operationUpdateCodeFailed: 'Failed to update code.',
+    operationUpdateEndDateFailed: 'Failed to update end date.',
+    operationUpdateSortIndexFailed: 'Failed to update sort index.',
     operationEndDateLabel: 'End date',
     operationSaveEndButton: 'Save end',
     operationClearEndButton: 'Clear end',
@@ -409,6 +430,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveSortButton: 'Sortierung speichern',
     operationPrerequisiteSummaryTemplate: 'Wartet auf {codes}{overflow}',
     operationPrerequisiteOverflowTemplate: ' +{count} weitere',
+    operationMoveFailed: 'Vorgang konnte nicht verschoben werden.',
+    operationUpdateStatusFailed: 'Vorgangsstatus konnte nicht aktualisiert werden.',
+    operationUpdateBlockedReasonFailed: 'Sperrgrund konnte nicht aktualisiert werden.',
+    operationUpdateTitleFailed: 'Titel konnte nicht aktualisiert werden.',
+    operationUpdateCodeFailed: 'Code konnte nicht aktualisiert werden.',
+    operationUpdateEndDateFailed: 'Enddatum konnte nicht aktualisiert werden.',
+    operationUpdateSortIndexFailed: 'Sortierindex konnte nicht aktualisiert werden.',
     operationEndDateLabel: 'Enddatum',
     operationSaveEndButton: 'Enddatum speichern',
     operationClearEndButton: 'Enddatum löschen',
@@ -1043,7 +1071,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { startDate: nextStartDate }, 'Failed to move operation.');
+    await onUpdateOperation(operation, { startDate: nextStartDate }, homepageAuthCopy.operationMoveFailed);
   };
 
   const onStatusChange = async (operation: Operation, status: Operation['status']) => {
@@ -1107,7 +1135,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { code }, 'Failed to update code.');
+    await onUpdateOperation(operation, { code }, homepageAuthCopy.operationUpdateCodeFailed);
   };
 
   const onSaveEndDate = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -1119,7 +1147,11 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { endDate: `${endDate}T00:00:00.000Z` }, 'Failed to update end date.');
+    await onUpdateOperation(
+      operation,
+      { endDate: `${endDate}T00:00:00.000Z` },
+      homepageAuthCopy.operationUpdateEndDateFailed,
+    );
   };
 
   const onClearEndDate = async (operation: Operation) => {
@@ -1145,7 +1177,11 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { sortIndex }, 'Failed to update sort index.');
+    await onUpdateOperation(
+      operation,
+      { sortIndex },
+      homepageAuthCopy.operationUpdateSortIndexFailed,
+    );
   };
 
   const controlsDisabled = !accessToken;
