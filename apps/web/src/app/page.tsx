@@ -137,6 +137,12 @@ type HomepageAuthLocaleStrings = {
   boardFilterClearAriaTemplate: string;
   boardFilteredEmptyTitle: string;
   boardFilteredEmptyHint: string;
+  commonAllOption: string;
+  operationStatusReady: string;
+  operationStatusInProgress: string;
+  operationStatusDone: string;
+  operationStatusBlocked: string;
+  operationCardStatusLabel: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -194,6 +200,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterClearAriaTemplate: 'Vymazat filtr {label}',
     boardFilteredEmptyTitle: 'Žádné operace neodpovídají aktuálním filtrům.',
     boardFilteredEmptyHint: 'Vymažte filtry, aby se celá nástěnka vrátila bez opětovného načítání operací.',
+    commonAllOption: 'Vše',
+    operationStatusReady: 'Připraveno',
+    operationStatusInProgress: 'Rozpracováno',
+    operationStatusDone: 'Hotovo',
+    operationStatusBlocked: 'Blokováno',
+    operationCardStatusLabel: 'Stav',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -249,6 +261,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterClearAriaTemplate: 'Clear {label} filter',
     boardFilteredEmptyTitle: 'No operations match the current filters.',
     boardFilteredEmptyHint: 'Clear filters to return to the full board without reloading operations.',
+    commonAllOption: 'All',
+    operationStatusReady: 'Ready',
+    operationStatusInProgress: 'In progress',
+    operationStatusDone: 'Done',
+    operationStatusBlocked: 'Blocked',
+    operationCardStatusLabel: 'Status',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -304,6 +322,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterClearAriaTemplate: 'Filter {label} löschen',
     boardFilteredEmptyTitle: 'Keine Vorgänge entsprechen den aktuellen Filtern.',
     boardFilteredEmptyHint: 'Löschen Sie die Filter, um ohne erneutes Laden der Vorgänge zum vollständigen Board zurückzukehren.',
+    commonAllOption: 'Alle',
+    operationStatusReady: 'Bereit',
+    operationStatusInProgress: 'In Bearbeitung',
+    operationStatusDone: 'Erledigt',
+    operationStatusBlocked: 'Blockiert',
+    operationCardStatusLabel: 'Status',
   },
 };
 
@@ -569,6 +593,20 @@ export default function Home() {
         return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeQueryLabel;
       default:
         return key;
+    }
+  };
+  const getLocalizedOperationStatusLabel = (status: Operation['status']) => {
+    switch (status) {
+      case 'READY':
+        return HOMEPAGE_AUTH_LOCALES.en.operationStatusReady;
+      case 'IN_PROGRESS':
+        return HOMEPAGE_AUTH_LOCALES.en.operationStatusInProgress;
+      case 'DONE':
+        return HOMEPAGE_AUTH_LOCALES.en.operationStatusDone;
+      case 'BLOCKED':
+        return HOMEPAGE_AUTH_LOCALES.en.operationStatusBlocked;
+      default:
+        return status;
     }
   };
 
@@ -1227,7 +1265,7 @@ export default function Home() {
                   }))
                 }
               >
-                <option value="ALL">All</option>
+                <option value="ALL">{homepageAuthCopy.commonAllOption}</option>
                 {BOARD_STATUS_VALUES.map((status) => (
                   <option key={status} value={status}>
                     {status}
@@ -1250,7 +1288,7 @@ export default function Home() {
               >
                 {availableBucketFilters.map((bucket) => (
                   <option key={bucket} value={bucket}>
-                    {bucket === 'ALL' ? 'All' : bucket}
+                    {bucket === 'ALL' ? homepageAuthCopy.commonAllOption : bucket}
                   </option>
                 ))}
               </select>
@@ -1533,7 +1571,7 @@ export default function Home() {
                             </form>
                           ) : null}
                           <label className="mt-3 flex flex-col gap-1 text-sm">
-                            Status
+                            {homepageAuthCopy.operationCardStatusLabel}
                            <select
                              className="max-w-[11rem] rounded border bg-white px-2 py-1"
                              value={operation.status}
@@ -1544,7 +1582,7 @@ export default function Home() {
                            >
                              {BOARD_STATUS_VALUES.map((status) => (
                                <option key={status} value={status}>
-                                 {status}
+                                 {getLocalizedOperationStatusLabel(status)}
                                </option>
                              ))}
                            </select>
