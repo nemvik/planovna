@@ -105,6 +105,12 @@ type HomepageAuthLocaleStrings = {
   loadOperationsButton: string;
   loadingOperationsButton: string;
   logoutResetSessionButton: string;
+  boardReloadFailedKeepLast: string;
+  boardConflictReloaded: string;
+  boardConflictReloadFailed: string;
+  boardLoadFailed: string;
+  boardEmpty: string;
+  boardForbidden: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -129,6 +135,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     loadOperationsButton: 'Načíst operace',
     loadingOperationsButton: 'Načítání operací…',
     logoutResetSessionButton: 'Odhlásit a resetovat relaci',
+    boardReloadFailedKeepLast: 'Operace se nepodařilo znovu načíst. Zobrazuje se poslední načtená nástěnka.',
+    boardConflictReloaded: 'Nástěnka nebyla aktuální. Načetly se nejnovější operace, zkuste to prosím znovu.',
+    boardConflictReloadFailed: 'Nástěnka nebyla aktuální a opětovné načtení selhalo. Načtěte prosím operace znovu.',
+    boardLoadFailed: 'Operace se nepodařilo načíst.',
+    boardEmpty: 'Nebyly nalezeny žádné operace.',
+    boardForbidden: 'Zakázáno: vaše role nemá oprávnění zobrazit operace.',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -151,6 +163,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     loadOperationsButton: 'Load operations',
     loadingOperationsButton: 'Loading operations…',
     logoutResetSessionButton: 'Logout and reset session',
+    boardReloadFailedKeepLast: 'Failed to reload operations. Showing the last loaded board.',
+    boardConflictReloaded: 'Board was out of date. Reloaded latest operations, please try again.',
+    boardConflictReloadFailed: 'Board was out of date and reload failed. Please reload operations again.',
+    boardLoadFailed: 'Failed to load operations.',
+    boardEmpty: 'No operations found.',
+    boardForbidden: 'Forbidden: your role is not allowed to view operations.',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -173,6 +191,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     loadOperationsButton: 'Vorgänge laden',
     loadingOperationsButton: 'Vorgänge werden geladen…',
     logoutResetSessionButton: 'Abmelden und Sitzung zurücksetzen',
+    boardReloadFailedKeepLast: 'Vorgänge konnten nicht neu geladen werden. Das zuletzt geladene Board wird angezeigt.',
+    boardConflictReloaded: 'Das Board war nicht aktuell. Neueste Vorgänge wurden geladen, bitte erneut versuchen.',
+    boardConflictReloadFailed: 'Das Board war nicht aktuell und das Neuladen ist fehlgeschlagen. Bitte laden Sie die Vorgänge erneut.',
+    boardLoadFailed: 'Vorgänge konnten nicht geladen werden.',
+    boardEmpty: 'Keine Vorgänge gefunden.',
+    boardForbidden: 'Verboten: Ihre Rolle darf keine Vorgänge anzeigen.',
   },
 };
 
@@ -563,7 +587,7 @@ export default function Home() {
       if (hasForbiddenCode(error)) {
         resetSession(homepageAuthCopy.sessionExpired);
       } else if (hadLoadedBoard) {
-        setBoardMessage('Failed to reload operations. Showing the last loaded board.');
+        setBoardMessage(homepageAuthCopy.boardReloadFailedKeepLast);
         setOperationLoadState('loaded');
       } else {
         setOperations([]);
@@ -734,13 +758,13 @@ export default function Home() {
             return;
           }
 
-          setBoardMessage('Board was out of date. Reloaded latest operations, please try again.');
+          setBoardMessage(homepageAuthCopy.boardConflictReloaded);
         } catch {
           if (mutationSession !== operationLoadSessionRef.current) {
             return;
           }
 
-          setBoardMessage('Board was out of date and reload failed. Please reload operations again.');
+          setBoardMessage(homepageAuthCopy.boardConflictReloadFailed);
         }
       } else {
         setBoardMessage(failureMessage);
@@ -967,7 +991,9 @@ export default function Home() {
           disabled={loadOperationsDisabled}
           onClick={onLoadOperations}
         >
-          {operationLoadState === 'loading' ? 'Loading operations…' : 'Load operations'}
+          {operationLoadState === 'loading'
+            ? homepageAuthCopy.loadingOperationsButton
+            : homepageAuthCopy.loadOperationsButton}
         </button>
         {accessToken ? (
           <button
@@ -1042,11 +1068,9 @@ export default function Home() {
       ) : null}
 
       {operationLoadState === 'loading' ? <p>{homepageAuthCopy.loadingOperationsButton}</p> : null}
-      {operationLoadState === 'empty' ? <p>No operations found.</p> : null}
-      {operationLoadState === 'forbidden' ? (
-        <p>Forbidden: your role is not allowed to view operations.</p>
-      ) : null}
-      {operationLoadState === 'error' ? <p>Failed to load operations.</p> : null}
+      {operationLoadState === 'empty' ? <p>{homepageAuthCopy.boardEmpty}</p> : null}
+      {operationLoadState === 'forbidden' ? <p>{homepageAuthCopy.boardForbidden}</p> : null}
+      {operationLoadState === 'error' ? <p>{homepageAuthCopy.boardLoadFailed}</p> : null}
 
       {showOperationBoard ? (
         <>
@@ -1458,5 +1482,3 @@ export default function Home() {
     </main>
   );
 }
-
-
