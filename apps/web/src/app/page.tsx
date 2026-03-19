@@ -93,6 +93,8 @@ type HomepageAuthLocaleStrings = {
   registrationDuplicateEmail: string;
   registrationRateLimit: string;
   registrationFailure: string;
+  authLoggedIn: string;
+  authLoggedOut: string;
   loginEmailLabel: string;
   loginPasswordLabel: string;
   loginButton: string;
@@ -183,6 +185,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registrationDuplicateEmail: 'Tento e-mail je již registrovaný. Přihlaste se prosím.',
     registrationRateLimit: 'Příliš mnoho pokusů o registraci. Počkejte prosím a zkuste to znovu.',
     registrationFailure: 'Registrace selhala. Zkuste to prosím znovu.',
+    authLoggedIn: 'Přihlášeno',
+    authLoggedOut: 'Odhlášeno',
     loginEmailLabel: 'E-mail',
     loginPasswordLabel: 'Heslo',
     loginButton: 'Přihlásit',
@@ -272,6 +276,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registrationDuplicateEmail: 'This email is already registered. Please log in instead.',
     registrationRateLimit: 'Too many registration attempts. Please wait a moment and try again.',
     registrationFailure: 'Registration failed. Please try again.',
+    authLoggedIn: 'Logged in',
+    authLoggedOut: 'Logged out',
     loginEmailLabel: 'Email',
     loginPasswordLabel: 'Password',
     loginButton: 'Login',
@@ -361,6 +367,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registrationDuplicateEmail: 'Diese E-Mail ist bereits registriert. Bitte melden Sie sich stattdessen an.',
     registrationRateLimit: 'Zu viele Registrierungsversuche. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
     registrationFailure: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    authLoggedIn: 'Angemeldet',
+    authLoggedOut: 'Abgemeldet',
     loginEmailLabel: 'E-Mail',
     loginPasswordLabel: 'Passwort',
     loginButton: 'Anmelden',
@@ -758,7 +766,7 @@ export default function Home() {
 
     hydrationAutoLoadPendingRef.current = true;
     setAccessToken(storedAccessToken);
-    setAuthMessage('Logged in');
+    setAuthMessage(HOMEPAGE_AUTH_LOCALES.en.authLoggedIn);
   }, []);
 
   useEffect(() => {
@@ -812,7 +820,7 @@ export default function Home() {
     operationLoadSessionRef.current += 1;
   };
 
-  const resetSession = (message = 'Logged out') => {
+  const resetSession = (message = HOMEPAGE_AUTH_LOCALES.en.authLoggedOut) => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
     }
