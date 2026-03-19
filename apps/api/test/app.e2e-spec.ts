@@ -182,6 +182,32 @@ describe('AppController (e2e)', () => {
     );
   });
 
+  it('allows tRPC preflight when allowed origin in env contains trailing slash', async () => {
+    process.env.API_CORS_ALLOWED_ORIGINS = 'https://allowed.planovna.test/';
+
+    await createApp({
+      status: 'ready',
+      service: 'api',
+      dependencies: {
+        database: {
+          status: 'up',
+        },
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .options('/trpc/auth.login')
+      .set('Origin', 'https://allowed.planovna.test')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'authorization,content-type')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'https://allowed.planovna.test',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
+
   it('does not add CORS headers for disallowed origins on tRPC requests', async () => {
     process.env.API_CORS_ALLOWED_ORIGINS = 'https://allowed.planovna.test';
 

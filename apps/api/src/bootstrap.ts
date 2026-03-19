@@ -11,12 +11,23 @@ import { createAppRouter } from './trpc/routers/app.router';
 
 const API_CORS_ALLOWED_ORIGINS_ENV = 'API_CORS_ALLOWED_ORIGINS';
 
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, '');
+}
+
 function getAllowedCorsOrigins(envValue = process.env[API_CORS_ALLOWED_ORIGINS_ENV]): string[] {
   if (!envValue) {
     return [];
   }
 
-  return [...new Set(envValue.split(',').map((origin) => origin.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      envValue
+        .split(',')
+        .map((origin) => normalizeOrigin(origin))
+        .filter(Boolean),
+    ),
+  ];
 }
 
 export function configureApiApp(app: INestApplication) {
@@ -42,7 +53,7 @@ export function configureApiApp(app: INestApplication) {
       origin: string | undefined,
       callback: (error: Error | null, allow?: boolean) => void,
     ) => {
-      if (origin && allowedCorsOrigins.includes(origin)) {
+      if (origin && allowedCorsOrigins.includes(normalizeOrigin(origin))) {
         callback(null, true);
         return;
       }
