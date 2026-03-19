@@ -130,6 +130,13 @@ type HomepageAuthLocaleStrings = {
   boardFilterStatusLabel: string;
   boardFilterBucketLabel: string;
   boardFilterResetButton: string;
+  boardSummaryShowingTemplate: string;
+  boardFilterBadgeStatusLabel: string;
+  boardFilterBadgeBucketLabel: string;
+  boardFilterBadgeQueryLabel: string;
+  boardFilterClearAriaTemplate: string;
+  boardFilteredEmptyTitle: string;
+  boardFilteredEmptyHint: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -180,6 +187,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Stav',
     boardFilterBucketLabel: 'Koš podle data',
     boardFilterResetButton: 'Resetovat filtry',
+    boardSummaryShowingTemplate: 'Zobrazeno {filtered} z {total} operací.',
+    boardFilterBadgeStatusLabel: 'Stav',
+    boardFilterBadgeBucketLabel: 'Koš',
+    boardFilterBadgeQueryLabel: 'Dotaz',
+    boardFilterClearAriaTemplate: 'Vymazat filtr {label}',
+    boardFilteredEmptyTitle: 'Žádné operace neodpovídají aktuálním filtrům.',
+    boardFilteredEmptyHint: 'Vymažte filtry, aby se celá nástěnka vrátila bez opětovného načítání operací.',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -228,6 +242,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Date bucket',
     boardFilterResetButton: 'Clear filters',
+    boardSummaryShowingTemplate: 'Showing {filtered} of {total} operations.',
+    boardFilterBadgeStatusLabel: 'Status',
+    boardFilterBadgeBucketLabel: 'Bucket',
+    boardFilterBadgeQueryLabel: 'Query',
+    boardFilterClearAriaTemplate: 'Clear {label} filter',
+    boardFilteredEmptyTitle: 'No operations match the current filters.',
+    boardFilteredEmptyHint: 'Clear filters to return to the full board without reloading operations.',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -276,6 +297,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Datums-Bucket',
     boardFilterResetButton: 'Filter zurücksetzen',
+    boardSummaryShowingTemplate: '{filtered} von {total} Vorgängen werden angezeigt.',
+    boardFilterBadgeStatusLabel: 'Status',
+    boardFilterBadgeBucketLabel: 'Bucket',
+    boardFilterBadgeQueryLabel: 'Suchbegriff',
+    boardFilterClearAriaTemplate: 'Filter {label} löschen',
+    boardFilteredEmptyTitle: 'Keine Vorgänge entsprechen den aktuellen Filtern.',
+    boardFilteredEmptyHint: 'Löschen Sie die Filter, um ohne erneutes Laden der Vorgänge zum vollständigen Board zurückzukehren.',
   },
 };
 
@@ -528,6 +556,21 @@ export default function Home() {
   const isFilteredEmptyState =
     operationLoadState === 'loaded' && operations.length > 0 && filteredOperations.length === 0;
   const showActiveFilterSummary = operationLoadState === 'loaded' && activeFilters.length > 0;
+  const boardSummaryShowingText = HOMEPAGE_AUTH_LOCALES.en.boardSummaryShowingTemplate
+    .replace('{filtered}', String(filteredOperations.length))
+    .replace('{total}', String(operations.length));
+  const getActiveFilterLabel = (key: (typeof activeFilters)[number]['key']) => {
+    switch (key) {
+      case 'status':
+        return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeStatusLabel;
+      case 'bucket':
+        return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeBucketLabel;
+      case 'query':
+        return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeQueryLabel;
+      default:
+        return key;
+    }
+  };
 
   useEffect(() => {
     if (
@@ -1225,19 +1268,22 @@ export default function Home() {
           {showActiveFilterSummary ? (
             <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium">Showing {filteredOperations.length} of {operations.length} operations.</p>
-                {activeFilters.map((filter) => (
+                <p className="font-medium">{boardSummaryShowingText}</p>
+                {activeFilters.map((filter) => {
+                  const localizedLabel = getActiveFilterLabel(filter.key);
+
+                  return (
                   <span
                     key={filter.key}
                     className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium text-amber-900"
                   >
                     <span>
-                      {filter.label}: {filter.value}
+                      {localizedLabel}: {filter.value}
                     </span>
                     <button
                       className="rounded-full border border-amber-300 px-1 text-[10px] leading-none text-amber-900"
                       type="button"
-                      aria-label={`Clear ${filter.label.toLowerCase()} filter`}
+                      aria-label={homepageAuthCopy.boardFilterClearAriaTemplate.replace('{label}', localizedLabel.toLowerCase())}
                       onClick={() =>
                         setFilters((currentFilters) => clearBoardFilter(currentFilters, filter.key))
                       }
@@ -1245,17 +1291,16 @@ export default function Home() {
                       x
                     </button>
                   </span>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : null}
 
           {isFilteredEmptyState ? (
             <div className="rounded border bg-slate-50 p-4">
-              <p className="font-medium">No operations match the current filters.</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Clear filters to return to the full board without reloading operations.
-              </p>
+              <p className="font-medium">{homepageAuthCopy.boardFilteredEmptyTitle}</p>
+              <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.boardFilteredEmptyHint}</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
