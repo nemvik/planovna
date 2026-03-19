@@ -32,6 +32,9 @@ type InvoicesPageLocaleStrings = {
   totalInvoicesLabel: string;
   issuedLabel: string;
   paidLabel: string;
+  invoiceStatusDraft: string;
+  invoiceStatusIssued: string;
+  invoiceStatusPaid: string;
   invoiceListAriaLabel: string;
   recentInvoicesTitle: string;
   loginToLoadHint: string;
@@ -56,6 +59,9 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     totalInvoicesLabel: 'Total invoices',
     issuedLabel: 'Issued',
     paidLabel: 'Paid',
+    invoiceStatusDraft: 'Draft',
+    invoiceStatusIssued: 'Issued',
+    invoiceStatusPaid: 'Paid',
     invoiceListAriaLabel: 'Invoice list',
     recentInvoicesTitle: 'Recent invoices',
     loginToLoadHint: 'Log in on the homepage to load invoice data.',
@@ -78,6 +84,9 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     totalInvoicesLabel: 'Total invoices',
     issuedLabel: 'Issued',
     paidLabel: 'Paid',
+    invoiceStatusDraft: 'Draft',
+    invoiceStatusIssued: 'Issued',
+    invoiceStatusPaid: 'Paid',
     invoiceListAriaLabel: 'Invoice list',
     recentInvoicesTitle: 'Recent invoices',
     loginToLoadHint: 'Log in on the homepage to load invoice data.',
@@ -100,6 +109,9 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     totalInvoicesLabel: 'Rechnungen gesamt',
     issuedLabel: 'Ausgestellt',
     paidLabel: 'Bezahlt',
+    invoiceStatusDraft: 'Entwurf',
+    invoiceStatusIssued: 'Ausgestellt',
+    invoiceStatusPaid: 'Bezahlt',
     invoiceListAriaLabel: 'Rechnungsliste',
     recentInvoicesTitle: 'Neueste Rechnungen',
     loginToLoadHint: 'Melden Sie sich auf der Homepage an, um Rechnungsdaten zu laden.',
@@ -154,6 +166,20 @@ export default function InvoicesPage() {
     };
   }, [invoices]);
 
+
+  const getLocalizedInvoiceStatus = (status: InvoiceSummary['status']) => {
+    switch (status) {
+      case 'DRAFT':
+        return invoicesCopy.invoiceStatusDraft;
+      case 'ISSUED':
+        return invoicesCopy.invoiceStatusIssued;
+      case 'PAID':
+        return invoicesCopy.invoiceStatusPaid;
+      default:
+        return status;
+    }
+  };
+
   const content = useMemo(
     () => (
       <div className="space-y-4">
@@ -206,7 +232,7 @@ export default function InvoicesPage() {
                 <li key={invoice.id} className="rounded border bg-white px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium">{invoice.number}</span>
-                    <span>{invoice.status}</span>
+                    <span>{getLocalizedInvoiceStatus(invoice.status)}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-3 text-slate-600">
                     <span>{formatMoney(invoice.amountGross, invoice.currency)}</span>
