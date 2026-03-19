@@ -1486,7 +1486,7 @@ export default function Home() {
                           onSubmit={(event) => void onSaveCode(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            Code
+                            {homepageAuthCopy.operationCodeLabel}
                             <input
                               className="rounded border bg-white px-2 py-1"
                               value={codeValue}
@@ -1504,7 +1504,7 @@ export default function Home() {
                             type="submit"
                              disabled={isOperationLocked || !canSaveCode}
                           >
-                            Save code
+                            {homepageAuthCopy.operationSaveCodeButton}
                           </button>
                         </form>
                         <form
@@ -1512,7 +1512,7 @@ export default function Home() {
                           onSubmit={(event) => void onSaveTitle(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            Title
+                            {homepageAuthCopy.operationTitleLabel}
                             <input
                               className="rounded border bg-white px-2 py-1"
                               value={titleValue}
@@ -1530,7 +1530,7 @@ export default function Home() {
                             type="submit"
                              disabled={isOperationLocked || !canSaveTitle}
                           >
-                            Save title
+                            {homepageAuthCopy.operationSaveTitleButton}
                           </button>
                         </form>
                         <form
@@ -1575,7 +1575,7 @@ export default function Home() {
                           onSubmit={(event) => void onSaveSortIndex(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            Sort index
+                            {homepageAuthCopy.operationSortIndexLabel}
                             <input
                               className="rounded border bg-white px-2 py-1"
                               type="number"
