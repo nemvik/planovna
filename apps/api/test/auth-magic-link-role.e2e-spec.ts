@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -67,6 +68,44 @@ describe('Legacy REST auth + onboarding (e2e)', () => {
         companyName: `Foundry ${randomUUID().slice(0, 8)}`,
       })
       .expect(429);
+  });
+
+  it('allows registration attempts again after rate-limit cooldown window elapses', async () => {
+    const appServer = app.getHttpServer();
+    const email = `rate-limit-reset-${randomUUID().slice(0, 8)}@example.test`;
+    const fixedNow = new Date('2026-03-19T08:04:00.000Z').getTime();
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(fixedNow);
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request(appServer)
+        .post('/auth/register')
+        .send({
+          email,
+          password: `welcome-${attempt}`,
+          companyName: `Foundry ${randomUUID().slice(0, 8)}`,
+        })
+        .expect(attempt === 0 ? 201 : 409);
+    }
+
+    await request(appServer)
+      .post('/auth/register')
+      .send({
+        email,
+        password: 'welcome-limited',
+        companyName: `Foundry ${randomUUID().slice(0, 8)}`,
+      })
+      .expect(429);
+
+    nowSpy.mockReturnValue(fixedNow + 61_000);
+
+    await request(appServer)
+      .post('/auth/register')
+      .send({
+        email,
+        password: 'welcome-after-cooldown',
+        companyName: `Foundry ${randomUUID().slice(0, 8)}`,
+      })
+      .expect(409);
   });
 
   it('returns 404 on removed auth REST endpoints', async () => {
