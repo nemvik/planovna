@@ -158,6 +158,9 @@ type HomepageAuthLocaleStrings = {
   operationSaveTitleButton: string;
   operationSortIndexLabel: string;
   operationSaveSortButton: string;
+  operationEndDateLabel: string;
+  operationSaveEndButton: string;
+  operationClearEndButton: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -236,6 +239,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveTitleButton: 'Uložit název',
     operationSortIndexLabel: 'Pořadí',
     operationSaveSortButton: 'Uložit pořadí',
+    operationEndDateLabel: 'Datum dokončení',
+    operationSaveEndButton: 'Uložit datum',
+    operationClearEndButton: 'Vymazat datum',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -312,6 +318,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveTitleButton: 'Save title',
     operationSortIndexLabel: 'Sort index',
     operationSaveSortButton: 'Save sort',
+    operationEndDateLabel: 'End date',
+    operationSaveEndButton: 'Save end',
+    operationClearEndButton: 'Clear end',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -388,6 +397,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveTitleButton: 'Titel speichern',
     operationSortIndexLabel: 'Sortierindex',
     operationSaveSortButton: 'Sortierung speichern',
+    operationEndDateLabel: 'Enddatum',
+    operationSaveEndButton: 'Enddatum speichern',
+    operationClearEndButton: 'Enddatum löschen',
   },
 };
 
@@ -1520,7 +1532,7 @@ export default function Home() {
                           onSubmit={(event) => void onSaveEndDate(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            End date
+                            {homepageAuthCopy.operationEndDateLabel}
                             <input
                               className="rounded border bg-white px-2 py-1"
                               type="date"
@@ -1539,7 +1551,7 @@ export default function Home() {
                             type="submit"
                              disabled={isOperationLocked || !canSaveEndDate}
                           >
-                            Save end
+                            {homepageAuthCopy.operationSaveEndButton}
                           </button>
                           {canClearEndDate ? (
                             <button
@@ -1548,7 +1560,7 @@ export default function Home() {
                                disabled={isOperationLocked}
                               onClick={() => void onClearEndDate(operation)}
                             >
-                              Clear end
+                              {homepageAuthCopy.operationClearEndButton}
                             </button>
                           ) : null}
                         </form>
@@ -1712,4 +1724,5 @@ export default function Home() {
     </main>
   );
 }
+
 
