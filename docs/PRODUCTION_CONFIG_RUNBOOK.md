@@ -257,15 +257,18 @@ Use the shipped homepage registration form to confirm onboarding no longer depen
 Minimal verification path:
 1. Start the app stack locally.
 2. Open `http://127.0.0.1:${PORT:-3000}/`.
-3. In `Create account`, submit a fresh company + email + password.
-4. Confirm the success marker appears: `Account created. You can now log in.`
-5. Immediately try the same company+email again.
+3. Submit a fresh company + email + password in the registration form.
+4. Confirm the homepage enters authenticated state (`Logged in`).
+5. Log out and immediately try the same company+email again.
+6. Trigger repeated registration attempts for the same identity until rate-limit protection responds.
 
 Expected visible/API markers:
-- success marker `Account created. You can now log in.`
-- duplicate guard marker (UI): `Registration failed: CONFLICT`
-- duplicate guard marker (API): `TRPCError` code `CONFLICT`
-- no partial onboarding state: duplicate submission must not create a second tenant/user pair
+- success marker (UI): `Logged in`
+- duplicate guard marker (UI): `This email is already registered. Please log in instead.`
+- duplicate guard marker (API): HTTP `409`
+- rate-limit guard marker (UI): `Too many registration attempts. Please wait a moment and try again.`
+- rate-limit guard marker (API): HTTP `429`
+- no partial onboarding state: duplicate/rate-limited retries must not create extra tenant/user pairs
 
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
