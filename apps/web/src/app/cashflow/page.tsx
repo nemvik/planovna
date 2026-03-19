@@ -19,10 +19,10 @@ const CASHFLOW_PAGE_LOCALES: Record<'cs' | 'en' | 'de', CashflowPageLocaleString
     sectionEyebrow: 'Finance',
     pageTitle: 'Cashflow',
     pageIntro: 'Dedikovaný cashflow přehled postavený na stejném nasazeném kontraktu homepage snapshotu.',
-    financeNavigationAriaLabel: 'Finance navigation',
-    financeNavigationTitle: 'Finance navigation',
+    financeNavigationAriaLabel: 'Navigace financí',
+    financeNavigationTitle: 'Navigace financí',
     financeNavigationHelper: 'Přejděte přímo do dedikovaného workspace faktur bez návratu na homepage.',
-    openInvoicesPageLink: 'Open invoices page',
+    openInvoicesPageLink: 'Otevřít stránku faktur',
   },
   en: {
     sectionEyebrow: 'Finance',
