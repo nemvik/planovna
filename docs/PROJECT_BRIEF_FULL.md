@@ -57,8 +57,8 @@ _Last updated: 2026-03-05_
 - Faktury: roční reset číselné řady, v MVP editace povolena
 - Cashflow: planned/actual jako 2 oddělené položky
 - Mazání: Owner only
-- Tenant onboarding: admin ručně
-- Auth: email+heslo + magic link, 2FA mimo MVP
+- Tenant onboarding: v M4 minimální self-serve baseline (registrace Owner + auto-vytvoření tenantu), bez pozvánek a bez billing automation
+- Auth: email+heslo + magic link; navíc M4 self-serve registrace pro Owner, 2FA mimo MVP
 - Měny: CZK + EUR
 - API styl: tRPC end-to-end
 - Import a SLO detail mimo MVP

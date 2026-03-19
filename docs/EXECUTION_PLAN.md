@@ -24,6 +24,22 @@ Spustit použitelný MVP provoz pro 1. pilotní firmu: plánování výroby + fa
 - Data konzistence invoice/cashflow: transakční zápisy + integrační testy
 - Adopce: UX optimalizace boardu jako priorita nad účetní detaily
 
+## M4 auth baseline (self-serve onboarding)
+- Cíl: odstranit ruční onboarding jako hard dependency pro pilot.
+- In-scope MVP:
+  - veřejná registrace `Owner` účtu (email+heslo),
+  - automatické založení tenantu při registraci,
+  - okamžité přihlášení po registraci,
+  - základní ochrany (duplicitní email, minimální validace hesla, rate-limit na registraci).
+- Out-of-scope v této fázi:
+  - self-serve pozvánky dalších uživatelů,
+  - billing/paywall,
+  - email verifikace a 2FA,
+  - vlastní provisioning flow mimo jeden default tenant setup.
+- Backend touchpointy: auth register endpoint/procedura, tenant bootstrap, role assignment (`Owner`).
+- Web touchpointy: registrační formulář + navázání na existující login session flow.
+- Riziko: onboarding abuse/spam; mitigace = jednoduchý rate-limit + audit log registrací.
+
 ## Rozhodnutí, která držíme
 - tRPC end-to-end
 - Multi-tenant isolation striktně přes tenant_id + policy guard
