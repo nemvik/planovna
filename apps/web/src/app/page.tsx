@@ -102,6 +102,9 @@ type HomepageAuthLocaleStrings = {
   registerCompanyLabel: string;
   registerButton: string;
   registerPendingButton: string;
+  loadOperationsButton: string;
+  loadingOperationsButton: string;
+  logoutResetSessionButton: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -123,6 +126,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registerCompanyLabel: 'Název společnosti',
     registerButton: 'Registrovat',
     registerPendingButton: 'Probíhá registrace...',
+    loadOperationsButton: 'Načíst operace',
+    loadingOperationsButton: 'Načítání operací…',
+    logoutResetSessionButton: 'Odhlásit a resetovat relaci',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -142,6 +148,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registerCompanyLabel: 'Company name',
     registerButton: 'Register',
     registerPendingButton: 'Registering...',
+    loadOperationsButton: 'Load operations',
+    loadingOperationsButton: 'Loading operations…',
+    logoutResetSessionButton: 'Logout and reset session',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -161,6 +170,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     registerCompanyLabel: 'Firmenname',
     registerButton: 'Registrieren',
     registerPendingButton: 'Registrierung läuft...',
+    loadOperationsButton: 'Vorgänge laden',
+    loadingOperationsButton: 'Vorgänge werden geladen…',
+    logoutResetSessionButton: 'Abmelden und Sitzung zurücksetzen',
   },
 };
 
@@ -1029,7 +1041,7 @@ export default function Home() {
         </section>
       ) : null}
 
-      {operationLoadState === 'loading' ? <p>Loading operations…</p> : null}
+      {operationLoadState === 'loading' ? <p>{homepageAuthCopy.loadingOperationsButton}</p> : null}
       {operationLoadState === 'empty' ? <p>No operations found.</p> : null}
       {operationLoadState === 'forbidden' ? (
         <p>Forbidden: your role is not allowed to view operations.</p>
@@ -1446,6 +1458,5 @@ export default function Home() {
     </main>
   );
 }
-
 
 

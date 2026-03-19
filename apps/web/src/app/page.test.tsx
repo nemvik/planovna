@@ -157,6 +157,8 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Registration password')).toBeInTheDocument();
     expect(screen.getByLabelText('Company name')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load operations' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
   });
 
   it('keeps auth login UX for valid and invalid credentials', async () => {
