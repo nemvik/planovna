@@ -200,6 +200,28 @@ describe('homepage operations board', () => {
     }
   });
 
+  it('shows explicit retry guidance when registration is rate-limited', async () => {
+    const client = createClient();
+    const fetchStub = setFetchMock(
+      createFetchResponse({ message: 'Too many attempts' }, { ok: false, status: 429 }),
+    );
+
+    try {
+      renderWithClient(client);
+
+      await register('owner@tenant-a.local', 'tenant-a-pass', 'Acme Co.');
+
+      expect(
+        await screen.findByText('Too many registration attempts. Please wait a moment and try again.'),
+      ).toBeInTheDocument();
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(client.auth.login.mutate).not.toHaveBeenCalled();
+      expect(client.operation.list.query).not.toHaveBeenCalled();
+    } finally {
+      fetchStub.restore();
+    }
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

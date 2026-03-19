@@ -87,6 +87,8 @@ const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
 const SESSION_EXPIRED_AUTH_MESSAGE = 'Session expired. Please log in again.';
 const HOMEPAGE_REGISTRATION_DUPLICATE_EMAIL_MESSAGE =
   'This email is already registered. Please log in instead.';
+const HOMEPAGE_REGISTRATION_RATE_LIMIT_MESSAGE =
+  'Too many registration attempts. Please wait a moment and try again.';
 const HOMEPAGE_REGISTRATION_FAILURE_MESSAGE = 'Registration failed. Please try again.';
 
 const resolveAuthBaseUrl = () => {
@@ -538,6 +540,11 @@ export default function Home() {
       if (!response.ok) {
         if (response.status === 409) {
           setAuthMessage(HOMEPAGE_REGISTRATION_DUPLICATE_EMAIL_MESSAGE);
+          return;
+        }
+
+        if (response.status === 429) {
+          setAuthMessage(HOMEPAGE_REGISTRATION_RATE_LIMIT_MESSAGE);
           return;
         }
 
