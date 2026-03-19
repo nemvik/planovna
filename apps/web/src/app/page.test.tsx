@@ -52,6 +52,35 @@ const createClient = () => ({
   },
 });
 
+const createFetchResponse = (
+  body: unknown,
+  init: { ok?: boolean; status?: number } = {},
+) =>
+  ({
+    ok: init.ok ?? true,
+    status: init.status ?? 200,
+    json: jest.fn().mockResolvedValue(body),
+  }) as unknown as Response;
+
+const setFetchMock = (response: Response) => {
+  const fetchScope = globalThis as Record<string, unknown>;
+  const previousFetch = fetchScope.fetch;
+  const fetchMock = jest.fn().mockResolvedValue(response);
+
+  fetchScope.fetch = fetchMock;
+
+  return {
+    fetchMock,
+    restore: () => {
+      if (previousFetch === undefined) {
+        delete fetchScope.fetch;
+      } else {
+        fetchScope.fetch = previousFetch;
+      }
+    },
+  };
+};
+
 const renderWithClient = (client: ReturnType<typeof createClient>) => {
   const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
   createTrpcClientMock.mockImplementation(() => client as never);
@@ -65,6 +94,21 @@ const login = async (email = 'owner@tenant-a.local', password = 'tenant-a-pass')
   await user.clear(screen.getByLabelText('Password'));
   await user.type(screen.getByLabelText('Password'), password);
   await user.click(screen.getByRole('button', { name: 'Login' }));
+};
+
+const register = async (
+  email = 'new@tenant-a.local',
+  password = 'tenant-a-pass',
+  companyName = 'Acme',
+) => {
+  const user = userEvent.setup();
+  await user.clear(screen.getByLabelText('Registration email'));
+  await user.type(screen.getByLabelText('Registration email'), email);
+  await user.clear(screen.getByLabelText('Registration password'));
+  await user.type(screen.getByLabelText('Registration password'), password);
+  await user.clear(screen.getByLabelText('Company name'));
+  await user.type(screen.getByLabelText('Company name'), companyName);
+  await user.click(screen.getByRole('button', { name: 'Register' }));
 };
 
 const loginAndWaitForAutoLoad = async (
@@ -88,6 +132,7 @@ const getOperationCard = (bucketLabel: string, operationText: string) => {
 };
 
 beforeEach(() => {
+  jest.restoreAllMocks();
   jest.clearAllMocks();
   window.localStorage.clear();
   window.history.replaceState({}, '', '/');
@@ -107,6 +152,52 @@ describe('homepage operations board', () => {
 
     await login('owner@tenant-a.local', 'tenant-a-pass');
     expect(await screen.findByText('Logged in')).toBeInTheDocument();
+  });
+
+  it('registers a new tenant owner and reuses the same post-login load flow', async () => {
+    const client = createClient();
+    const fetchStub = setFetchMock(
+      createFetchResponse({ accessToken: 'token-tenant-new', tokenType: 'Bearer', expiresAt: '2099-01-01T00:00:00.000Z' }),
+    );
+
+    try {
+      renderWithClient(client);
+
+      await register('owner-new@tenant-a.local', 'new-password', 'Acme Co.');
+
+      expect(await screen.findByText('Logged in')).toBeInTheDocument();
+
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-tenant-new');
+      expect(fetchStub.fetchMock).toHaveBeenCalledTimes(1);
+      expect(client.auth.login.mutate).not.toHaveBeenCalled();
+      expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    } finally {
+      fetchStub.restore();
+    }
+  });
+
+  it('shows a safe error when registering an already used email', async () => {
+    const client = createClient();
+    const fetchStub = setFetchMock(
+      createFetchResponse({ message: 'Email already exists' }, { ok: false, status: 409 }),
+    );
+
+    try {
+      renderWithClient(client);
+
+      await register('owner@tenant-a.local', 'tenant-a-pass', 'Acme Co.');
+
+      expect(
+        await screen.findByText('This email is already registered. Please log in instead.'),
+      ).toBeInTheDocument();
+      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+      expect(client.auth.login.mutate).not.toHaveBeenCalled();
+      expect(client.operation.list.query).not.toHaveBeenCalled();
+    } finally {
+      fetchStub.restore();
+    }
   });
 
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {

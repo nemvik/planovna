@@ -85,6 +85,17 @@ const DEFAULT_BOARD_FILTERS: BoardFilters = {
 
 const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
 const SESSION_EXPIRED_AUTH_MESSAGE = 'Session expired. Please log in again.';
+const HOMEPAGE_REGISTRATION_DUPLICATE_EMAIL_MESSAGE =
+  'This email is already registered. Please log in instead.';
+const HOMEPAGE_REGISTRATION_FAILURE_MESSAGE = 'Registration failed. Please try again.';
+
+const resolveAuthBaseUrl = () => {
+  const trpcUrl = process.env.NEXT_PUBLIC_API_TRPC_URL ?? 'http://localhost:3000/trpc';
+  const withoutTrailingSlash = trpcUrl.replace(/\/+$/, '');
+  return withoutTrailingSlash.replace(/\/trpc$/, '');
+};
+
+const getRegistrationEndpoint = () => `${resolveAuthBaseUrl()}/auth/register`;
 
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
@@ -238,8 +249,12 @@ const formatMoney = (amount: number, currency: CashflowItem['currency']) =>
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerCompanyName, setRegisterCompanyName] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loginPending, setLoginPending] = useState(false);
+  const [registerPending, setRegisterPending] = useState(false);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
   const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
@@ -256,9 +271,28 @@ export default function Home() {
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
   const hydrationAutoLoadPendingRef = useRef(false);
   const loginPendingRef = useRef(false);
+  const registerPendingRef = useRef(false);
   const manualOperationLoadPendingRef = useRef(false);
   const mutatingOperationIdRef = useRef<string | null>(null);
   const operationLoadSessionRef = useRef(0);
+
+  const completeAuthSession = (nextAccessToken: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, nextAccessToken);
+    setAccessToken(nextAccessToken);
+    resetOperationsState();
+    setAuthMessage('Logged in');
+
+    const authenticatedClient = createTrpcClient(nextAccessToken);
+    void loadCashflow(authenticatedClient);
+    void loadInvoices(authenticatedClient);
+    void loadOperations(authenticatedClient).catch(() => {
+      // state is already updated in loadOperations
+    });
+  };
 
   const trpcClient = useMemo(
     () => createTrpcClient(accessToken ?? undefined),
@@ -467,26 +501,58 @@ export default function Home() {
     try {
       const result = await trpcClient.auth.login.mutate({ email, password });
       const nextAccessToken = result.accessToken;
-      window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, nextAccessToken);
-      setAccessToken(nextAccessToken);
-      resetOperationsState();
-      setAuthMessage('Logged in');
-
-      const authenticatedClient = createTrpcClient(nextAccessToken);
-      void loadCashflow(authenticatedClient);
-      void loadInvoices(authenticatedClient);
-
-      try {
-        await loadOperations(authenticatedClient);
-      } catch {
-        // state is already updated in loadOperations
-      }
+      completeAuthSession(nextAccessToken);
     } catch {
       resetSession();
       setAuthMessage('Invalid credentials');
     } finally {
       loginPendingRef.current = false;
       setLoginPending(false);
+    }
+  };
+
+  const onRegister = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (registerPendingRef.current) {
+      return;
+    }
+
+    registerPendingRef.current = true;
+    setRegisterPending(true);
+    setAuthMessage('');
+
+    try {
+      const response = await fetch(getRegistrationEndpoint(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: registerEmail,
+          password: registerPassword,
+          companyName: registerCompanyName,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setAuthMessage(HOMEPAGE_REGISTRATION_DUPLICATE_EMAIL_MESSAGE);
+          return;
+        }
+
+        setAuthMessage(HOMEPAGE_REGISTRATION_FAILURE_MESSAGE);
+        return;
+      }
+
+      const result = (await response.json()) as { accessToken: string };
+      const nextAccessToken = result.accessToken;
+      completeAuthSession(nextAccessToken);
+    } catch {
+      setAuthMessage(HOMEPAGE_REGISTRATION_FAILURE_MESSAGE);
+    } finally {
+      registerPendingRef.current = false;
+      setRegisterPending(false);
     }
   };
 
@@ -712,6 +778,7 @@ export default function Home() {
   const controlsDisabled = !accessToken;
   const loadOperationsDisabled =
     controlsDisabled || operationLoadState === 'loading' || mutatingOperationId !== null;
+  const authOperationDisabled = loginPending || registerPending;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-8">
@@ -722,36 +789,81 @@ export default function Home() {
         </p>
       </div>
 
-      <form className="flex max-w-sm flex-col gap-2" onSubmit={onLogin}>
-        <label className="flex flex-col gap-1">
-          Email
-          <input
-            className="rounded border px-2 py-1"
-            value={email}
-            disabled={loginPending}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </label>
+      {!accessToken ? (
+        <div className="grid gap-3 max-w-2xl md:grid-cols-2">
+          <form className="flex flex-col gap-2" onSubmit={onLogin}>
+            <label className="flex flex-col gap-1">
+              Email
+              <input
+                className="rounded border px-2 py-1"
+                value={email}
+                disabled={authOperationDisabled}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
 
-        <label className="flex flex-col gap-1">
-          Password
-          <input
-            className="rounded border px-2 py-1"
-            type="password"
-            value={password}
-            disabled={loginPending}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </label>
+            <label className="flex flex-col gap-1">
+              Password
+              <input
+                className="rounded border px-2 py-1"
+                type="password"
+                value={password}
+                disabled={authOperationDisabled}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
 
-        <button
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-          type="submit"
-          disabled={loginPending}
-        >
-          {loginPending ? 'Logging in...' : 'Login'}
-        </button>
-      </form>
+            <button
+              className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+              type="submit"
+              disabled={authOperationDisabled}
+            >
+              {loginPending ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <form className="flex flex-col gap-2" onSubmit={onRegister}>
+            <label className="flex flex-col gap-1">
+              Registration email
+              <input
+                className="rounded border px-2 py-1"
+                value={registerEmail}
+                disabled={authOperationDisabled}
+                onChange={(event) => setRegisterEmail(event.target.value)}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1">
+              Registration password
+              <input
+                className="rounded border px-2 py-1"
+                type="password"
+                value={registerPassword}
+                disabled={authOperationDisabled}
+                onChange={(event) => setRegisterPassword(event.target.value)}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1">
+              Company name
+              <input
+                className="rounded border px-2 py-1"
+                value={registerCompanyName}
+                disabled={authOperationDisabled}
+                onChange={(event) => setRegisterCompanyName(event.target.value)}
+              />
+            </label>
+
+            <button
+              className="rounded border border-slate-400 px-3 py-2 text-slate-900 disabled:opacity-50"
+              type="submit"
+              disabled={authOperationDisabled}
+            >
+              {registerPending ? 'Registering...' : 'Register'}
+            </button>
+          </form>
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <button
