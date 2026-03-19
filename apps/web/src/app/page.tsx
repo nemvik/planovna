@@ -159,6 +159,8 @@ type HomepageAuthLocaleStrings = {
   operationSaveTitleButton: string;
   operationSortIndexLabel: string;
   operationSaveSortButton: string;
+  operationPrerequisiteSummaryTemplate: string;
+  operationPrerequisiteOverflowTemplate: string;
   operationEndDateLabel: string;
   operationSaveEndButton: string;
   operationClearEndButton: string;
@@ -241,6 +243,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveTitleButton: 'Uložit název',
     operationSortIndexLabel: 'Pořadí',
     operationSaveSortButton: 'Uložit pořadí',
+    operationPrerequisiteSummaryTemplate: 'Čeká na {codes}{overflow}',
+    operationPrerequisiteOverflowTemplate: ' +{count} dalších',
     operationEndDateLabel: 'Datum dokončení',
     operationSaveEndButton: 'Uložit datum',
     operationClearEndButton: 'Vymazat datum',
@@ -321,6 +325,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveTitleButton: 'Save title',
     operationSortIndexLabel: 'Sort index',
     operationSaveSortButton: 'Save sort',
+    operationPrerequisiteSummaryTemplate: 'Waiting on {codes}{overflow}',
+    operationPrerequisiteOverflowTemplate: ' +{count} more',
     operationEndDateLabel: 'End date',
     operationSaveEndButton: 'Save end',
     operationClearEndButton: 'Clear end',
@@ -401,6 +407,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveTitleButton: 'Titel speichern',
     operationSortIndexLabel: 'Sortierindex',
     operationSaveSortButton: 'Sortierung speichern',
+    operationPrerequisiteSummaryTemplate: 'Wartet auf {codes}{overflow}',
+    operationPrerequisiteOverflowTemplate: ' +{count} weitere',
     operationEndDateLabel: 'Enddatum',
     operationSaveEndButton: 'Enddatum speichern',
     operationClearEndButton: 'Enddatum löschen',
@@ -545,15 +553,26 @@ const buildScheduleDateDrafts = (operations: Operation[]) =>
     return drafts;
   }, {});
 
-const formatPrerequisiteSummary = (operation: Operation) => {
+const formatPrerequisiteSummary = (
+  operation: Operation,
+  homepageAuthCopy: HomepageAuthLocaleStrings,
+) => {
   if (!operation.prerequisiteCodes || operation.prerequisiteCodes.length === 0) {
     return null;
   }
 
   const overflowCount = operation.prerequisiteOverflowCount ?? 0;
-  const overflowSuffix = overflowCount > 0 ? ` +${overflowCount} more` : '';
+  const overflowSuffix =
+    overflowCount > 0
+      ? homepageAuthCopy.operationPrerequisiteOverflowTemplate.replace(
+          '{count}',
+          String(overflowCount),
+        )
+      : '';
 
-  return `Waiting on ${operation.prerequisiteCodes.join(', ')}${overflowSuffix}`;
+  return homepageAuthCopy.operationPrerequisiteSummaryTemplate
+    .replace('{codes}', operation.prerequisiteCodes.join(', '))
+    .replace('{overflow}', overflowSuffix);
 };
 
 const formatMoney = (amount: number, currency: CashflowItem['currency']) =>
@@ -1456,7 +1475,10 @@ export default function Home() {
                         sortIndexValue.trim() !== '' &&
                         Number.isInteger(parsedSortIndex) &&
                         parsedSortIndex !== operation.sortIndex;
-                      const prerequisiteSummary = formatPrerequisiteSummary(operation);
+                      const prerequisiteSummary = formatPrerequisiteSummary(
+                        operation,
+                        homepageAuthCopy,
+                      );
 
                       return (
                         <li key={operation.id} className="rounded border bg-white p-3">
