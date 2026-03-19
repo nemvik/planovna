@@ -44,6 +44,31 @@ describe('Legacy REST auth + onboarding (e2e)', () => {
       .expect(409);
   });
 
+  it('rate limits repeated registration attempts from same email/ip identity window', async () => {
+    const appServer = app.getHttpServer();
+    const email = `rate-limit-${randomUUID().slice(0, 8)}@example.test`;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request(appServer)
+        .post('/auth/register')
+        .send({
+          email,
+          password: `welcome-${attempt}`,
+          companyName: `Foundry ${randomUUID().slice(0, 8)}`,
+        })
+        .expect(attempt === 0 ? 201 : 409);
+    }
+
+    await request(appServer)
+      .post('/auth/register')
+      .send({
+        email,
+        password: 'welcome-final',
+        companyName: `Foundry ${randomUUID().slice(0, 8)}`,
+      })
+      .expect(429);
+  });
+
   it('returns 404 on removed auth REST endpoints', async () => {
     const appServer = app.getHttpServer();
 

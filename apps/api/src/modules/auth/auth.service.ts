@@ -41,6 +41,11 @@ type MagicLinkRequestResponse = {
   expiresAt: string;
 };
 
+type RegisterAttemptWindow = {
+  startedAtMs: number;
+  count: number;
+};
+
 const DEV_TOKEN_SECRET = 'planovna-dev-secret';
 const PRODUCTION_SECRET_ERROR =
   'AUTH_TOKEN_SECRET must be set to a non-default value in production';
@@ -106,6 +111,27 @@ export class AuthService {
     },
   ];
   private readonly magicLinkTokens = new Map<string, MagicLinkToken>();
+  private readonly registerAttempts = new Map<string, RegisterAttemptWindow>();
+  private readonly registerRateLimitWindowMs = 60_000;
+  private readonly registerRateLimitMaxAttempts = 5;
+
+  isRegisterRateLimited(email: string, clientIp?: string): boolean {
+    const key = this.registerAttemptKey(email, clientIp);
+    const nowMs = Date.now();
+    const window = this.registerAttempts.get(key);
+
+    if (!window || nowMs - window.startedAtMs >= this.registerRateLimitWindowMs) {
+      this.registerAttempts.set(key, { startedAtMs: nowMs, count: 1 });
+      return false;
+    }
+
+    if (window.count >= this.registerRateLimitMaxAttempts) {
+      return true;
+    }
+
+    window.count += 1;
+    return false;
+  }
 
   register(input: RegisterDto): LoginResponseDto | null {
     const email = input.email.trim().toLowerCase();
@@ -246,6 +272,12 @@ export class AuthService {
 
   private findUserById(userId: string): User | undefined {
     return this.users.find((candidate) => candidate.id === userId);
+  }
+
+  private registerAttemptKey(email: string, clientIp?: string): string {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedIp = clientIp?.trim() || 'unknown-ip';
+    return `${normalizedIp}:${normalizedEmail}`;
   }
 
   private hashMagicToken(token: string): string {
