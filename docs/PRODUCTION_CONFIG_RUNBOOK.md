@@ -251,6 +251,22 @@ Expected visible markers:
 - empty-data marker `No invoices available yet.`
 - existing homepage/app shell content rendered beneath the invoice header
 
+### Verify self-serve Owner registration baseline
+Use the shipped homepage registration form to confirm onboarding no longer depends on pre-created operator users.
+
+Minimal verification path:
+1. Start the app stack locally.
+2. Open `http://127.0.0.1:${PORT:-3000}/`.
+3. In `Create account`, submit a fresh company + email + password.
+4. Confirm the success marker appears: `Account created. You can now log in.`
+5. Immediately try the same company+email again.
+
+Expected visible/API markers:
+- success marker `Account created. You can now log in.`
+- duplicate guard marker (UI): `Registration failed: CONFLICT`
+- duplicate guard marker (API): `TRPCError` code `CONFLICT`
+- no partial onboarding state: duplicate submission must not create a second tenant/user pair
+
 `prisma:migrate:deploy` is the production-safe command for applying committed migrations against `DATABASE_URL` without creating new migration files on the server.
 
 ## Recommended deployment order
