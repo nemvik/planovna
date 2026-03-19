@@ -138,6 +138,7 @@ type HomepageAuthLocaleStrings = {
   boardFilteredEmptyTitle: string;
   boardFilteredEmptyHint: string;
   commonAllOption: string;
+  commonBacklogOption: string;
   operationStatusReady: string;
   operationStatusInProgress: string;
   operationStatusDone: string;
@@ -219,6 +220,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilteredEmptyTitle: 'Žádné operace neodpovídají aktuálním filtrům.',
     boardFilteredEmptyHint: 'Vymažte filtry, aby se celá nástěnka vrátila bez opětovného načítání operací.',
     commonAllOption: 'Vše',
+    commonBacklogOption: 'Backlog',
     operationStatusReady: 'Připraveno',
     operationStatusInProgress: 'Rozpracováno',
     operationStatusDone: 'Hotovo',
@@ -298,6 +300,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilteredEmptyTitle: 'No operations match the current filters.',
     boardFilteredEmptyHint: 'Clear filters to return to the full board without reloading operations.',
     commonAllOption: 'All',
+    commonBacklogOption: 'Backlog',
     operationStatusReady: 'Ready',
     operationStatusInProgress: 'In progress',
     operationStatusDone: 'Done',
@@ -377,6 +380,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilteredEmptyTitle: 'Keine Vorgänge entsprechen den aktuellen Filtern.',
     boardFilteredEmptyHint: 'Löschen Sie die Filter, um ohne erneutes Laden der Vorgänge zum vollständigen Board zurückzukehren.',
     commonAllOption: 'Alle',
+    commonBacklogOption: 'Backlog',
     operationStatusReady: 'Bereit',
     operationStatusInProgress: 'In Bearbeitung',
     operationStatusDone: 'Erledigt',
@@ -655,6 +659,8 @@ export default function Home() {
   const boardSummaryShowingText = HOMEPAGE_AUTH_LOCALES.en.boardSummaryShowingTemplate
     .replace('{filtered}', String(filteredOperations.length))
     .replace('{total}', String(operations.length));
+  const getLocalizedBucketLabel = (bucket: string) =>
+    bucket === BACKLOG_BUCKET ? HOMEPAGE_AUTH_LOCALES.en.commonBacklogOption : bucket;
   const getActiveFilterLabel = (key: (typeof activeFilters)[number]['key']) => {
     switch (key) {
       case 'status':
@@ -1679,7 +1685,7 @@ export default function Home() {
                           >
                             {moveBucketOptions.map((moveBucket) => (
                               <option key={moveBucket} value={moveBucket}>
-                                {moveBucket}
+                                {getLocalizedBucketLabel(moveBucket)}
                               </option>
                             ))}
                           </select>
