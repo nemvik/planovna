@@ -84,12 +84,74 @@ const DEFAULT_BOARD_FILTERS: BoardFilters = {
 };
 
 const HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY = 'planovna.homepage.accessToken';
-const SESSION_EXPIRED_AUTH_MESSAGE = 'Session expired. Please log in again.';
-const HOMEPAGE_REGISTRATION_DUPLICATE_EMAIL_MESSAGE =
-  'This email is already registered. Please log in instead.';
-const HOMEPAGE_REGISTRATION_RATE_LIMIT_MESSAGE =
-  'Too many registration attempts. Please wait a moment and try again.';
-const HOMEPAGE_REGISTRATION_FAILURE_MESSAGE = 'Registration failed. Please try again.';
+
+type HomepageAuthLocaleStrings = {
+  sessionExpired: string;
+  invalidCredentials: string;
+  registrationDuplicateEmail: string;
+  registrationRateLimit: string;
+  registrationFailure: string;
+  loginEmailLabel: string;
+  loginPasswordLabel: string;
+  loginButton: string;
+  loginPendingButton: string;
+  registerEmailLabel: string;
+  registerPasswordLabel: string;
+  registerCompanyLabel: string;
+  registerButton: string;
+  registerPendingButton: string;
+};
+
+const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
+  cs: {
+    sessionExpired: 'Relace vypršela. Přihlaste se prosím znovu.',
+    invalidCredentials: 'Neplatné přihlašovací údaje',
+    registrationDuplicateEmail: 'Tento e-mail je již registrovaný. Přihlaste se prosím.',
+    registrationRateLimit: 'Příliš mnoho pokusů o registraci. Počkejte prosím a zkuste to znovu.',
+    registrationFailure: 'Registrace selhala. Zkuste to prosím znovu.',
+    loginEmailLabel: 'E-mail',
+    loginPasswordLabel: 'Heslo',
+    loginButton: 'Přihlásit',
+    loginPendingButton: 'Přihlašování...',
+    registerEmailLabel: 'Registrační e-mail',
+    registerPasswordLabel: 'Registrační heslo',
+    registerCompanyLabel: 'Název společnosti',
+    registerButton: 'Registrovat',
+    registerPendingButton: 'Probíhá registrace...',
+  },
+  en: {
+    sessionExpired: 'Session expired. Please log in again.',
+    invalidCredentials: 'Invalid credentials',
+    registrationDuplicateEmail: 'This email is already registered. Please log in instead.',
+    registrationRateLimit: 'Too many registration attempts. Please wait a moment and try again.',
+    registrationFailure: 'Registration failed. Please try again.',
+    loginEmailLabel: 'Email',
+    loginPasswordLabel: 'Password',
+    loginButton: 'Login',
+    loginPendingButton: 'Logging in...',
+    registerEmailLabel: 'Registration email',
+    registerPasswordLabel: 'Registration password',
+    registerCompanyLabel: 'Company name',
+    registerButton: 'Register',
+    registerPendingButton: 'Registering...',
+  },
+  de: {
+    sessionExpired: 'Sitzung abgelaufen. Bitte melden Sie sich erneut an.',
+    invalidCredentials: 'Ungültige Anmeldedaten',
+    registrationDuplicateEmail: 'Diese E-Mail ist bereits registriert. Bitte melden Sie sich stattdessen an.',
+    registrationRateLimit: 'Zu viele Registrierungsversuche. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
+    registrationFailure: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    loginEmailLabel: 'E-Mail',
+    loginPasswordLabel: 'Passwort',
+    loginButton: 'Anmelden',
+    loginPendingButton: 'Anmeldung läuft...',
+    registerEmailLabel: 'Registrierungs-E-Mail',
+    registerPasswordLabel: 'Registrierungs-Passwort',
+    registerCompanyLabel: 'Firmenname',
+    registerButton: 'Registrieren',
+    registerPendingButton: 'Registrierung läuft...',
+  },
+};
 
 const resolveAuthBaseUrl = () => {
   const trpcUrl = process.env.NEXT_PUBLIC_API_TRPC_URL ?? 'http://localhost:3000/trpc';
@@ -476,7 +538,7 @@ export default function Home() {
       }
 
       if (hasForbiddenCode(error)) {
-        resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
+        resetSession(homepageAuthCopy.sessionExpired);
       } else if (hadLoadedBoard) {
         setBoardMessage('Failed to reload operations. Showing the last loaded board.');
         setOperationLoadState('loaded');
@@ -506,7 +568,7 @@ export default function Home() {
       completeAuthSession(nextAccessToken);
     } catch {
       resetSession();
-      setAuthMessage('Invalid credentials');
+      setAuthMessage(homepageAuthCopy.invalidCredentials);
     } finally {
       loginPendingRef.current = false;
       setLoginPending(false);
@@ -539,16 +601,16 @@ export default function Home() {
 
       if (!response.ok) {
         if (response.status === 409) {
-          setAuthMessage(HOMEPAGE_REGISTRATION_DUPLICATE_EMAIL_MESSAGE);
+          setAuthMessage(homepageAuthCopy.registrationDuplicateEmail);
           return;
         }
 
         if (response.status === 429) {
-          setAuthMessage(HOMEPAGE_REGISTRATION_RATE_LIMIT_MESSAGE);
+          setAuthMessage(homepageAuthCopy.registrationRateLimit);
           return;
         }
 
-        setAuthMessage(HOMEPAGE_REGISTRATION_FAILURE_MESSAGE);
+        setAuthMessage(homepageAuthCopy.registrationFailure);
         return;
       }
 
@@ -556,7 +618,7 @@ export default function Home() {
       const nextAccessToken = result.accessToken;
       completeAuthSession(nextAccessToken);
     } catch {
-      setAuthMessage(HOMEPAGE_REGISTRATION_FAILURE_MESSAGE);
+      setAuthMessage(homepageAuthCopy.registrationFailure);
     } finally {
       registerPendingRef.current = false;
       setRegisterPending(false);
@@ -640,7 +702,7 @@ export default function Home() {
       }
 
       if (hasForbiddenCode(error)) {
-        resetSession(SESSION_EXPIRED_AUTH_MESSAGE);
+        resetSession(homepageAuthCopy.sessionExpired);
       } else if (extractConflictData(error)) {
         try {
           await loadOperations();
@@ -786,6 +848,7 @@ export default function Home() {
   const loadOperationsDisabled =
     controlsDisabled || operationLoadState === 'loading' || mutatingOperationId !== null;
   const authOperationDisabled = loginPending || registerPending;
+  const homepageAuthCopy = HOMEPAGE_AUTH_LOCALES.en;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-8">
@@ -800,7 +863,7 @@ export default function Home() {
         <div className="grid gap-3 max-w-2xl md:grid-cols-2">
           <form className="flex flex-col gap-2" onSubmit={onLogin}>
             <label className="flex flex-col gap-1">
-              Email
+              {homepageAuthCopy.loginEmailLabel}
               <input
                 className="rounded border px-2 py-1"
                 value={email}
@@ -810,7 +873,7 @@ export default function Home() {
             </label>
 
             <label className="flex flex-col gap-1">
-              Password
+              {homepageAuthCopy.loginPasswordLabel}
               <input
                 className="rounded border px-2 py-1"
                 type="password"
@@ -825,13 +888,13 @@ export default function Home() {
               type="submit"
               disabled={authOperationDisabled}
             >
-              {loginPending ? 'Logging in...' : 'Login'}
+              {loginPending ? homepageAuthCopy.loginPendingButton : homepageAuthCopy.loginButton}
             </button>
           </form>
 
           <form className="flex flex-col gap-2" onSubmit={onRegister}>
             <label className="flex flex-col gap-1">
-              Registration email
+              {homepageAuthCopy.registerEmailLabel}
               <input
                 className="rounded border px-2 py-1"
                 type="email"
@@ -843,7 +906,7 @@ export default function Home() {
             </label>
 
             <label className="flex flex-col gap-1">
-              Registration password
+              {homepageAuthCopy.registerPasswordLabel}
               <input
                 className="rounded border px-2 py-1"
                 type="password"
@@ -855,7 +918,7 @@ export default function Home() {
             </label>
 
             <label className="flex flex-col gap-1">
-              Company name
+              {homepageAuthCopy.registerCompanyLabel}
               <input
                 className="rounded border px-2 py-1"
                 required
@@ -870,7 +933,7 @@ export default function Home() {
               type="submit"
               disabled={authOperationDisabled}
             >
-              {registerPending ? 'Registering...' : 'Register'}
+              {registerPending ? homepageAuthCopy.registerPendingButton : homepageAuthCopy.registerButton}
             </button>
           </form>
         </div>
@@ -1374,3 +1437,5 @@ export default function Home() {
     </main>
   );
 }
+
+

@@ -139,6 +139,20 @@ beforeEach(() => {
 });
 
 describe('homepage operations board', () => {
+  it('renders default English auth and registration labels from locale copy', () => {
+    const client = createClient();
+
+    renderWithClient(client);
+
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Registration email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Registration password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Company name')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+  });
+
   it('keeps auth login UX for valid and invalid credentials', async () => {
     const client = createClient();
     client.auth.login.mutate
