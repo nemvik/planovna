@@ -111,6 +111,18 @@ type HomepageAuthLocaleStrings = {
   boardLoadFailed: string;
   boardEmpty: string;
   boardForbidden: string;
+  cashflowSummarySectionLabel: string;
+  cashflowSnapshotTitle: string;
+  cashflowPlannedIn: string;
+  cashflowActualIn: string;
+  invoiceStatusLabel: string;
+  invoiceWorkspaceLabel: string;
+  openInvoicesWorkspaceLink: string;
+  financeSummaryHelper: string;
+  nextCashflowItemsLabel: string;
+  openCashflowPageLink: string;
+  openInvoicesPageLink: string;
+  noCashflowItems: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -141,6 +153,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardLoadFailed: 'Operace se nepodařilo načíst.',
     boardEmpty: 'Nebyly nalezeny žádné operace.',
     boardForbidden: 'Zakázáno: vaše role nemá oprávnění zobrazit operace.',
+    cashflowSummarySectionLabel: 'Přehled cashflow',
+    cashflowSnapshotTitle: 'Přehled cashflow',
+    cashflowPlannedIn: 'Plánovaný příjem',
+    cashflowActualIn: 'Skutečný příjem',
+    invoiceStatusLabel: 'Stav faktur',
+    invoiceWorkspaceLabel: 'Fakturační workspace',
+    openInvoicesWorkspaceLink: 'Otevřít fakturační workspace',
+    financeSummaryHelper:
+      'Zkontrolujte zde stav faktur a pak přejděte přímo na dedikované stránky faktur nebo cashflow pro další finanční krok.',
+    nextCashflowItemsLabel: 'Další položky cashflow',
+    openCashflowPageLink: 'Otevřít stránku cashflow',
+    openInvoicesPageLink: 'Otevřít stránku faktur',
+    noCashflowItems: 'Zatím nejsou žádné položky cashflow.',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -169,6 +194,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardLoadFailed: 'Failed to load operations.',
     boardEmpty: 'No operations found.',
     boardForbidden: 'Forbidden: your role is not allowed to view operations.',
+    cashflowSummarySectionLabel: 'Cashflow summary',
+    cashflowSnapshotTitle: 'Cashflow snapshot',
+    cashflowPlannedIn: 'Planned in',
+    cashflowActualIn: 'Actual in',
+    invoiceStatusLabel: 'Invoice status',
+    invoiceWorkspaceLabel: 'Invoice workspace',
+    openInvoicesWorkspaceLink: 'Open invoices workspace',
+    financeSummaryHelper:
+      'Review invoice status here, then jump directly to the dedicated invoice or cashflow pages for the next finance step.',
+    nextCashflowItemsLabel: 'Next cashflow items',
+    openCashflowPageLink: 'Open cashflow page',
+    openInvoicesPageLink: 'Open invoices page',
+    noCashflowItems: 'No cashflow items yet.',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -197,6 +235,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardLoadFailed: 'Vorgänge konnten nicht geladen werden.',
     boardEmpty: 'Keine Vorgänge gefunden.',
     boardForbidden: 'Verboten: Ihre Rolle darf keine Vorgänge anzeigen.',
+    cashflowSummarySectionLabel: 'Cashflow-Übersicht',
+    cashflowSnapshotTitle: 'Cashflow-Snapshot',
+    cashflowPlannedIn: 'Geplant eingehend',
+    cashflowActualIn: 'Tatsächlich eingehend',
+    invoiceStatusLabel: 'Rechnungsstatus',
+    invoiceWorkspaceLabel: 'Rechnungs-Workspace',
+    openInvoicesWorkspaceLink: 'Rechnungs-Workspace öffnen',
+    financeSummaryHelper:
+      'Prüfen Sie hier den Rechnungsstatus und wechseln Sie dann direkt zu den dedizierten Rechnungs- oder Cashflow-Seiten für den nächsten Finanzschritt.',
+    nextCashflowItemsLabel: 'Nächste Cashflow-Positionen',
+    openCashflowPageLink: 'Cashflow-Seite öffnen',
+    openInvoicesPageLink: 'Rechnungsseite öffnen',
+    noCashflowItems: 'Noch keine Cashflow-Positionen.',
   },
 };
 
@@ -1001,7 +1052,7 @@ export default function Home() {
             type="button"
             onClick={() => resetSession()}
           >
-            Logout and reset session
+            {homepageAuthCopy.logoutResetSessionButton}
           </button>
         ) : null}
       </div>
@@ -1010,55 +1061,55 @@ export default function Home() {
       {boardMessage ? <p>{boardMessage}</p> : null}
 
       {accessToken ? (
-        <section aria-label="Cashflow summary" className="rounded border bg-slate-50 p-4">
-          <h2 className="text-lg font-medium">Cashflow snapshot</h2>
+        <section aria-label={homepageAuthCopy.cashflowSummarySectionLabel} className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">{homepageAuthCopy.cashflowSnapshotTitle}</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-4">
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Planned in</p>
+              <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowPlannedIn}</p>
               <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK')}</p>
             </div>
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Actual in</p>
+              <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowActualIn}</p>
               <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK')}</p>
             </div>
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Invoice status</p>
+              <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceStatusLabel}</p>
               <p className="text-lg font-semibold">
                 {invoiceSummary.issuedCount} issued / {invoiceSummary.paidCount} paid
               </p>
               <p className="text-xs text-slate-500">{invoiceSummary.totalCount} invoices loaded</p>
             </div>
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Invoice workspace</p>
+              <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceWorkspaceLabel}</p>
               <Link className="mt-1 inline-block text-sm font-medium text-sky-700 underline" href="/invoices">
-                Open invoices workspace
+                {homepageAuthCopy.openInvoicesWorkspaceLink}
               </Link>
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-sm text-slate-600">
-              Review invoice status here, then jump directly to the dedicated invoice or cashflow pages
-              for the next finance step.
-            </p>
+            <p className="text-sm text-slate-600">{homepageAuthCopy.financeSummaryHelper}</p>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">Next cashflow items</p>
+              <p className="text-sm font-medium">{homepageAuthCopy.nextCashflowItemsLabel}</p>
               <div className="flex items-center gap-3">
                 <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
-                  Open cashflow page
+                  {homepageAuthCopy.openCashflowPageLink}
                 </Link>
                 <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
-                  Open invoices page
+                  {homepageAuthCopy.openInvoicesPageLink}
                 </Link>
               </div>
             </div>
             {cashflowSummary.nextItems.length === 0 ? (
-              <p className="mt-1 text-sm text-slate-600">No cashflow items yet.</p>
+              <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.noCashflowItems}</p>
             ) : (
               <ul className="mt-2 space-y-1 text-sm text-slate-700">
                 {cashflowSummary.nextItems.map((item) => (
                   <li key={item.id}>
-                    {item.date.slice(0, 10)} — {item.kind === 'PLANNED_IN' ? 'Planned in' : 'Actual in'} —{' '}
-                    {formatMoney(item.amount, item.currency)}
+                    {item.date.slice(0, 10)} —{' '}
+                    {item.kind === 'PLANNED_IN'
+                      ? homepageAuthCopy.cashflowPlannedIn
+                      : homepageAuthCopy.cashflowActualIn}{' '}
+                    — {formatMoney(item.amount, item.currency)}
                   </li>
                 ))}
               </ul>
