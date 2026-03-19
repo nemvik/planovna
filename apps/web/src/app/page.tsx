@@ -126,6 +126,10 @@ type HomepageAuthLocaleStrings = {
   invoiceIssuedSuffix: string;
   invoicePaidSuffix: string;
   invoicesLoadedSuffix: string;
+  boardFilterQueryLabel: string;
+  boardFilterStatusLabel: string;
+  boardFilterBucketLabel: string;
+  boardFilterResetButton: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -172,6 +176,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuedSuffix: 'vystaveno',
     invoicePaidSuffix: 'zaplaceno',
     invoicesLoadedSuffix: 'faktur načteno',
+    boardFilterQueryLabel: 'Kód nebo název',
+    boardFilterStatusLabel: 'Stav',
+    boardFilterBucketLabel: 'Koš podle data',
+    boardFilterResetButton: 'Resetovat filtry',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -216,6 +224,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuedSuffix: 'issued',
     invoicePaidSuffix: 'paid',
     invoicesLoadedSuffix: 'invoices loaded',
+    boardFilterQueryLabel: 'Code or title',
+    boardFilterStatusLabel: 'Status',
+    boardFilterBucketLabel: 'Date bucket',
+    boardFilterResetButton: 'Clear filters',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -260,6 +272,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuedSuffix: 'ausgestellt',
     invoicePaidSuffix: 'bezahlt',
     invoicesLoadedSuffix: 'Rechnungen geladen',
+    boardFilterQueryLabel: 'Code oder Titel',
+    boardFilterStatusLabel: 'Status',
+    boardFilterBucketLabel: 'Datums-Bucket',
+    boardFilterResetButton: 'Filter zurücksetzen',
   },
 };
 
@@ -1142,7 +1158,7 @@ export default function Home() {
         <>
           <div className="flex flex-wrap items-end gap-3 rounded border bg-slate-50 p-4">
             <label className="flex flex-col gap-1 text-sm">
-              Code or title
+              {homepageAuthCopy.boardFilterQueryLabel}
               <input
                 className="rounded border bg-white px-2 py-1"
                 type="search"
@@ -1157,7 +1173,7 @@ export default function Home() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
-              Status
+              {homepageAuthCopy.boardFilterStatusLabel}
               <select
                 className="rounded border bg-white px-2 py-1"
                 value={filters.status}
@@ -1178,7 +1194,7 @@ export default function Home() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
-              Date bucket
+              {homepageAuthCopy.boardFilterBucketLabel}
               <select
                 className="rounded border bg-white px-2 py-1"
                 value={filters.bucket}
@@ -1202,7 +1218,7 @@ export default function Home() {
               type="button"
               onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
             >
-              Clear filters
+              {homepageAuthCopy.boardFilterResetButton}
             </button>
           </div>
 
