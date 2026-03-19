@@ -9,6 +9,8 @@ import { AppService, type ReadinessResponse } from './../src/app.service';
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
   const originalCorsAllowedOrigins = process.env.API_CORS_ALLOWED_ORIGINS;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalAuthTokenSecret = process.env.AUTH_TOKEN_SECRET;
 
   afterEach(async () => {
     await app?.close();
@@ -17,6 +19,18 @@ describe('AppController (e2e)', () => {
       delete process.env.API_CORS_ALLOWED_ORIGINS;
     } else {
       process.env.API_CORS_ALLOWED_ORIGINS = originalCorsAllowedOrigins;
+    }
+
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+
+    if (originalAuthTokenSecret === undefined) {
+      delete process.env.AUTH_TOKEN_SECRET;
+    } else {
+      process.env.AUTH_TOKEN_SECRET = originalAuthTokenSecret;
     }
   });
 
@@ -208,7 +222,39 @@ describe('AppController (e2e)', () => {
     expect(response.headers['access-control-allow-credentials']).toBe('true');
   });
 
+  it('falls back to canonical prod web origin for tRPC preflight when env allowlist is unset', async () => {
+    delete process.env.API_CORS_ALLOWED_ORIGINS;
+    process.env.NODE_ENV = 'production';
+    process.env.AUTH_TOKEN_SECRET = 'test-prod-secret-for-cors-fallback';
+
+    await createApp({
+      status: 'ready',
+      service: 'api',
+      dependencies: {
+        database: {
+          status: 'up',
+        },
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .options('/trpc/auth.login')
+      .set('Origin', 'https://planovna.nemvik.com')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'authorization,content-type')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'https://planovna.nemvik.com',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    expect(response.headers['access-control-allow-headers']).toBe(
+      'authorization,content-type',
+    );
+  });
+
   it('does not add CORS headers for disallowed origins on tRPC requests', async () => {
+    process.env.NODE_ENV = 'test';
     process.env.API_CORS_ALLOWED_ORIGINS = 'https://allowed.planovna.test';
 
     await createApp({

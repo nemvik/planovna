@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { NextFunction, Request, Response } from 'express';
 import { AuthService } from './modules/auth/auth.service';
 import { CashflowService } from './modules/cashflow/cashflow.service';
 import { CustomerService } from './modules/customer/customer.service';
@@ -10,6 +11,7 @@ import { createTrpcContext } from './trpc/context';
 import { createAppRouter } from './trpc/routers/app.router';
 
 const API_CORS_ALLOWED_ORIGINS_ENV = 'API_CORS_ALLOWED_ORIGINS';
+const PROD_DEFAULT_CORS_ALLOWED_ORIGINS = ['https://planovna.nemvik.com'];
 
 function normalizeOrigin(origin: string): string {
   return origin.trim().replace(/\/+$/, '');
@@ -17,6 +19,10 @@ function normalizeOrigin(origin: string): string {
 
 function getAllowedCorsOrigins(envValue = process.env[API_CORS_ALLOWED_ORIGINS_ENV]): string[] {
   if (!envValue) {
+    if (process.env.NODE_ENV === 'production') {
+      return PROD_DEFAULT_CORS_ALLOWED_ORIGINS;
+    }
+
     return [];
   }
 
@@ -60,6 +66,34 @@ export function configureApiApp(app: INestApplication) {
 
       callback(null, false);
     },
+  });
+
+  app.use('/trpc', (req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== 'OPTIONS') {
+      next();
+      return;
+    }
+
+    const requestOrigin = req.headers.origin;
+    if (
+      typeof requestOrigin === 'string' &&
+      allowedCorsOrigins.includes(normalizeOrigin(requestOrigin))
+    ) {
+      const requestHeaders = req.headers['access-control-request-headers'];
+      const allowHeaders =
+        typeof requestHeaders === 'string' && requestHeaders.trim().length > 0
+          ? requestHeaders
+          : 'content-type,authorization';
+
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', allowHeaders);
+      res.status(204).end();
+      return;
+    }
+
+    res.status(204).end();
   });
 
   app.use(
