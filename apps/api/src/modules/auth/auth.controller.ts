@@ -1,18 +1,14 @@
 import {
   Body,
   Controller,
+  ConflictException,
   Post,
-  UnauthorizedException,
 } from '@nestjs/common';
 import {
-  LoginSchema,
-  MagicLinkConsumeSchema,
-  MagicLinkRequestSchema,
+  RegisterSchema,
 } from './dto/auth.dto';
 import type {
-  LoginDto,
-  MagicLinkConsumeDto,
-  MagicLinkRequestDto,
+  RegisterDto,
 } from './dto/auth.dto';
 import { AuthService } from './auth.service';
 
@@ -20,34 +16,13 @@ import { AuthService } from './auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
-  login(@Body() body: LoginDto) {
-    const result = this.authService.login(LoginSchema.parse(body));
+  @Post('register')
+  register(@Body() body: RegisterDto) {
+    const result = this.authService.register(RegisterSchema.parse(body));
     if (!result) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new ConflictException('Email already exists');
     }
-    return result;
-  }
 
-  @Post('magic-link/request')
-  requestMagicLink(@Body() body: MagicLinkRequestDto) {
-    const result = this.authService.requestMagicLink(
-      MagicLinkRequestSchema.parse(body),
-    );
-    if (!result) {
-      throw new UnauthorizedException('Unknown user');
-    }
-    return result;
-  }
-
-  @Post('magic-link/consume')
-  consumeMagicLink(@Body() body: MagicLinkConsumeDto) {
-    const result = this.authService.consumeMagicLink(
-      MagicLinkConsumeSchema.parse(body),
-    );
-    if (!result) {
-      throw new UnauthorizedException('Invalid or expired magic link');
-    }
     return result;
   }
 }

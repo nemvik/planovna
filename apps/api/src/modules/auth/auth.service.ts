@@ -3,6 +3,7 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import {
   LoginDto,
   LoginResponseDto,
+  RegisterDto,
   MagicLinkConsumeDto,
   MagicLinkRequestDto,
 } from './dto/auth.dto';
@@ -22,6 +23,11 @@ type User = {
   email: string;
   passwordHash: string;
   role: AuthRole;
+};
+
+type Tenant = {
+  id: string;
+  name: string;
 };
 
 type MagicLinkToken = {
@@ -58,6 +64,10 @@ export class AuthService {
   private readonly tokenSecret = resolveTokenSecret();
   private readonly tokenTtlSeconds = 60 * 60;
   private readonly magicLinkTtlSeconds = 15 * 60;
+  private readonly tenants: Tenant[] = [
+    { id: 'tenant-a', name: 'Tenant A' },
+    { id: 'tenant-b', name: 'Tenant B' },
+  ];
   private readonly users: User[] = [
     {
       id: 'u-tenant-a-owner',
@@ -96,6 +106,32 @@ export class AuthService {
     },
   ];
   private readonly magicLinkTokens = new Map<string, MagicLinkToken>();
+
+  register(input: RegisterDto): LoginResponseDto | null {
+    const email = input.email.trim().toLowerCase();
+    if (this.findUserByEmail(email)) {
+      return null;
+    }
+
+    const tenantId = `tenant-${randomUUID()}`;
+    const ownerId = `u-${tenantId}-owner`;
+
+    this.tenants.push({
+      id: tenantId,
+      name: input.companyName,
+    });
+
+    const user: User = {
+      id: ownerId,
+      tenantId,
+      email,
+      passwordHash: this.hashPassword(input.password),
+      role: 'OWNER',
+    };
+    this.users.push(user);
+
+    return this.issueAccessToken(user);
+  }
 
   login(input: LoginDto): LoginResponseDto | null {
     const user = this.findUserByEmail(input.email);

@@ -3,8 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { randomUUID } from 'node:crypto';
 
-describe('Legacy REST auth lockdown (e2e)', () => {
+describe('Legacy REST auth + onboarding (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -18,6 +19,29 @@ describe('Legacy REST auth lockdown (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  it('registers a tenant-owner and rejects duplicate email', async () => {
+    const appServer = app.getHttpServer();
+    const payload = {
+      email: `founder-${randomUUID().slice(0, 8)}@example.test`,
+      password: 'welcome',
+      companyName: `Foundry ${randomUUID().slice(0, 8)}`,
+    };
+
+    const created = await request(appServer)
+      .post('/auth/register')
+      .send(payload)
+      .expect(201);
+
+    expect(created.body.tokenType).toBe('Bearer');
+    expect(created.body.accessToken).toBeTruthy();
+    expect(created.body.expiresAt).toBeTruthy();
+
+    await request(appServer)
+      .post('/auth/register')
+      .send(payload)
+      .expect(409);
   });
 
   it('returns 404 on removed auth REST endpoints', async () => {
