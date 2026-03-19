@@ -17,6 +17,98 @@ type InvoiceSummary = {
   pdfPath: string;
 };
 
+type InvoicesPageLocaleStrings = {
+  sectionEyebrow: string;
+  pageTitle: string;
+  pageIntro: string;
+  exportActionsAriaLabel: string;
+  exportActionsTitle: string;
+  exportActionsHelper: string;
+  exportPathTemplate: string;
+  openHomepageFinanceWorkspaceLink: string;
+  openCashflowPageLink: string;
+  statusSummaryAriaLabel: string;
+  statusSummaryTitle: string;
+  totalInvoicesLabel: string;
+  issuedLabel: string;
+  paidLabel: string;
+  invoiceListAriaLabel: string;
+  recentInvoicesTitle: string;
+  loginToLoadHint: string;
+  noInvoicesHint: string;
+  noDueDate: string;
+  exportPdfForTemplate: string;
+};
+
+const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleStrings> = {
+  cs: {
+    sectionEyebrow: 'Finance',
+    pageTitle: 'Invoices',
+    pageIntro: 'Dedikovaný přehled faktur postavený na stejném nasazeném kontraktu homepage financí a exportu.',
+    exportActionsAriaLabel: 'Invoice export actions',
+    exportActionsTitle: 'Invoice export actions',
+    exportActionsHelper: 'Použijte nasazený základní vzor PDF export cesty při práci s konkrétním ID faktury.',
+    exportPathTemplate: '/invoices/<invoiceId>/pdf',
+    openHomepageFinanceWorkspaceLink: 'Open homepage finance workspace',
+    openCashflowPageLink: 'Open cashflow page',
+    statusSummaryAriaLabel: 'Invoice status summary',
+    statusSummaryTitle: 'Invoice status summary',
+    totalInvoicesLabel: 'Total invoices',
+    issuedLabel: 'Issued',
+    paidLabel: 'Paid',
+    invoiceListAriaLabel: 'Invoice list',
+    recentInvoicesTitle: 'Recent invoices',
+    loginToLoadHint: 'Log in on the homepage to load invoice data.',
+    noInvoicesHint: 'No invoices available yet.',
+    noDueDate: 'No due date',
+    exportPdfForTemplate: 'Export PDF for {invoiceNumber}',
+  },
+  en: {
+    sectionEyebrow: 'Finance',
+    pageTitle: 'Invoices',
+    pageIntro: 'Dedicated invoice view built on the same shipped homepage finance and export contract.',
+    exportActionsAriaLabel: 'Invoice export actions',
+    exportActionsTitle: 'Invoice export actions',
+    exportActionsHelper: 'Use the shipped PDF export baseline path pattern when working with a concrete invoice ID.',
+    exportPathTemplate: '/invoices/<invoiceId>/pdf',
+    openHomepageFinanceWorkspaceLink: 'Open homepage finance workspace',
+    openCashflowPageLink: 'Open cashflow page',
+    statusSummaryAriaLabel: 'Invoice status summary',
+    statusSummaryTitle: 'Invoice status summary',
+    totalInvoicesLabel: 'Total invoices',
+    issuedLabel: 'Issued',
+    paidLabel: 'Paid',
+    invoiceListAriaLabel: 'Invoice list',
+    recentInvoicesTitle: 'Recent invoices',
+    loginToLoadHint: 'Log in on the homepage to load invoice data.',
+    noInvoicesHint: 'No invoices available yet.',
+    noDueDate: 'No due date',
+    exportPdfForTemplate: 'Export PDF for {invoiceNumber}',
+  },
+  de: {
+    sectionEyebrow: 'Finanzen',
+    pageTitle: 'Rechnungen',
+    pageIntro: 'Dedizierte Rechnungsansicht auf Basis desselben ausgelieferten Homepage-Finanz- und Export-Vertrags.',
+    exportActionsAriaLabel: 'Rechnungsexport-Aktionen',
+    exportActionsTitle: 'Rechnungsexport-Aktionen',
+    exportActionsHelper: 'Verwenden Sie beim Arbeiten mit einer konkreten Rechnungs-ID das ausgelieferte PDF-Export-Basispfadmuster.',
+    exportPathTemplate: '/invoices/<invoiceId>/pdf',
+    openHomepageFinanceWorkspaceLink: 'Homepage-Finanz-Workspace öffnen',
+    openCashflowPageLink: 'Cashflow-Seite öffnen',
+    statusSummaryAriaLabel: 'Rechnungsstatus-Zusammenfassung',
+    statusSummaryTitle: 'Rechnungsstatus-Zusammenfassung',
+    totalInvoicesLabel: 'Rechnungen gesamt',
+    issuedLabel: 'Ausgestellt',
+    paidLabel: 'Bezahlt',
+    invoiceListAriaLabel: 'Rechnungsliste',
+    recentInvoicesTitle: 'Neueste Rechnungen',
+    loginToLoadHint: 'Melden Sie sich auf der Homepage an, um Rechnungsdaten zu laden.',
+    noInvoicesHint: 'Noch keine Rechnungen verfügbar.',
+    noDueDate: 'Kein Fälligkeitsdatum',
+    exportPdfForTemplate: 'PDF exportieren für {invoiceNumber}',
+  },
+};
+
 const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
   new Intl.NumberFormat('cs-CZ', {
     style: 'currency',
@@ -28,6 +120,8 @@ const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [hasToken, setHasToken] = useState(false);
+
+  const invoicesCopy = INVOICES_PAGE_LOCALES.en;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -64,52 +158,48 @@ export default function InvoicesPage() {
     () => (
       <div className="space-y-4">
         <header className="space-y-1">
-          <p className="text-sm font-medium text-slate-500">Finance</p>
-          <h1 className="text-2xl font-semibold">Invoices</h1>
-          <p className="text-sm text-slate-600">
-            Dedicated invoice view built on the same shipped homepage finance and export contract.
-          </p>
+          <p className="text-sm font-medium text-slate-500">{invoicesCopy.sectionEyebrow}</p>
+          <h1 className="text-2xl font-semibold">{invoicesCopy.pageTitle}</h1>
+          <p className="text-sm text-slate-600">{invoicesCopy.pageIntro}</p>
         </header>
-        <section aria-label="Invoice export actions" className="rounded border bg-slate-50 p-4">
-          <h2 className="text-lg font-medium">Invoice export actions</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Use the shipped PDF export baseline path pattern when working with a concrete invoice ID.
-          </p>
+        <section aria-label={invoicesCopy.exportActionsAriaLabel} className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">{invoicesCopy.exportActionsTitle}</h2>
+          <p className="mt-1 text-sm text-slate-600">{invoicesCopy.exportActionsHelper}</p>
           <code className="mt-3 block rounded bg-white px-3 py-2 text-sm text-slate-800">
-            /invoices/&lt;invoiceId&gt;/pdf
+            {invoicesCopy.exportPathTemplate}
           </code>
           <div className="mt-3 flex items-center gap-3">
             <Link className="text-sm font-medium text-sky-700 underline" href="/">
-              Open homepage finance workspace
+              {invoicesCopy.openHomepageFinanceWorkspaceLink}
             </Link>
             <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
-              Open cashflow page
+              {invoicesCopy.openCashflowPageLink}
             </Link>
           </div>
         </section>
-        <section aria-label="Invoice status summary" className="rounded border bg-slate-50 p-4">
-          <h2 className="text-lg font-medium">Invoice status summary</h2>
+        <section aria-label={invoicesCopy.statusSummaryAriaLabel} className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">{invoicesCopy.statusSummaryTitle}</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Total invoices</p>
+              <p className="text-sm text-slate-500">{invoicesCopy.totalInvoicesLabel}</p>
               <p className="text-lg font-semibold">{invoiceSummary.totalCount}</p>
             </div>
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Issued</p>
+              <p className="text-sm text-slate-500">{invoicesCopy.issuedLabel}</p>
               <p className="text-lg font-semibold">{invoiceSummary.issuedCount}</p>
             </div>
             <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">Paid</p>
+              <p className="text-sm text-slate-500">{invoicesCopy.paidLabel}</p>
               <p className="text-lg font-semibold">{invoiceSummary.paidCount}</p>
             </div>
           </div>
         </section>
-        <section aria-label="Invoice list" className="rounded border bg-slate-50 p-4">
-          <h2 className="text-lg font-medium">Recent invoices</h2>
+        <section aria-label={invoicesCopy.invoiceListAriaLabel} className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">{invoicesCopy.recentInvoicesTitle}</h2>
           {!hasToken ? (
-            <p className="mt-1 text-sm text-slate-600">Log in on the homepage to load invoice data.</p>
+            <p className="mt-1 text-sm text-slate-600">{invoicesCopy.loginToLoadHint}</p>
           ) : invoices.length === 0 ? (
-            <p className="mt-1 text-sm text-slate-600">No invoices available yet.</p>
+            <p className="mt-1 text-sm text-slate-600">{invoicesCopy.noInvoicesHint}</p>
           ) : (
             <ul className="mt-3 space-y-2 text-sm text-slate-700">
               {invoices.map((invoice) => (
@@ -120,14 +210,11 @@ export default function InvoicesPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-3 text-slate-600">
                     <span>{formatMoney(invoice.amountGross, invoice.currency)}</span>
-                    <span>{invoice.dueAt ? invoice.dueAt.slice(0, 10) : 'No due date'}</span>
+                    <span>{invoice.dueAt ? invoice.dueAt.slice(0, 10) : invoicesCopy.noDueDate}</span>
                   </div>
                   <div className="mt-2">
-                    <Link
-                      className="text-sm font-medium text-sky-700 underline"
-                      href={invoice.pdfPath}
-                    >
-                      Export PDF for {invoice.number}
+                    <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
+                      {invoicesCopy.exportPdfForTemplate.replace('{invoiceNumber}', invoice.number)}
                     </Link>
                   </div>
                 </li>
@@ -138,7 +225,7 @@ export default function InvoicesPage() {
         <Home />
       </div>
     ),
-    [hasToken, invoiceSummary, invoices],
+    [hasToken, invoiceSummary, invoices, invoicesCopy],
   );
 
   return content;
