@@ -151,6 +151,13 @@ type HomepageAuthLocaleStrings = {
   operationMoveToBucketLabel: string;
   operationScheduleToDateLabel: string;
   operationScheduleButton: string;
+  operationSavingLabel: string;
+  operationCodeLabel: string;
+  operationSaveCodeButton: string;
+  operationTitleLabel: string;
+  operationSaveTitleButton: string;
+  operationSortIndexLabel: string;
+  operationSaveSortButton: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -222,6 +229,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationMoveToBucketLabel: 'Přesunout do koše',
     operationScheduleToDateLabel: 'Naplánovat na datum',
     operationScheduleButton: 'Naplánovat',
+    operationSavingLabel: 'Ukládání…',
+    operationCodeLabel: 'Kód',
+    operationSaveCodeButton: 'Uložit kód',
+    operationTitleLabel: 'Název',
+    operationSaveTitleButton: 'Uložit název',
+    operationSortIndexLabel: 'Pořadí',
+    operationSaveSortButton: 'Uložit pořadí',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -291,6 +305,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationMoveToBucketLabel: 'Move to bucket',
     operationScheduleToDateLabel: 'Schedule to date',
     operationScheduleButton: 'Schedule',
+    operationSavingLabel: 'Saving…',
+    operationCodeLabel: 'Code',
+    operationSaveCodeButton: 'Save code',
+    operationTitleLabel: 'Title',
+    operationSaveTitleButton: 'Save title',
+    operationSortIndexLabel: 'Sort index',
+    operationSaveSortButton: 'Save sort',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -360,6 +381,13 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationMoveToBucketLabel: 'In Bucket verschieben',
     operationScheduleToDateLabel: 'Für Datum planen',
     operationScheduleButton: 'Planen',
+    operationSavingLabel: 'Speichern…',
+    operationCodeLabel: 'Code',
+    operationSaveCodeButton: 'Code speichern',
+    operationTitleLabel: 'Titel',
+    operationSaveTitleButton: 'Titel speichern',
+    operationSortIndexLabel: 'Sortierindex',
+    operationSaveSortButton: 'Sortierung speichern',
   },
 };
 
@@ -1423,7 +1451,7 @@ export default function Home() {
                               <p className="mt-1 text-sm text-amber-700">{prerequisiteSummary}</p>
                             ) : null}
                             {isMutatingOperation ? (
-                              <p className="mt-1 text-sm font-medium text-slate-600">Saving…</p>
+                              <p className="mt-1 text-sm font-medium text-slate-600">{homepageAuthCopy.operationSavingLabel}</p>
                             ) : null}
                           </div>
                           {operation.dependencyCount > 0 && !prerequisiteSummary ? (
@@ -1549,7 +1577,7 @@ export default function Home() {
                             type="submit"
                              disabled={isOperationLocked || !canSaveSortIndex}
                           >
-                            Save sort
+                            {homepageAuthCopy.operationSaveSortButton}
                           </button>
                         </form>
                         {operation.blockedReason ? (
