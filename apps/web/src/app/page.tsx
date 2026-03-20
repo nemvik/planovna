@@ -1100,7 +1100,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { status }, 'Failed to update operation status.');
+    await onUpdateOperation(operation, { status }, homepageAuthCopy.operationUpdateStatusFailed);
   };
 
   const onScheduleOperation = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -1124,7 +1124,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { blockedReason }, 'Failed to update blocked reason.');
+    await onUpdateOperation(operation, { blockedReason }, homepageAuthCopy.operationUpdateBlockedReasonFailed);
   };
 
   const onClearBlockedReason = async (operation: Operation) => {
@@ -1132,7 +1132,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { blockedReason: null }, 'Failed to update blocked reason.');
+    await onUpdateOperation(operation, { blockedReason: null }, homepageAuthCopy.operationUpdateBlockedReasonFailed);
   };
 
   const onSaveTitle = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -1144,7 +1144,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { title }, 'Failed to update title.');
+    await onUpdateOperation(operation, { title }, homepageAuthCopy.operationUpdateTitleFailed);
   };
 
   const onSaveCode = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
@@ -1180,7 +1180,7 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { endDate: null }, 'Failed to update end date.');
+    await onUpdateOperation(operation, { endDate: null }, homepageAuthCopy.operationUpdateEndDateFailed);
   };
 
   const onSaveSortIndex = async (event: FormEvent<HTMLFormElement>, operation: Operation) => {
