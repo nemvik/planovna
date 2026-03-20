@@ -757,7 +757,7 @@ export default function Home() {
   };
   const getClearFilterAriaLabelToken = (filter: (typeof activeFilters)[number], label: string) => {
     if (homepageLocale === 'en' && filter.key === 'bucket') {
-      return homepageAuthCopy.boardFilterBucketLabel;
+      return homepageAuthCopy.boardFilterBucketLabel.toLowerCase();
     }
 
     if (homepageLocale === 'en' && filter.key === 'status') {
