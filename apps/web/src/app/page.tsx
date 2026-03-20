@@ -670,7 +670,7 @@ export default function Home() {
     window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, nextAccessToken);
     setAccessToken(nextAccessToken);
     resetOperationsState();
-    setAuthMessage('Logged in');
+    setAuthMessage(homepageAuthCopy.authLoggedIn);
 
     const authenticatedClient = createTrpcClient(nextAccessToken);
     void loadCashflow(authenticatedClient);
