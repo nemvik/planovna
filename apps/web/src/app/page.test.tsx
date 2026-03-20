@@ -3621,6 +3621,7 @@ describe('homepage operations board', () => {
     });
 
     expect(screen.getByText('Suche: press')).toBeInTheDocument();
+    expect(screen.getByLabelText('Code oder Titel')).toHaveValue('press');
   });
 
   it('localizes active query chip label in Czech locale', async () => {
@@ -3651,6 +3652,7 @@ describe('homepage operations board', () => {
     });
 
     expect(screen.getByText('Hledání: lis')).toBeInTheDocument();
+    expect(screen.getByLabelText('Kód nebo název')).toHaveValue('lis');
   });
 
   it('resets a hydrated bucket filter to All when that bucket is not loaded', async () => {
