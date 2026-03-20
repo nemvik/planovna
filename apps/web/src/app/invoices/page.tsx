@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { resolveSupportedLocale } from '../../lib/locale';
 import { createTrpcClient } from '../../lib/trpc/client';
 import Home from '../page';
 
@@ -141,7 +142,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [hasToken, setHasToken] = useState(false);
 
-  const invoicesCopy = INVOICES_PAGE_LOCALES.en;
+  const invoicesCopy = INVOICES_PAGE_LOCALES[resolveSupportedLocale()];
 
   useEffect(() => {
     if (typeof window === 'undefined') {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
+import { resolveSupportedLocale } from '../../lib/locale';
 import Home from '../page';
 
 type CashflowPageLocaleStrings = {
@@ -45,7 +46,7 @@ const CASHFLOW_PAGE_LOCALES: Record<'cs' | 'en' | 'de', CashflowPageLocaleString
 };
 
 export default function CashflowPage() {
-  const cashflowCopy = CASHFLOW_PAGE_LOCALES.en;
+  const cashflowCopy = CASHFLOW_PAGE_LOCALES[resolveSupportedLocale()];
 
   const content = useMemo(
     () => (
