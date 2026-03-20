@@ -67,6 +67,10 @@ describe('invoices page', () => {
     expect(await screen.findByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-0001');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('121');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-03-15');
+    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('Issued');
+    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('Paid');
+    expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('ISSUED');
+    expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('PAID');
     expect(screen.getByRole('link', { name: 'Export PDF for 2026-0001' })).toHaveAttribute(
       'href',
       '/invoices/inv-1/pdf',
