@@ -210,8 +210,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     cashflowPlannedIn: 'Plánovaný příjem',
     cashflowActualIn: 'Skutečný příjem',
     invoiceStatusLabel: 'Stav faktur',
-    invoiceWorkspaceLabel: 'Fakturační workspace',
-    openInvoicesWorkspaceLink: 'Otevřít fakturační workspace',
+    invoiceWorkspaceLabel: 'Fakturační prostor',
+    openInvoicesWorkspaceLink: 'Otevřít fakturační prostor',
     financeSummaryHelper:
       'Zkontrolujte zde stav faktur a pak přejděte přímo na dedikované stránky faktur nebo cashflow pro další finanční krok.',
     nextCashflowItemsLabel: 'Další položky cashflow',
