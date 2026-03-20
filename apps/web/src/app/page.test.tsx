@@ -3750,7 +3750,7 @@ describe('homepage operations board', () => {
     expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
     expect(window.location.search).toBe('?status=BLOCKED');
 
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
 
     await waitFor(() => {
       expect(screen.getAllByLabelText('Status')[0]).toHaveValue('ALL');
