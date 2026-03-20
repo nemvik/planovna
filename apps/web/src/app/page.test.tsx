@@ -3560,7 +3560,7 @@ describe('homepage operations board', () => {
       expect(client.operation.list.query).toHaveBeenCalledTimes(1);
     });
 
-    expect(screen.getByText('Bucket: Rückstand')).toBeInTheDocument();
+    expect(screen.getByText('Datums-Bucket: Rückstand')).toBeInTheDocument();
   });
 
   it('resets a hydrated bucket filter to All when that bucket is not loaded', async () => {

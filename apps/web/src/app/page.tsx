@@ -410,7 +410,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterResetButton: 'Filter zurücksetzen',
     boardSummaryShowingTemplate: '{filtered} von {total} Vorgängen werden angezeigt.',
     boardFilterBadgeStatusLabel: 'Status',
-    boardFilterBadgeBucketLabel: 'Bucket',
+    boardFilterBadgeBucketLabel: 'Datums-Bucket',
     boardFilterBadgeQueryLabel: 'Suchbegriff',
     boardFilterClearAriaTemplate: 'Filter {label} löschen',
     boardFilteredEmptyTitle: 'Keine Vorgänge entsprechen den aktuellen Filtern.',
