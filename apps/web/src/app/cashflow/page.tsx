@@ -18,7 +18,7 @@ const CASHFLOW_PAGE_LOCALES: Record<'cs' | 'en' | 'de', CashflowPageLocaleString
   cs: {
     sectionEyebrow: 'Finance',
     pageTitle: 'Peněžní tok',
-    pageIntro: 'Dedikovaný cashflow přehled postavený na stejném nasazeném kontraktu homepage snapshotu.',
+    pageIntro: 'Dedikovaný přehled peněžního toku postavený na stejném nasazeném kontraktu homepage snapshotu.',
     financeNavigationAriaLabel: 'Navigace financí',
     financeNavigationTitle: 'Navigace financí',
     financeNavigationHelper: 'Přejděte přímo do dedikovaného workspace faktur bez návratu na homepage.',
