@@ -321,7 +321,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterBadgeStatusLabel: 'Status',
     boardFilterBadgeBucketLabel: 'Bucket',
     boardFilterBadgeQueryLabel: 'Search',
-    boardFilterClearAriaTemplate: 'Clear filter: {label}',
+    boardFilterClearAriaTemplate: 'Clear {label} filter',
     boardFilteredEmptyTitle: 'No operations match the current filters.',
     boardFilteredEmptyHint: 'Reset filters to return to the full board without reloading operations.',
     commonAllOption: 'All',
