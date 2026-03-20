@@ -1612,7 +1612,7 @@ describe('homepage operations board', () => {
 
     expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Clear search filter' }));
+    await user.click(screen.getByRole('button', { name: 'Clear code or title filter' }));
 
     await waitFor(() => {
       expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();
