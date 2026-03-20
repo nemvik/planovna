@@ -764,6 +764,10 @@ export default function Home() {
       return homepageAuthCopy.boardFilterStatusLabel.toLowerCase();
     }
 
+    if (homepageLocale === 'en' && filter.key === 'query') {
+      return 'search';
+    }
+
     return homepageLocale === 'en' ? label : label.toLowerCase();
   };
   const getLocalizedActiveFilterValue = (filter: (typeof activeFilters)[number]) => {
