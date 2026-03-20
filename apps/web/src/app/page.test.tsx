@@ -1272,7 +1272,7 @@ describe('homepage operations board', () => {
 
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
 
-    expect(await screen.findByText('Showing 1/2 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 1 of 2 operations.')).toBeInTheDocument();
 
     const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
     const operationCard = within(backlogBucket)
@@ -1291,7 +1291,7 @@ describe('homepage operations board', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Showing 0/2 operations.')).toBeInTheDocument();
+      expect(screen.getByText('Showing 0 of 2 operations.')).toBeInTheDocument();
       expect(screen.queryByText('OP-100 — Ready backlog item')).not.toBeInTheDocument();
     });
 
@@ -1299,7 +1299,7 @@ describe('homepage operations board', () => {
 
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'DONE');
 
-    expect(await screen.findByText('Showing 1/2 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 1 of 2 operations.')).toBeInTheDocument();
 
     const updatedCard = await within(screen.getByRole('region', { name: 'Backlog' }))
       .findByText('OP-100 — Ready backlog item')
@@ -1352,12 +1352,12 @@ describe('homepage operations board', () => {
 
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
 
-    expect(await screen.findByText('Showing 2/3 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 2 of 3 operations.')).toBeInTheDocument();
     expect(screen.getByText('Status: Ready')).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Code or title'), 'weld');
 
-    expect(screen.getByText('Showing 1/3 operations.')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1 of 3 operations.')).toBeInTheDocument();
     expect(screen.getByText('Search: weld')).toBeInTheDocument();
     expect(screen.getByText('OP-300 — Weld frame')).toBeInTheDocument();
     expect(screen.queryByText('OP-100 — Cut steel')).not.toBeInTheDocument();
@@ -1396,7 +1396,7 @@ describe('homepage operations board', () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText('Code or title'), 'missing');
 
-    expect(await screen.findByText('Showing 0/2 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 0 of 2 operations.')).toBeInTheDocument();
     expect(screen.getByText('Search: missing')).toBeInTheDocument();
     expect(screen.getByText('No operations match the current filters.')).toBeInTheDocument();
     expect(screen.getByText('Reset filters to return to the full board without reloading operations.')).toBeInTheDocument();
@@ -1459,12 +1459,12 @@ describe('homepage operations board', () => {
     await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
     await user.type(screen.getByLabelText('Code or title'), 'frame');
 
-    expect(await screen.findByText('Showing 2/4 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 2 of 4 operations.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Clear status filter' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Showing 3/4 operations.')).toBeInTheDocument();
+      expect(screen.getByText('Showing 3 of 4 operations.')).toBeInTheDocument();
     });
 
     expect(screen.getAllByLabelText('Status')[0]).toHaveValue('ALL');
@@ -1534,12 +1534,12 @@ describe('homepage operations board', () => {
     await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
     await user.type(screen.getByLabelText('Code or title'), 'cut');
 
-    expect(await screen.findByText('Showing 1/4 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Clear bucket filter' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Showing 2/4 operations.')).toBeInTheDocument();
+      expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();
     });
 
     expect(screen.getAllByLabelText('Status')[0]).toHaveValue('READY');
@@ -1610,12 +1610,12 @@ describe('homepage operations board', () => {
     await user.selectOptions(screen.getByLabelText('Date bucket'), '2026-03-06');
     await user.type(screen.getByLabelText('Code or title'), 'cut');
 
-    expect(await screen.findByText('Showing 1/4 operations.')).toBeInTheDocument();
+    expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Clear search filter' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Showing 2/4 operations.')).toBeInTheDocument();
+      expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();
     });
 
     expect(screen.getAllByLabelText('Status')[0]).toHaveValue('READY');

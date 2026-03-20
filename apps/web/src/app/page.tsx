@@ -317,7 +317,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Date bucket',
     boardFilterResetButton: 'Reset filters',
-    boardSummaryShowingTemplate: 'Showing {filtered}/{total} operations.',
+    boardSummaryShowingTemplate: 'Showing {filtered} of {total} operations.',
     boardFilterBadgeStatusLabel: 'Status',
     boardFilterBadgeBucketLabel: 'Bucket',
     boardFilterBadgeQueryLabel: 'Search',
