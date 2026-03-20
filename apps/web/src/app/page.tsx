@@ -17,6 +17,7 @@ import {
   serializeBoardFilters,
 } from './board-filters';
 import { createTrpcClient } from '../lib/trpc/client';
+import { resolveSupportedLocale } from '../lib/locale';
 
 type Operation = {
   id: string;
@@ -648,6 +649,8 @@ export default function Home() {
   const manualOperationLoadPendingRef = useRef(false);
   const mutatingOperationIdRef = useRef<string | null>(null);
   const operationLoadSessionRef = useRef(0);
+  const homepageLocale = resolveSupportedLocale();
+  const homepageAuthCopy = HOMEPAGE_AUTH_LOCALES[homepageLocale];
 
   const completeAuthSession = (nextAccessToken: string) => {
     if (typeof window === 'undefined') {
@@ -711,19 +714,19 @@ export default function Home() {
   const isFilteredEmptyState =
     operationLoadState === 'loaded' && operations.length > 0 && filteredOperations.length === 0;
   const showActiveFilterSummary = operationLoadState === 'loaded' && activeFilters.length > 0;
-  const boardSummaryShowingText = HOMEPAGE_AUTH_LOCALES.en.boardSummaryShowingTemplate
+  const boardSummaryShowingText = homepageAuthCopy.boardSummaryShowingTemplate
     .replace('{filtered}', String(filteredOperations.length))
     .replace('{total}', String(operations.length));
   const getLocalizedBucketLabel = (bucket: string) =>
-    bucket === BACKLOG_BUCKET ? HOMEPAGE_AUTH_LOCALES.en.commonBacklogOption : bucket;
+    bucket === BACKLOG_BUCKET ? homepageAuthCopy.commonBacklogOption : bucket;
   const getActiveFilterLabel = (key: (typeof activeFilters)[number]['key']) => {
     switch (key) {
       case 'status':
-        return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeStatusLabel;
+        return homepageAuthCopy.boardFilterBadgeStatusLabel;
       case 'bucket':
-        return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeBucketLabel;
+        return homepageAuthCopy.boardFilterBadgeBucketLabel;
       case 'query':
-        return HOMEPAGE_AUTH_LOCALES.en.boardFilterBadgeQueryLabel;
+        return homepageAuthCopy.boardFilterBadgeQueryLabel;
       default:
         return key;
     }
@@ -731,13 +734,13 @@ export default function Home() {
   const getLocalizedOperationStatusLabel = (status: Operation['status']) => {
     switch (status) {
       case 'READY':
-        return HOMEPAGE_AUTH_LOCALES.en.operationStatusReady;
+        return homepageAuthCopy.operationStatusReady;
       case 'IN_PROGRESS':
-        return HOMEPAGE_AUTH_LOCALES.en.operationStatusInProgress;
+        return homepageAuthCopy.operationStatusInProgress;
       case 'DONE':
-        return HOMEPAGE_AUTH_LOCALES.en.operationStatusDone;
+        return homepageAuthCopy.operationStatusDone;
       case 'BLOCKED':
-        return HOMEPAGE_AUTH_LOCALES.en.operationStatusBlocked;
+        return homepageAuthCopy.operationStatusBlocked;
       default:
         return status;
     }
@@ -766,7 +769,7 @@ export default function Home() {
 
     hydrationAutoLoadPendingRef.current = true;
     setAccessToken(storedAccessToken);
-    setAuthMessage(HOMEPAGE_AUTH_LOCALES.en.authLoggedIn);
+    setAuthMessage(homepageAuthCopy.authLoggedIn);
   }, []);
 
   useEffect(() => {
@@ -820,7 +823,7 @@ export default function Home() {
     operationLoadSessionRef.current += 1;
   };
 
-  const resetSession = (message = HOMEPAGE_AUTH_LOCALES.en.authLoggedOut) => {
+  const resetSession = (message = homepageAuthCopy.authLoggedOut) => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY);
     }
@@ -1196,7 +1199,6 @@ export default function Home() {
   const loadOperationsDisabled =
     controlsDisabled || operationLoadState === 'loading' || mutatingOperationId !== null;
   const authOperationDisabled = loginPending || registerPending;
-  const homepageAuthCopy = HOMEPAGE_AUTH_LOCALES.en;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-8">

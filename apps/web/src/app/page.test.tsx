@@ -136,6 +136,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
   window.history.replaceState({}, '', '/');
+  document.documentElement.lang = '';
 });
 
 describe('homepage operations board', () => {
@@ -159,6 +160,19 @@ describe('homepage operations board', () => {
     expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load operations' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Logout and reset session' })).not.toBeInTheDocument();
+  });
+
+  it('resolves homepage locale copy from html lang when supported', () => {
+    const client = createClient();
+    document.documentElement.lang = 'de';
+
+    renderWithClient(client);
+
+    expect(screen.getByRole('heading', { name: 'Planovna-Operationsboard' })).toBeInTheDocument();
+    expect(screen.getByLabelText('E-Mail')).toBeInTheDocument();
+    expect(screen.getByLabelText('Passwort')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anmelden' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Vorgänge laden' })).toBeInTheDocument();
   });
 
   it('keeps auth login UX for valid and invalid credentials', async () => {
