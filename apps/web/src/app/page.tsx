@@ -760,6 +760,10 @@ export default function Home() {
       return homepageAuthCopy.boardFilterBucketLabel;
     }
 
+    if (homepageLocale === 'en' && filter.key === 'status') {
+      return homepageAuthCopy.boardFilterStatusLabel.toLowerCase();
+    }
+
     return homepageLocale === 'en' ? label : label.toLowerCase();
   };
   const getLocalizedActiveFilterValue = (filter: (typeof activeFilters)[number]) => {
