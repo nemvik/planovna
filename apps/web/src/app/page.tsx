@@ -228,7 +228,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterResetButton: 'Resetovat filtry',
     boardSummaryShowingTemplate: 'Zobrazeno {filtered} z {total} operací.',
     boardFilterBadgeStatusLabel: 'Stav',
-    boardFilterBadgeBucketLabel: 'Koš',
+    boardFilterBadgeBucketLabel: 'Koš podle data',
     boardFilterBadgeQueryLabel: 'Dotaz',
     boardFilterClearAriaTemplate: 'Vymazat filtr {label}',
     boardFilteredEmptyTitle: 'Žádné operace neodpovídají aktuálním filtrům.',
