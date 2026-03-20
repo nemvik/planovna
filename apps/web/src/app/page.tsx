@@ -17,7 +17,7 @@ import {
   serializeBoardFilters,
 } from './board-filters';
 import { createTrpcClient } from '../lib/trpc/client';
-import { resolveSupportedLocale } from '../lib/locale';
+import { resolveSupportedLocale, type SupportedLocale } from '../lib/locale';
 
 type Operation = {
   id: string;
@@ -612,8 +612,18 @@ const formatPrerequisiteSummary = (
     .replace('{overflow}', overflowSuffix);
 };
 
-const formatMoney = (amount: number, currency: CashflowItem['currency']) =>
-  new Intl.NumberFormat('cs-CZ', {
+const HOMEPAGE_NUMBER_FORMAT_LOCALES: Record<SupportedLocale, string> = {
+  cs: 'cs-CZ',
+  en: 'en-US',
+  de: 'de-DE',
+};
+
+const formatMoney = (
+  amount: number,
+  currency: CashflowItem['currency'],
+  locale: SupportedLocale = 'en',
+) =>
+  new Intl.NumberFormat(HOMEPAGE_NUMBER_FORMAT_LOCALES[locale] ?? HOMEPAGE_NUMBER_FORMAT_LOCALES.en, {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
@@ -1318,11 +1328,11 @@ export default function Home() {
           <div className="mt-3 grid gap-3 md:grid-cols-4">
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowPlannedIn}</p>
-              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK')}</p>
+              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK', homepageLocale)}</p>
             </div>
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowActualIn}</p>
-              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK')}</p>
+              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK', homepageLocale)}</p>
             </div>
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceStatusLabel}</p>
@@ -1364,7 +1374,7 @@ export default function Home() {
                     {item.kind === 'PLANNED_IN'
                       ? homepageAuthCopy.cashflowPlannedIn
                       : homepageAuthCopy.cashflowActualIn}{' '}
-                    — {formatMoney(item.amount, item.currency)}
+                    — {formatMoney(item.amount, item.currency, homepageLocale)}
                   </li>
                 ))}
               </ul>

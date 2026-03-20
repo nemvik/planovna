@@ -336,6 +336,35 @@ describe('homepage operations board', () => {
     expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
   });
 
+  it('formats homepage cashflow money using resolved locale', async () => {
+    const client = createClient();
+    document.documentElement.lang = 'de';
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([
+      {
+        id: 'cf-planned',
+        tenantId: 'tenant-a',
+        invoiceId: 'inv-1',
+        kind: 'PLANNED_IN',
+        amount: 1234.56,
+        currency: 'EUR',
+        date: '2026-03-15T00:00:00.000Z',
+      },
+    ]);
+    client.invoice.list.query.mockResolvedValue([]);
+
+    const user = userEvent.setup();
+
+    renderWithClient(client);
+    await user.click(screen.getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow-Übersicht' });
+    expect(cashflowSummary).toHaveTextContent('1.234,56');
+  });
+
   it('auto-loads operations once after a successful login', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
