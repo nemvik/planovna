@@ -1421,7 +1421,7 @@ export default function Home() {
                 <option value="ALL">{homepageAuthCopy.commonAllOption}</option>
                 {BOARD_STATUS_VALUES.map((status) => (
                   <option key={status} value={status}>
-                    {status}
+                    {getLocalizedOperationStatusLabel(status)}
                   </option>
                 ))}
               </select>

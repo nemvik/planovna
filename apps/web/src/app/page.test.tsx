@@ -365,6 +365,37 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('1.234,56');
   });
 
+  it('localizes homepage status filter option labels while keeping enum values', async () => {
+    const client = createClient();
+    document.documentElement.lang = 'de';
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Bereit Vorgang',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderWithClient(client);
+
+    await user.click(screen.getByRole('button', { name: 'Anmelden' }));
+
+    const statusSelect = (await screen.findAllByLabelText('Status'))[0];
+    const optionLabels = within(statusSelect)
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+
+    expect(optionLabels).toEqual(['Alle', 'Bereit', 'In Bearbeitung', 'Erledigt', 'Blockiert']);
+    expect(statusSelect).toHaveValue('ALL');
+  });
+
   it('auto-loads operations once after a successful login', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
