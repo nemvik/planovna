@@ -766,6 +766,8 @@ export default function Home() {
 
     return filter.value;
   };
+  const getActiveFilterChipText = (label: string, value: string) =>
+    homepageLocale === 'en' ? `${label} — ${value}` : `${label}: ${value}`;
 
   useEffect(() => {
     if (
@@ -1480,7 +1482,10 @@ export default function Home() {
                     className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium text-amber-900"
                   >
                     <span>
-                      {localizedLabel}: {getLocalizedActiveFilterValue(filter)}
+                      {getActiveFilterChipText(
+                        localizedLabel,
+                        getLocalizedActiveFilterValue(filter),
+                      )}
                     </span>
                     <button
                       className="rounded-full border border-amber-300 px-1 text-[10px] leading-none text-amber-900"

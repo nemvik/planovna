@@ -1353,12 +1353,12 @@ describe('homepage operations board', () => {
     await user.selectOptions(screen.getAllByLabelText('Status')[0], 'READY');
 
     expect(await screen.findByText('Showing 2 of 3 operations.')).toBeInTheDocument();
-    expect(screen.getByText('Status: Ready')).toBeInTheDocument();
+    expect(screen.getByText('Status — Ready')).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Code or title'), 'weld');
 
     expect(screen.getByText('Showing 1 of 3 operations.')).toBeInTheDocument();
-    expect(screen.getByText('Search: weld')).toBeInTheDocument();
+    expect(screen.getByText('Search — weld')).toBeInTheDocument();
     expect(screen.getByText('OP-300 — Weld frame')).toBeInTheDocument();
     expect(screen.queryByText('OP-100 — Cut steel')).not.toBeInTheDocument();
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
@@ -1397,7 +1397,7 @@ describe('homepage operations board', () => {
     await user.type(screen.getByLabelText('Code or title'), 'missing');
 
     expect(await screen.findByText('Showing 0 of 2 operations.')).toBeInTheDocument();
-    expect(screen.getByText('Search: missing')).toBeInTheDocument();
+    expect(screen.getByText('Search — missing')).toBeInTheDocument();
     expect(screen.getByText('No operations match the current filters.')).toBeInTheDocument();
     expect(screen.getByText('Reset filters to return to the full board without reloading operations.')).toBeInTheDocument();
   });
@@ -1470,9 +1470,9 @@ describe('homepage operations board', () => {
     expect(screen.getAllByLabelText('Status')[0]).toHaveValue('ALL');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
     expect(screen.getByLabelText('Code or title')).toHaveValue('frame');
-    expect(screen.queryByText('Status: Ready')).not.toBeInTheDocument();
-    expect(screen.getByText('Bucket: 2026-03-06')).toBeInTheDocument();
-    expect(screen.getByText('Search: frame')).toBeInTheDocument();
+    expect(screen.queryByText('Status — Ready')).not.toBeInTheDocument();
+    expect(screen.getByText('Bucket — 2026-03-06')).toBeInTheDocument();
+    expect(screen.getByText('Search — frame')).toBeInTheDocument();
     expect(screen.getByText('OP-200 — Cut frame blocked')).toBeInTheDocument();
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
   });
@@ -1545,9 +1545,9 @@ describe('homepage operations board', () => {
     expect(screen.getAllByLabelText('Status')[0]).toHaveValue('READY');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
     expect(screen.getByLabelText('Code or title')).toHaveValue('cut');
-    expect(screen.getByText('Status: Ready')).toBeInTheDocument();
-    expect(screen.queryByText('Bucket: 2026-03-06')).not.toBeInTheDocument();
-    expect(screen.getByText('Search: cut')).toBeInTheDocument();
+    expect(screen.getByText('Status — Ready')).toBeInTheDocument();
+    expect(screen.queryByText('Bucket — 2026-03-06')).not.toBeInTheDocument();
+    expect(screen.getByText('Search — cut')).toBeInTheDocument();
     expect(screen.getByText('OP-100 — Cut steel')).toBeInTheDocument();
     expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
@@ -1621,9 +1621,9 @@ describe('homepage operations board', () => {
     expect(screen.getAllByLabelText('Status')[0]).toHaveValue('READY');
     expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
     expect(screen.getByLabelText('Code or title')).toHaveValue('');
-    expect(screen.getByText('Status: Ready')).toBeInTheDocument();
-    expect(screen.getByText('Bucket: 2026-03-06')).toBeInTheDocument();
-    expect(screen.queryByText('Search: cut')).not.toBeInTheDocument();
+    expect(screen.getByText('Status — Ready')).toBeInTheDocument();
+    expect(screen.getByText('Bucket — 2026-03-06')).toBeInTheDocument();
+    expect(screen.queryByText('Search — cut')).not.toBeInTheDocument();
     expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
     expect(screen.getByText('OP-400 — Weld frame')).toBeInTheDocument();
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
