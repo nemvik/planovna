@@ -66,7 +66,7 @@ describe('invoices page', () => {
     expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Paid');
     expect(await screen.findByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-0001');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('121');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-03-15');
+    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('03/15/2026');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('Issued');
     expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('Paid');
     expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('ISSUED');

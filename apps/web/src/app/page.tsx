@@ -630,6 +630,22 @@ const formatMoney = (
     maximumFractionDigits: 2,
   }).format(amount);
 
+
+const formatDateForDisplay = (value: string, locale: SupportedLocale = 'en') => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 10);
+  }
+
+  return new Intl.DateTimeFormat(HOMEPAGE_NUMBER_FORMAT_LOCALES[locale] ?? HOMEPAGE_NUMBER_FORMAT_LOCALES.en, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'UTC',
+  }).format(date);
+};
+
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
@@ -1532,11 +1548,11 @@ export default function Home() {
               {operationBuckets.map((bucket) => (
                 <section
                   key={bucket.label}
-                  aria-label={bucket.label}
+                  aria-label={getLocalizedBucketLabel(bucket.label)}
                   className="rounded border bg-slate-50 p-4"
                 >
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <h2 className="text-lg font-medium">{bucket.label}</h2>
+                    <h2 className="text-lg font-medium">{getLocalizedBucketLabel(bucket.label)}</h2>
                     <span className="text-sm text-slate-500">{bucket.operations.length}</span>
                   </div>
 

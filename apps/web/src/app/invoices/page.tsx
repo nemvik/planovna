@@ -138,6 +138,22 @@ const formatMoney = (
     maximumFractionDigits: 2,
   }).format(amount);
 
+
+const formatDateForDisplay = (value: string, localeTag: string) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 10);
+  }
+
+  return new Intl.DateTimeFormat(localeTag, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'UTC',
+  }).format(date);
+};
+
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [hasToken, setHasToken] = useState(false);
@@ -245,7 +261,7 @@ export default function InvoicesPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-3 text-slate-600">
                     <span>{formatMoney(invoice.amountGross, invoice.currency, invoicesCopy.localeTag)}</span>
-                    <span>{invoice.dueAt ? invoice.dueAt.slice(0, 10) : invoicesCopy.noDueDate}</span>
+                    <span>{invoice.dueAt ? formatDateForDisplay(invoice.dueAt, invoicesCopy.localeTag) : invoicesCopy.noDueDate}</span>
                   </div>
                   <div className="mt-2">
                     <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
