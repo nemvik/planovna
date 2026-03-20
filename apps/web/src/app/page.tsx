@@ -755,6 +755,13 @@ export default function Home() {
         return status;
     }
   };
+  const getClearFilterAriaLabelToken = (filter: (typeof activeFilters)[number], label: string) => {
+    if (homepageLocale === 'en' && filter.key === 'bucket') {
+      return homepageAuthCopy.boardFilterBucketLabel;
+    }
+
+    return homepageLocale === 'en' ? label : label.toLowerCase();
+  };
   const getLocalizedActiveFilterValue = (filter: (typeof activeFilters)[number]) => {
     if (filter.key === 'status') {
       return getLocalizedOperationStatusLabel(filter.value as Operation['status']);
@@ -1492,7 +1499,7 @@ export default function Home() {
                       type="button"
                       aria-label={homepageAuthCopy.boardFilterClearAriaTemplate.replace(
                         '{label}',
-                        homepageLocale === 'en' ? localizedLabel : localizedLabel.toLowerCase(),
+                        getClearFilterAriaLabelToken(filter, localizedLabel),
                       )}
                       onClick={() =>
                         setFilters((currentFilters) => clearBoardFilter(currentFilters, filter.key))
