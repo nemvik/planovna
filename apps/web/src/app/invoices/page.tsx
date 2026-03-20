@@ -54,7 +54,7 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     exportActionsTitle: 'Akce exportu faktur',
     exportActionsHelper: 'Použijte nasazený základní vzor PDF export cesty při práci s konkrétním ID faktury.',
     exportPathTemplate: '/invoices/<invoiceId>/pdf',
-    openHomepageFinanceWorkspaceLink: 'Otevřít finanční workspace na homepage',
+    openHomepageFinanceWorkspaceLink: 'Otevřít finanční pracovní prostor na homepage',
     openCashflowPageLink: 'Otevřít stránku peněžního toku',
     statusSummaryAriaLabel: 'Souhrn stavu faktur',
     statusSummaryTitle: 'Souhrn stavu faktur',

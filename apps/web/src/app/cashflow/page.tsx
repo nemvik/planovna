@@ -21,7 +21,7 @@ const CASHFLOW_PAGE_LOCALES: Record<'cs' | 'en' | 'de', CashflowPageLocaleString
     pageIntro: 'Dedikovaný přehled peněžního toku postavený na stejném nasazeném kontraktu homepage snapshotu.',
     financeNavigationAriaLabel: 'Navigace financí',
     financeNavigationTitle: 'Navigace financí',
-    financeNavigationHelper: 'Přejděte přímo do dedikovaného workspace faktur bez návratu na homepage.',
+    financeNavigationHelper: 'Přejděte přímo do dedikovaného prostoru faktur bez návratu na homepage.',
     openInvoicesPageLink: 'Otevřít stránku faktur',
   },
   en: {
