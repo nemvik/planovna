@@ -1399,7 +1399,7 @@ describe('homepage operations board', () => {
     expect(await screen.findByText('Showing 0 of 2 operations.')).toBeInTheDocument();
     expect(screen.getByText('Search: missing')).toBeInTheDocument();
     expect(screen.getByText('No operations match the current filters.')).toBeInTheDocument();
-    expect(screen.getByText('Clear filters to return to the full board without reloading operations.')).toBeInTheDocument();
+    expect(screen.getByText('Reset filters to return to the full board without reloading operations.')).toBeInTheDocument();
   });
 
   it('clears only the status chip and preserves bucket and query filters', async () => {
@@ -3746,7 +3746,7 @@ describe('homepage operations board', () => {
     await user.selectOptions((await screen.findAllByLabelText('Status'))[0], 'BLOCKED');
 
     expect(await screen.findByText('No operations match the current filters.')).toBeInTheDocument();
-    expect(screen.getByText('Clear filters to return to the full board without reloading operations.')).toBeInTheDocument();
+    expect(screen.getByText('Reset filters to return to the full board without reloading operations.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Backlog' })).not.toBeInTheDocument();
     expect(window.location.search).toBe('?status=BLOCKED');
 
