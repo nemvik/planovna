@@ -47,7 +47,7 @@ type InvoicesPageLocaleStrings = {
 const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleStrings> = {
   cs: {
     localeTag: 'cs-CZ',
-    sectionEyebrow: 'Finance',
+    sectionEyebrow: 'Finanční přehled',
     pageTitle: 'Faktury',
     pageIntro: 'Dedikovaný přehled faktur postavený na stejném nasazeném kontraktu homepage financí a exportu.',
     exportActionsAriaLabel: 'Akce exportu faktur',
