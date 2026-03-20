@@ -1461,7 +1461,7 @@ describe('homepage operations board', () => {
 
     expect(await screen.findByText('Showing 2 of 4 operations.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Clear status filter' }));
+    await user.click(screen.getByRole('button', { name: 'Clear filter: Status' }));
 
     await waitFor(() => {
       expect(screen.getByText('Showing 3 of 4 operations.')).toBeInTheDocument();
@@ -1536,7 +1536,7 @@ describe('homepage operations board', () => {
 
     expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Clear bucket filter' }));
+    await user.click(screen.getByRole('button', { name: 'Clear filter: Bucket' }));
 
     await waitFor(() => {
       expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();
@@ -1612,7 +1612,7 @@ describe('homepage operations board', () => {
 
     expect(await screen.findByText('Showing 1 of 4 operations.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Clear search filter' }));
+    await user.click(screen.getByRole('button', { name: 'Clear filter: Search' }));
 
     await waitFor(() => {
       expect(screen.getByText('Showing 2 of 4 operations.')).toBeInTheDocument();

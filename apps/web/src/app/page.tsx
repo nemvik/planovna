@@ -321,7 +321,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterBadgeStatusLabel: 'Status',
     boardFilterBadgeBucketLabel: 'Bucket',
     boardFilterBadgeQueryLabel: 'Search',
-    boardFilterClearAriaTemplate: 'Clear {label} filter',
+    boardFilterClearAriaTemplate: 'Clear filter: {label}',
     boardFilteredEmptyTitle: 'No operations match the current filters.',
     boardFilteredEmptyHint: 'Reset filters to return to the full board without reloading operations.',
     commonAllOption: 'All',
@@ -1490,7 +1490,10 @@ export default function Home() {
                     <button
                       className="rounded-full border border-amber-300 px-1 text-[10px] leading-none text-amber-900"
                       type="button"
-                      aria-label={homepageAuthCopy.boardFilterClearAriaTemplate.replace('{label}', localizedLabel.toLowerCase())}
+                      aria-label={homepageAuthCopy.boardFilterClearAriaTemplate.replace(
+                        '{label}',
+                        homepageLocale === 'en' ? localizedLabel : localizedLabel.toLowerCase(),
+                      )}
                       onClick={() =>
                         setFilters((currentFilters) => clearBoardFilter(currentFilters, filter.key))
                       }
