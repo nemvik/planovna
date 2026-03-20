@@ -320,7 +320,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardSummaryShowingTemplate: 'Showing {filtered} of {total} operations.',
     boardFilterBadgeStatusLabel: 'Status',
     boardFilterBadgeBucketLabel: 'Bucket',
-    boardFilterBadgeQueryLabel: 'Query',
+    boardFilterBadgeQueryLabel: 'Search',
     boardFilterClearAriaTemplate: 'Clear {label} filter',
     boardFilteredEmptyTitle: 'No operations match the current filters.',
     boardFilteredEmptyHint: 'Clear filters to return to the full board without reloading operations.',
