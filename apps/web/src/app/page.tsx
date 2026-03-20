@@ -755,6 +755,13 @@ export default function Home() {
         return status;
     }
   };
+  const getLocalizedActiveFilterValue = (filter: (typeof activeFilters)[number]) => {
+    if (filter.key === 'status') {
+      return getLocalizedOperationStatusLabel(filter.value as Operation['status']);
+    }
+
+    return filter.value;
+  };
 
   useEffect(() => {
     if (
@@ -1469,7 +1476,7 @@ export default function Home() {
                     className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium text-amber-900"
                   >
                     <span>
-                      {localizedLabel}: {filter.value}
+                      {localizedLabel}: {getLocalizedActiveFilterValue(filter)}
                     </span>
                     <button
                       className="rounded-full border border-amber-300 px-1 text-[10px] leading-none text-amber-900"
