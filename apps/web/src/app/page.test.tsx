@@ -3522,6 +3522,47 @@ describe('homepage operations board', () => {
     expect(screen.queryByText('OP-300 — Ready backlog item')).not.toBeInTheDocument();
   });
 
+  it('localizes active bucket chip value for backlog in German locale', async () => {
+    window.history.replaceState({}, '', '/?bucket=Backlog');
+    document.documentElement.lang = 'de';
+
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Dated item',
+        status: 'READY',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderWithClient(client);
+    await user.click(screen.getByRole('button', { name: 'Anmelden' }));
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText('Bucket: Rückstand')).toBeInTheDocument();
+  });
+
   it('resets a hydrated bucket filter to All when that bucket is not loaded', async () => {
     window.history.replaceState({}, '', '/?status=DONE&bucket=2026-03-08');
 

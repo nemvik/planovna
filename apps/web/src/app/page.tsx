@@ -234,7 +234,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilteredEmptyTitle: 'Žádné operace neodpovídají aktuálním filtrům.',
     boardFilteredEmptyHint: 'Vymažte filtry, aby se celá nástěnka vrátila bez opětovného načítání operací.',
     commonAllOption: 'Vše',
-    commonBacklogOption: 'Backlog',
+    commonBacklogOption: 'Nevyřízené',
     operationStatusReady: 'Připraveno',
     operationStatusInProgress: 'Rozpracováno',
     operationStatusDone: 'Hotovo',
@@ -416,7 +416,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilteredEmptyTitle: 'Keine Vorgänge entsprechen den aktuellen Filtern.',
     boardFilteredEmptyHint: 'Löschen Sie die Filter, um ohne erneutes Laden der Vorgänge zum vollständigen Board zurückzukehren.',
     commonAllOption: 'Alle',
-    commonBacklogOption: 'Backlog',
+    commonBacklogOption: 'Rückstand',
     operationStatusReady: 'Bereit',
     operationStatusInProgress: 'In Bearbeitung',
     operationStatusDone: 'Erledigt',
@@ -758,6 +758,10 @@ export default function Home() {
   const getLocalizedActiveFilterValue = (filter: (typeof activeFilters)[number]) => {
     if (filter.key === 'status') {
       return getLocalizedOperationStatusLabel(filter.value as Operation['status']);
+    }
+
+    if (filter.key === 'bucket') {
+      return getLocalizedBucketLabel(filter.value);
     }
 
     return filter.value;
