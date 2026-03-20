@@ -213,9 +213,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceWorkspaceLabel: 'Fakturační prostor',
     openInvoicesWorkspaceLink: 'Otevřít fakturační prostor',
     financeSummaryHelper:
-      'Zkontrolujte zde stav faktur a pak přejděte přímo na dedikované stránky faktur nebo cashflow pro další finanční krok.',
-    nextCashflowItemsLabel: 'Další položky cashflow',
-    openCashflowPageLink: 'Otevřít stránku cashflow',
+      'Zkontrolujte zde stav faktur a pak přejděte přímo na dedikované stránky faktur nebo přehledu peněžního toku pro další finanční krok.',
+    nextCashflowItemsLabel: 'Další položky peněžního toku',
+    openCashflowPageLink: 'Otevřít stránku peněžního toku',
     openInvoicesPageLink: 'Otevřít stránku faktur',
     noCashflowItems: 'Zatím nejsou žádné položky cashflow.',
     invoiceIssuedSuffix: 'vystaveno',
