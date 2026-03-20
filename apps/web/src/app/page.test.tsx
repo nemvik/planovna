@@ -1461,7 +1461,7 @@ describe('homepage operations board', () => {
 
     expect(await screen.findByText('Showing 2 of 4 operations.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Clear operation status filter' }));
+    await user.click(screen.getByRole('button', { name: 'Clear workflow status filter' }));
 
     await waitFor(() => {
       expect(screen.getByText('Showing 3 of 4 operations.')).toBeInTheDocument();

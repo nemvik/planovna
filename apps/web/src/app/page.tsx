@@ -761,7 +761,7 @@ export default function Home() {
     }
 
     if (homepageLocale === 'en' && filter.key === 'status') {
-      return `operation ${homepageAuthCopy.boardFilterStatusLabel.toLowerCase()}`;
+      return 'workflow status';
     }
 
     if (homepageLocale === 'en' && filter.key === 'query') {
