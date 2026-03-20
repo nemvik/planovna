@@ -17,7 +17,7 @@ type CashflowPageLocaleStrings = {
 const CASHFLOW_PAGE_LOCALES: Record<'cs' | 'en' | 'de', CashflowPageLocaleStrings> = {
   cs: {
     sectionEyebrow: 'Finance',
-    pageTitle: 'Cashflow',
+    pageTitle: 'Peněžní tok',
     pageIntro: 'Dedikovaný cashflow přehled postavený na stejném nasazeném kontraktu homepage snapshotu.',
     financeNavigationAriaLabel: 'Navigace financí',
     financeNavigationTitle: 'Navigace financí',
