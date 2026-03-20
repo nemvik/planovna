@@ -3593,6 +3593,66 @@ describe('homepage operations board', () => {
     expect(screen.getByText('Koš podle data: Nevyřízené')).toBeInTheDocument();
   });
 
+  it('localizes active query chip label in German locale', async () => {
+    window.history.replaceState({}, '', '/?query=press');
+    document.documentElement.lang = 'de';
+
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Press item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderWithClient(client);
+    await user.click(screen.getByRole('button', { name: 'Anmelden' }));
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText('Suche: press')).toBeInTheDocument();
+  });
+
+  it('localizes active query chip label in Czech locale', async () => {
+    window.history.replaceState({}, '', '/?query=lis');
+    document.documentElement.lang = 'cs';
+
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Lisovací operace',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderWithClient(client);
+    await user.click(screen.getByRole('button', { name: 'Přihlásit' }));
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText('Hledání: lis')).toBeInTheDocument();
+  });
+
   it('resets a hydrated bucket filter to All when that bucket is not loaded', async () => {
     window.history.replaceState({}, '', '/?status=DONE&bucket=2026-03-08');
 
