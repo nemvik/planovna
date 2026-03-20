@@ -761,7 +761,7 @@ export default function Home() {
     }
 
     if (homepageLocale === 'en' && filter.key === 'status') {
-      return homepageAuthCopy.boardFilterStatusLabel.toLowerCase();
+      return `operation ${homepageAuthCopy.boardFilterStatusLabel.toLowerCase()}`;
     }
 
     if (homepageLocale === 'en' && filter.key === 'query') {
