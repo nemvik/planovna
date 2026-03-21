@@ -1785,7 +1785,7 @@ export default function Home() {
                               ) : null}
                             </form>
                           ) : null}
-                          <div className="mt-4 grid gap-2.5 rounded-lg border border-slate-200/80 bg-slate-50/40 p-2.5 sm:grid-cols-2">
+                          <div className="mt-3.5 grid gap-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2 sm:grid-cols-2">
                             <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationCardStatusLabel}
                               <select
