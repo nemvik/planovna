@@ -1288,7 +1288,7 @@ export default function Home() {
             </label>
 
             <button
-              className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+              className="rounded bg-slate-900 px-3 py-2 text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
               type="submit"
               disabled={authOperationDisabled}
             >
@@ -1333,7 +1333,7 @@ export default function Home() {
             </label>
 
             <button
-              className="rounded border border-slate-400 px-3 py-2 text-slate-900 disabled:opacity-50"
+              className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
               type="submit"
               disabled={authOperationDisabled}
             >
@@ -1345,7 +1345,7 @@ export default function Home() {
 
       <div className="flex items-center gap-2">
         <button
-          className="rounded border px-3 py-2 disabled:opacity-50"
+          className="rounded bg-slate-900 px-3 py-2 text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
           type="button"
           disabled={loadOperationsDisabled}
           onClick={onLoadOperations}
@@ -1356,7 +1356,7 @@ export default function Home() {
         </button>
         {accessToken ? (
           <button
-            className="rounded border border-slate-400 px-3 py-2 text-slate-900"
+            className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
             type="button"
             onClick={() => resetSession()}
           >
