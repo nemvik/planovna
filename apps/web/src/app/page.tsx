@@ -1553,9 +1553,11 @@ export default function Home() {
                   aria-label={getLocalizedBucketLabel(bucket.label)}
                   className="rounded border bg-slate-50 p-4"
                 >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <h2 className="text-lg font-medium">{getLocalizedBucketLabel(bucket.label)}</h2>
-                    <span className="text-sm text-slate-500">{bucket.operations.length}</span>
+                  <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <h2 className="text-lg font-semibold text-slate-800">{getLocalizedBucketLabel(bucket.label)}</h2>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                      {bucket.operations.length}
+                    </span>
                   </div>
 
                   <ul className="space-y-2">
@@ -1589,10 +1591,10 @@ export default function Home() {
                       );
 
                       return (
-                        <li key={operation.id} className="rounded border bg-white p-3">
+                        <li key={operation.id} className="rounded border bg-white p-3 shadow-sm">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-medium">
+                            <div className="font-semibold text-slate-800">
                               {operation.code} — {operation.title}
                             </div>
                             {prerequisiteSummary ? (
