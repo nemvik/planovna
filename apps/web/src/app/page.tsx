@@ -1785,47 +1785,49 @@ export default function Home() {
                               ) : null}
                             </form>
                           ) : null}
-                          <label className="mt-3 flex flex-col gap-1 text-sm">
-                            {homepageAuthCopy.operationCardStatusLabel}
-                           <select
-                             className="max-w-[11rem] rounded border bg-white px-2 py-1"
-                             value={operation.status}
-                               disabled={isOperationLocked}
-                             onChange={(event) =>
-                               void onStatusChange(operation, event.target.value as Operation['status'])
-                             }
-                           >
-                             {BOARD_STATUS_VALUES.map((status) => (
-                               <option key={status} value={status}>
-                                 {getLocalizedOperationStatusLabel(status)}
-                               </option>
-                             ))}
-                           </select>
-                         </label>
-                         <label className="mt-3 flex flex-col gap-1 text-sm">
-                           {homepageAuthCopy.operationMoveToBucketLabel}
-                           <select
-                             className="rounded border bg-white px-2 py-1"
-                             value={getOperationBucketLabel(operation.startDate)}
-                               disabled={isOperationLocked}
-                             onChange={(event) =>
-                               void onMoveOperation(
-                                 operation,
-                                event.target.value as Exclude<BucketFilter, 'ALL'>,
-                              )
-                            }
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <label className="flex flex-col gap-1 text-sm">
+                              {homepageAuthCopy.operationCardStatusLabel}
+                              <select
+                                className="max-w-[11rem] rounded border bg-white px-2 py-1"
+                                value={operation.status}
+                                disabled={isOperationLocked}
+                                onChange={(event) =>
+                                  void onStatusChange(operation, event.target.value as Operation['status'])
+                                }
+                              >
+                                {BOARD_STATUS_VALUES.map((status) => (
+                                  <option key={status} value={status}>
+                                    {getLocalizedOperationStatusLabel(status)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="flex flex-col gap-1 text-sm">
+                              {homepageAuthCopy.operationMoveToBucketLabel}
+                              <select
+                                className="rounded border bg-white px-2 py-1"
+                                value={getOperationBucketLabel(operation.startDate)}
+                                disabled={isOperationLocked}
+                                onChange={(event) =>
+                                  void onMoveOperation(
+                                    operation,
+                                    event.target.value as Exclude<BucketFilter, 'ALL'>,
+                                  )
+                                }
+                              >
+                                {moveBucketOptions.map((moveBucket) => (
+                                  <option key={moveBucket} value={moveBucket}>
+                                    {getLocalizedBucketOptionLabel(moveBucket)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                          <form
+                            className="mt-2 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                            onSubmit={(event) => void onScheduleOperation(event, operation)}
                           >
-                            {moveBucketOptions.map((moveBucket) => (
-                              <option key={moveBucket} value={moveBucket}>
-                                {getLocalizedBucketOptionLabel(moveBucket)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <form
-                          className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                          onSubmit={(event) => void onScheduleOperation(event, operation)}
-                        >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             {homepageAuthCopy.operationScheduleToDateLabel}
                             <input
