@@ -779,11 +779,11 @@ export default function Home() {
     }
 
     if (homepageLocale === 'en' && filter.key === 'status') {
-      return 'workflow status';
+      return 'operation status';
     }
 
     if (homepageLocale === 'en' && filter.key === 'query') {
-      return 'search query';
+      return 'code or title query';
     }
 
     return homepageLocale === 'en' ? label : label.toLowerCase();
