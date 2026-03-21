@@ -1632,7 +1632,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveCode}
                           >
@@ -1658,7 +1658,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveTitle}
                           >
@@ -1685,7 +1685,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveEndDate}
                           >
@@ -1723,7 +1723,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveSortIndex}
                           >
@@ -1767,7 +1767,7 @@ export default function Home() {
                                 />
                               </label>
                               <button
-                                className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                                className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                                 type="submit"
                                  disabled={isOperationLocked || !canSaveBlockedReason}
                               >
@@ -1844,7 +1844,7 @@ export default function Home() {
                               />
                             </label>
                             <button
-                              className="rounded border bg-white px-3 py-1.5 text-sm font-medium transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                              className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                               type="submit"
                               disabled={isOperationLocked || !canSchedule}
                             >
