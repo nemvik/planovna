@@ -1531,7 +1531,7 @@ export default function Home() {
                         setFilters((currentFilters) => clearBoardFilter(currentFilters, filter.key))
                       }
                     >
-                      {homepageLocale === 'en' ? '×' : 'x'}
+                      ×
                     </button>
                   </span>
                   );
