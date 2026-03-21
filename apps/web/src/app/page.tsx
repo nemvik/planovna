@@ -1605,7 +1605,7 @@ export default function Home() {
                             ) : null}
                           </div>
                           {operation.dependencyCount > 0 && !prerequisiteSummary ? (
-                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
                               {homepageAuthCopy.operationBlockedByTemplate.replace(
                                 '{count}',
                                 String(operation.dependencyCount),
@@ -1785,11 +1785,11 @@ export default function Home() {
                               ) : null}
                             </form>
                           ) : null}
-                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                            <label className="flex flex-col gap-1 text-sm">
+                          <div className="mt-4 grid gap-2.5 rounded-lg border border-slate-200/80 bg-slate-50/40 p-2.5 sm:grid-cols-2">
+                            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationCardStatusLabel}
                               <select
-                                className="max-w-[11rem] rounded border bg-white px-2 py-1"
+                                className="max-w-[11rem] rounded border bg-white px-2 py-1.5 text-sm font-normal text-slate-900"
                                 value={operation.status}
                                 disabled={isOperationLocked}
                                 onChange={(event) =>
@@ -1803,10 +1803,10 @@ export default function Home() {
                                 ))}
                               </select>
                             </label>
-                            <label className="flex flex-col gap-1 text-sm">
+                            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationMoveToBucketLabel}
                               <select
-                                className="rounded border bg-white px-2 py-1"
+                                className="rounded border bg-white px-2 py-1.5 text-sm font-normal text-slate-900"
                                 value={getOperationBucketLabel(operation.startDate)}
                                 disabled={isOperationLocked}
                                 onChange={(event) =>
