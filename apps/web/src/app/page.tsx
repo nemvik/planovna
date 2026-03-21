@@ -1620,7 +1620,7 @@ export default function Home() {
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             {homepageAuthCopy.operationCodeLabel}
                             <input
-                              className="rounded border bg-white px-2 py-1"
+                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                               value={codeValue}
                                disabled={isOperationLocked}
                               onChange={(event) =>
@@ -1646,7 +1646,7 @@ export default function Home() {
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             {homepageAuthCopy.operationTitleLabel}
                             <input
-                              className="rounded border bg-white px-2 py-1"
+                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                               value={titleValue}
                                disabled={isOperationLocked}
                               onChange={(event) =>
@@ -1672,7 +1672,7 @@ export default function Home() {
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             {homepageAuthCopy.operationEndDateLabel}
                             <input
-                              className="rounded border bg-white px-2 py-1"
+                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                               type="date"
                               value={endDateValue}
                                disabled={isOperationLocked}
@@ -1709,7 +1709,7 @@ export default function Home() {
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             {homepageAuthCopy.operationSortIndexLabel}
                             <input
-                              className="rounded border bg-white px-2 py-1"
+                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                               type="number"
                               inputMode="numeric"
                               value={sortIndexValue}
@@ -1755,7 +1755,7 @@ export default function Home() {
                               <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                                 {homepageAuthCopy.operationBlockedReasonLabel}
                                 <input
-                                  className="rounded border bg-white px-2 py-1"
+                                  className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                                   value={blockedReasonValue}
                                    disabled={isOperationLocked}
                                   onChange={(event) =>
@@ -1789,7 +1789,7 @@ export default function Home() {
                             <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationCardStatusLabel}
                               <select
-                                className="max-w-[11rem] rounded border bg-white px-2 py-1.5 text-sm font-normal text-slate-900"
+                                className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                                 value={operation.status}
                                 disabled={isOperationLocked}
                                 onChange={(event) =>
@@ -1806,7 +1806,7 @@ export default function Home() {
                             <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationMoveToBucketLabel}
                               <select
-                                className="rounded border bg-white px-2 py-1.5 text-sm font-normal text-slate-900"
+                                className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                                 value={getOperationBucketLabel(operation.startDate)}
                                 disabled={isOperationLocked}
                                 onChange={(event) =>
