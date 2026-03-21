@@ -1605,7 +1605,7 @@ export default function Home() {
                             ) : null}
                           </div>
                           {operation.dependencyCount > 0 && !prerequisiteSummary ? (
-                            <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+                            <span className="inline-flex items-center rounded-full border border-amber-300/90 bg-amber-100/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-950 shadow-sm">
                               {homepageAuthCopy.operationBlockedByTemplate.replace(
                                 '{count}',
                                 String(operation.dependencyCount),
