@@ -1436,7 +1436,7 @@ export default function Home() {
 
       {showOperationBoard ? (
         <>
-          <div className="flex flex-wrap items-end gap-3 rounded border bg-slate-50 p-4">
+          <div className="flex flex-wrap items-end gap-4 rounded border bg-slate-50 p-4 md:p-5">
             <label className="flex flex-col gap-1 text-sm">
               {homepageAuthCopy.boardFilterQueryLabel}
               <input
@@ -1503,7 +1503,7 @@ export default function Home() {
           </div>
 
           {showActiveFilterSummary ? (
-            <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium">{boardSummaryShowingText}</p>
                 {activeFilters.map((filter) => {
