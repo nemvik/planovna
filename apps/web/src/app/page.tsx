@@ -1614,7 +1614,7 @@ export default function Home() {
                           ) : null}
                         </div>
                         <form
-                          className="mt-2 flex items-end gap-2"
+                          className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
                           onSubmit={(event) => void onSaveCode(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
