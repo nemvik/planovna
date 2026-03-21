@@ -1828,7 +1828,7 @@ export default function Home() {
                             className="mt-3 flex items-end gap-2 rounded-lg bg-slate-50/70 p-2"
                             onSubmit={(event) => void onScheduleOperation(event, operation)}
                           >
-                            <label className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
+                            <label className="flex min-w-0 flex-1 flex-col justify-end gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationScheduleToDateLabel}
                               <input
                                 className="rounded border border-slate-200 bg-white/90 px-2 py-1.5 text-sm font-normal text-slate-800"
