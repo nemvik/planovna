@@ -775,7 +775,7 @@ export default function Home() {
   };
   const getClearFilterAriaLabelToken = (filter: (typeof activeFilters)[number], label: string) => {
     if (homepageLocale === 'en' && filter.key === 'bucket') {
-      return 'date timeline';
+      return 'date bucket';
     }
 
     if (homepageLocale === 'en' && filter.key === 'status') {
