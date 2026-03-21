@@ -77,4 +77,30 @@ describe('invoices page', () => {
     );
     expect(screen.getByTestId('homepage-shell')).toBeInTheDocument();
   });
+
+  it('shows localized invalid due date fallback instead of raw token', async () => {
+    window.localStorage.setItem('planovna.homepage.accessToken', 'token-owner');
+    (createTrpcClient as jest.Mock).mockReturnValue({
+      invoice: {
+        list: {
+          query: jest.fn().mockResolvedValue([
+            {
+              id: 'inv-3',
+              number: '2026-0003',
+              status: 'DRAFT',
+              amountGross: 1000,
+              currency: 'CZK',
+              dueAt: 'not-a-date',
+              pdfPath: '/invoices/inv-3/pdf',
+            },
+          ]),
+        },
+      },
+    });
+
+    render(<InvoicesPage />);
+
+    expect(await screen.findByRole('region', { name: 'Invoice list' })).toHaveTextContent('Invalid due date');
+    expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('not-a-date');
+  });
 });

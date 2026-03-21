@@ -42,6 +42,7 @@ type InvoicesPageLocaleStrings = {
   loginToLoadHint: string;
   noInvoicesHint: string;
   noDueDate: string;
+  invalidDueDate: string;
   exportPdfForTemplate: string;
 };
 
@@ -70,6 +71,7 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     loginToLoadHint: 'Pro načtení dat faktur se přihlaste na homepage.',
     noInvoicesHint: 'Zatím nejsou dostupné žádné faktury.',
     noDueDate: 'Bez data splatnosti',
+    invalidDueDate: 'Neplatné datum splatnosti',
     exportPdfForTemplate: 'Exportovat PDF pro {invoiceNumber}',
   },
   en: {
@@ -96,6 +98,7 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     loginToLoadHint: 'Log in on the homepage to load invoice data.',
     noInvoicesHint: 'No invoices available yet.',
     noDueDate: 'No due date',
+    invalidDueDate: 'Invalid due date',
     exportPdfForTemplate: 'Export PDF for {invoiceNumber}',
   },
   de: {
@@ -122,6 +125,7 @@ const INVOICES_PAGE_LOCALES: Record<'cs' | 'en' | 'de', InvoicesPageLocaleString
     loginToLoadHint: 'Melden Sie sich auf der Homepage an, um Rechnungsdaten zu laden.',
     noInvoicesHint: 'Noch keine Rechnungen verfügbar.',
     noDueDate: 'Kein Fälligkeitsdatum',
+    invalidDueDate: 'Ungültiges Fälligkeitsdatum',
     exportPdfForTemplate: 'PDF exportieren für {invoiceNumber}',
   },
 };
@@ -139,11 +143,11 @@ const formatMoney = (
   }).format(amount);
 
 
-const formatDateForDisplay = (value: string, localeTag: string) => {
+const formatDateForDisplay = (value: string, localeTag: string, invalidLabel: string) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 10);
+    return invalidLabel;
   }
 
   return new Intl.DateTimeFormat(localeTag, {
@@ -261,7 +265,11 @@ export default function InvoicesPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-3 text-slate-600">
                     <span>{formatMoney(invoice.amountGross, invoice.currency, invoicesCopy.localeTag)}</span>
-                    <span>{invoice.dueAt ? formatDateForDisplay(invoice.dueAt, invoicesCopy.localeTag) : invoicesCopy.noDueDate}</span>
+                    <span>
+                      {invoice.dueAt
+                        ? formatDateForDisplay(invoice.dueAt, invoicesCopy.localeTag, invoicesCopy.invalidDueDate)
+                        : invoicesCopy.noDueDate}
+                    </span>
                   </div>
                   <div className="mt-2">
                     <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
