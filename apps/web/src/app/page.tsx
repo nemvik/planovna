@@ -1825,7 +1825,7 @@ export default function Home() {
                             </label>
                           </div>
                           <form
-                            className="mt-3 flex items-end gap-2.5 rounded-lg bg-slate-50/70 p-2"
+                            className="mt-3 flex items-end gap-2 rounded-lg bg-slate-50/70 p-2"
                             onSubmit={(event) => void onScheduleOperation(event, operation)}
                           >
                             <label className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
