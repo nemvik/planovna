@@ -328,7 +328,7 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent(
       'Review invoice status here, then jump directly to the dedicated invoice or cashflow pages for the next finance step.',
     );
-    expect(cashflowSummary).toHaveTextContent('2026-03-10');
+    expect(cashflowSummary).toHaveTextContent('03/10/2026');
     expect(cashflowSummary).toHaveTextContent('Next cashflow items');
     expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
     expect(screen.getByRole('link', { name: 'Open invoices page' })).toHaveAttribute('href', '/invoices');

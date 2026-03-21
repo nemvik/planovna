@@ -1416,7 +1416,7 @@ export default function Home() {
               <ul className="mt-2 space-y-1 text-sm text-slate-700">
                 {cashflowSummary.nextItems.map((item) => (
                   <li key={item.id}>
-                    {item.date.slice(0, 10)} —{' '}
+                    {formatDateForDisplay(item.date, homepageLocale)} —{' '}
                     {item.kind === 'PLANNED_IN'
                       ? homepageAuthCopy.cashflowPlannedIn
                       : homepageAuthCopy.cashflowActualIn}{' '}
