@@ -1844,7 +1844,7 @@ export default function Home() {
                               />
                             </label>
                             <button
-                              className="h-9 rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                              className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
                               type="submit"
                               disabled={isOperationLocked || !canSchedule}
                             >
