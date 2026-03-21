@@ -1693,7 +1693,7 @@ export default function Home() {
                           </button>
                           {canClearEndDate ? (
                             <button
-                              className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                              className="inline-flex items-center rounded border bg-white px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                               type="button"
                                disabled={isOperationLocked}
                               onClick={() => void onClearEndDate(operation)}
