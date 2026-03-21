@@ -1831,7 +1831,7 @@ export default function Home() {
                             <label className="flex min-w-0 flex-1 flex-col justify-end gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
                               {homepageAuthCopy.operationScheduleToDateLabel}
                               <input
-                                className="h-9 rounded border border-slate-200 bg-white/90 px-2 py-1.5 text-sm font-normal text-slate-800"
+                                className="h-9 rounded border border-slate-200 bg-white/90 px-2 py-1.5 text-sm font-normal text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                                 type="date"
                                 value={scheduledDateValue}
                                 disabled={isOperationLocked}
@@ -1844,7 +1844,7 @@ export default function Home() {
                               />
                             </label>
                             <button
-                              className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                              className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
                               type="submit"
                               disabled={isOperationLocked || !canSchedule}
                             >
