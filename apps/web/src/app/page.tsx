@@ -1593,15 +1593,15 @@ export default function Home() {
                       return (
                         <li key={operation.id} className="rounded border bg-white p-3 shadow-sm">
                         <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="font-semibold text-slate-800">
+                          <div className="space-y-1">
+                            <div className="font-semibold leading-5 text-slate-800">
                               {operation.code} — {operation.title}
                             </div>
                             {prerequisiteSummary ? (
-                              <p className="mt-1 text-sm text-amber-700">{prerequisiteSummary}</p>
+                              <p className="text-sm leading-5 text-amber-700">{prerequisiteSummary}</p>
                             ) : null}
                             {isMutatingOperation ? (
-                              <p className="mt-1 text-sm font-medium text-slate-600">{homepageAuthCopy.operationSavingLabel}</p>
+                              <p className="text-sm font-medium text-slate-600">{homepageAuthCopy.operationSavingLabel}</p>
                             ) : null}
                           </div>
                           {operation.dependencyCount > 0 && !prerequisiteSummary ? (
