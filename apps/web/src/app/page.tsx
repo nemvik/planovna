@@ -1494,7 +1494,7 @@ export default function Home() {
             </label>
 
             <button
-              className="rounded border px-3 py-2 text-sm"
+              className="rounded border bg-white px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               type="button"
               onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
             >
@@ -1521,7 +1521,7 @@ export default function Home() {
                       )}
                     </span>
                     <button
-                      className="rounded-full border border-amber-300 px-1 text-[10px] leading-none text-amber-900"
+                      className="rounded-full border border-amber-300 bg-white px-1 text-[10px] leading-none text-amber-900 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                       type="button"
                       aria-label={homepageAuthCopy.boardFilterClearAriaTemplate.replace(
                         '{label}',
@@ -1630,7 +1630,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveCode}
                           >
@@ -1656,7 +1656,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveTitle}
                           >
@@ -1683,7 +1683,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveEndDate}
                           >
@@ -1691,7 +1691,7 @@ export default function Home() {
                           </button>
                           {canClearEndDate ? (
                             <button
-                              className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                              className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                               type="button"
                                disabled={isOperationLocked}
                               onClick={() => void onClearEndDate(operation)}
@@ -1721,7 +1721,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                            className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                            className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                             type="submit"
                              disabled={isOperationLocked || !canSaveSortIndex}
                           >
@@ -1765,7 +1765,7 @@ export default function Home() {
                                 />
                               </label>
                               <button
-                                className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                                className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                                 type="submit"
                                  disabled={isOperationLocked || !canSaveBlockedReason}
                               >
@@ -1773,7 +1773,7 @@ export default function Home() {
                               </button>
                               {canClearBlockedReason ? (
                                 <button
-                                  className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                                  className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                                   type="button"
                                    disabled={isOperationLocked}
                                   onClick={() => void onClearBlockedReason(operation)}
@@ -1840,7 +1840,7 @@ export default function Home() {
                             />
                           </label>
                           <button
-                             className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+                             className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
                              type="submit"
                                disabled={isOperationLocked || !canSchedule}
                            >
