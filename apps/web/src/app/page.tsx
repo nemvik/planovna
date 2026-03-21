@@ -1731,13 +1731,13 @@ export default function Home() {
                           </button>
                         </form>
                         {operation.blockedReason ? (
-                          <div className="mt-3 flex items-center gap-2 text-sm text-amber-700">
-                            <span className="min-w-0 flex-1">
+                          <div className="mt-3 flex items-start gap-2.5 rounded-md border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-sm text-amber-800">
+                            <span className="min-w-0 flex-1 font-medium leading-5">
                               {homepageAuthCopy.operationBlockedReasonPrefix} {operation.blockedReason}
                             </span>
                             {operation.status !== 'BLOCKED' ? (
                               <button
-                                className="rounded border px-3 py-1.5 text-sm text-slate-900 disabled:opacity-50"
+                                className="rounded border border-amber-300/90 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
                                 type="button"
                                  disabled={isOperationLocked}
                                 onClick={() => void onClearBlockedReason(operation)}
@@ -1749,13 +1749,13 @@ export default function Home() {
                         ) : null}
                           {operation.status === 'BLOCKED' ? (
                             <form
-                              className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                              className="mt-3 flex items-end gap-3 rounded-md border border-amber-200/70 bg-amber-50/50 p-2.5"
                               onSubmit={(event) => void onSaveBlockedReason(event, operation)}
                             >
-                              <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                              <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium uppercase tracking-wide text-amber-900/80">
                                 {homepageAuthCopy.operationBlockedReasonLabel}
                                 <input
-                                  className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                  className="rounded border border-amber-300 bg-white px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                                   value={blockedReasonValue}
                                    disabled={isOperationLocked}
                                   onChange={(event) =>
@@ -1775,7 +1775,7 @@ export default function Home() {
                               </button>
                               {canClearBlockedReason ? (
                                 <button
-                                  className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                                  className="rounded border border-amber-300/90 bg-white px-3 py-1.5 text-sm text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
                                   type="button"
                                    disabled={isOperationLocked}
                                   onClick={() => void onClearBlockedReason(operation)}
