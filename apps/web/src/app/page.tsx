@@ -1638,7 +1638,7 @@ export default function Home() {
                           </button>
                         </form>
                         <form
-                          className="mt-3 flex items-end gap-2"
+                          className="mt-3 flex items-end gap-3"
                           onSubmit={(event) => void onSaveTitle(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
@@ -1664,7 +1664,7 @@ export default function Home() {
                           </button>
                         </form>
                         <form
-                          className="mt-3 flex items-end gap-2"
+                          className="mt-3 flex items-end gap-3"
                           onSubmit={(event) => void onSaveEndDate(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
@@ -1701,7 +1701,7 @@ export default function Home() {
                           ) : null}
                         </form>
                         <form
-                          className="mt-3 flex items-end gap-2"
+                          className="mt-3 flex items-end gap-3"
                           onSubmit={(event) => void onSaveSortIndex(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
@@ -1747,7 +1747,7 @@ export default function Home() {
                         ) : null}
                           {operation.status === 'BLOCKED' ? (
                             <form
-                              className="mt-3 flex items-end gap-2"
+                              className="mt-3 flex items-end gap-3"
                               onSubmit={(event) => void onSaveBlockedReason(event, operation)}
                             >
                               <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
@@ -1821,7 +1821,7 @@ export default function Home() {
                           </select>
                         </label>
                         <form
-                          className="mt-3 flex items-end gap-2"
+                          className="mt-3 flex items-end gap-3"
                           onSubmit={(event) => void onScheduleOperation(event, operation)}
                         >
                           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
