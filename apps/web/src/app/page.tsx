@@ -1436,11 +1436,11 @@ export default function Home() {
 
       {showOperationBoard ? (
         <>
-          <div className="flex flex-wrap items-end gap-4 rounded border bg-slate-50 p-4 md:p-5">
-            <label className="flex flex-col gap-1 text-sm">
+          <div className="flex flex-wrap items-end gap-3 rounded border bg-slate-50 p-4 md:gap-4 md:p-5">
+            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
               {homepageAuthCopy.boardFilterQueryLabel}
               <input
-                className="rounded border bg-white px-2 py-1"
+                className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
                 type="search"
                 value={filters.query}
                 onChange={(event) =>
@@ -1452,10 +1452,10 @@ export default function Home() {
               />
             </label>
 
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
               {homepageAuthCopy.boardFilterStatusLabel}
               <select
-                className="rounded border bg-white px-2 py-1"
+                className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
                 value={filters.status}
                 onChange={(event) =>
                   setFilters((currentFilters) => ({
@@ -1473,10 +1473,10 @@ export default function Home() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
               {homepageAuthCopy.boardFilterBucketLabel}
               <select
-                className="rounded border bg-white px-2 py-1"
+                className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
                 value={filters.bucket}
                 onChange={(event) =>
                   setFilters((currentFilters) => ({
@@ -1494,7 +1494,7 @@ export default function Home() {
             </label>
 
             <button
-              className="rounded border bg-white px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              className="rounded border bg-white px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 md:ml-auto"
               type="button"
               onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
             >
