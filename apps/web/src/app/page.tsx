@@ -1825,32 +1825,32 @@ export default function Home() {
                             </label>
                           </div>
                           <form
-                            className="mt-2 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                            className="mt-3 flex items-end gap-2 rounded-lg bg-slate-50/70 p-2.5"
                             onSubmit={(event) => void onScheduleOperation(event, operation)}
                           >
-                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            {homepageAuthCopy.operationScheduleToDateLabel}
-                            <input
-                               className="rounded border bg-white px-2 py-1"
-                               type="date"
-                               value={scheduledDateValue}
-                                 disabled={isOperationLocked}
-                               onChange={(event) =>
-                                 setScheduleDates((currentScheduleDates) => ({
-                                   ...currentScheduleDates,
-                                  [operation.id]: event.target.value,
-                                }))
-                              }
-                            />
-                          </label>
-                          <button
-                             className="rounded border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
-                             type="submit"
-                               disabled={isOperationLocked || !canSchedule}
-                           >
-                             {homepageAuthCopy.operationScheduleButton}
-                           </button>
-                        </form>
+                            <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                              {homepageAuthCopy.operationScheduleToDateLabel}
+                              <input
+                                className="rounded border bg-white px-2 py-1.5 text-sm font-normal text-slate-900"
+                                type="date"
+                                value={scheduledDateValue}
+                                disabled={isOperationLocked}
+                                onChange={(event) =>
+                                  setScheduleDates((currentScheduleDates) => ({
+                                    ...currentScheduleDates,
+                                    [operation.id]: event.target.value,
+                                  }))
+                                }
+                              />
+                            </label>
+                            <button
+                              className="rounded border bg-white px-3 py-1.5 text-sm font-medium transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                              type="submit"
+                              disabled={isOperationLocked || !canSchedule}
+                            >
+                              {homepageAuthCopy.operationScheduleButton}
+                            </button>
+                          </form>
                         </li>
                       );
                     })}
