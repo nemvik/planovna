@@ -2578,8 +2578,8 @@ describe('homepage operations board', () => {
 
     const moveSelect = within(operationCard as HTMLElement).getByLabelText('Move to bucket');
     expect(within(moveSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      '2026-03-06',
-      '2026-03-07',
+      '03/06/2026',
+      '03/07/2026',
     ]);
 
     const scheduleInput = within(operationCard as HTMLElement).getByLabelText('Schedule to date');

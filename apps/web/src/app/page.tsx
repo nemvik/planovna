@@ -745,6 +745,8 @@ export default function Home() {
     .replace('{total}', String(operations.length));
   const getLocalizedBucketLabel = (bucket: string) =>
     bucket === BACKLOG_BUCKET ? homepageAuthCopy.commonBacklogOption : bucket;
+  const getLocalizedBucketOptionLabel = (bucket: string) =>
+    bucket === BACKLOG_BUCKET ? homepageAuthCopy.commonBacklogOption : formatDateForDisplay(bucket, homepageLocale);
   const getActiveFilterLabel = (key: (typeof activeFilters)[number]['key']) => {
     switch (key) {
       case 'status':
@@ -1813,7 +1815,7 @@ export default function Home() {
                           >
                             {moveBucketOptions.map((moveBucket) => (
                               <option key={moveBucket} value={moveBucket}>
-                                {getLocalizedBucketLabel(moveBucket)}
+                                {getLocalizedBucketOptionLabel(moveBucket)}
                               </option>
                             ))}
                           </select>
