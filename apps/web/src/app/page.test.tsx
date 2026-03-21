@@ -1471,7 +1471,7 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
     expect(screen.getByLabelText('Code or title')).toHaveValue('frame');
     expect(screen.queryByText('Status — Ready')).not.toBeInTheDocument();
-    expect(screen.getByText('Bucket — 2026-03-06')).toBeInTheDocument();
+    expect(screen.getByText('Bucket — 03/06/2026')).toBeInTheDocument();
     expect(screen.getByText('Search — frame')).toBeInTheDocument();
     expect(screen.getByText('OP-200 — Cut frame blocked')).toBeInTheDocument();
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
@@ -1546,7 +1546,7 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
     expect(screen.getByLabelText('Code or title')).toHaveValue('cut');
     expect(screen.getByText('Status — Ready')).toBeInTheDocument();
-    expect(screen.queryByText('Bucket — 2026-03-06')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bucket — 03/06/2026')).not.toBeInTheDocument();
     expect(screen.getByText('Search — cut')).toBeInTheDocument();
     expect(screen.getByText('OP-100 — Cut steel')).toBeInTheDocument();
     expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
@@ -1622,7 +1622,7 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
     expect(screen.getByLabelText('Code or title')).toHaveValue('');
     expect(screen.getByText('Status — Ready')).toBeInTheDocument();
-    expect(screen.getByText('Bucket — 2026-03-06')).toBeInTheDocument();
+    expect(screen.getByText('Bucket — 03/06/2026')).toBeInTheDocument();
     expect(screen.queryByText('Search — cut')).not.toBeInTheDocument();
     expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
     expect(screen.getByText('OP-400 — Weld frame')).toBeInTheDocument();

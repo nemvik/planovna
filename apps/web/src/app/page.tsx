@@ -794,7 +794,7 @@ export default function Home() {
     }
 
     if (filter.key === 'bucket') {
-      return getLocalizedBucketLabel(filter.value);
+      return getLocalizedBucketOptionLabel(filter.value);
     }
 
     return filter.value;
