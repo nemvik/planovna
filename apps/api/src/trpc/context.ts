@@ -7,6 +7,7 @@ type TrpcContextOptions = {
 };
 
 export type TrpcContext = {
+  req: Request;
   auth: AuthTokenPayload | null;
 };
 
@@ -17,10 +18,11 @@ export const createTrpcContext = ({ req, authService }: TrpcContextOptions): Trp
     : null;
 
   if (!accessToken) {
-    return { auth: null };
+    return { req, auth: null };
   }
 
   return {
+    req,
     auth: authService.verify(accessToken),
   };
 };

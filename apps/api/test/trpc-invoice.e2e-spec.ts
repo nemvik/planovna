@@ -120,7 +120,7 @@ describe('tRPC invoice contracts (e2e)', () => {
       }),
     ).rejects.toMatchObject({ data: { code: 'UNAUTHORIZED' } });
 
-    const plannerLogin = authService.login({
+    const plannerLogin = await authService.login({
       email: 'planner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -143,11 +143,11 @@ describe('tRPC invoice contracts (e2e)', () => {
       }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
 
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const financeLogin = authService.login({
+    const financeLogin = await authService.login({
       email: 'finance@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -169,7 +169,7 @@ describe('tRPC invoice contracts (e2e)', () => {
   });
 
   it('covers invalid input, not-found and version-conflict paths for invoice writes', async () => {
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -236,15 +236,15 @@ describe('tRPC invoice contracts (e2e)', () => {
   });
 
   it('keeps invoice.list tenant-safe and reflects ISSUED -> PAID lifecycle', async () => {
-    const tenantAOwnerLogin = authService.login({
+    const tenantAOwnerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantAFinanceLogin = authService.login({
+    const tenantAFinanceLogin = await authService.login({
       email: 'finance@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBOwnerLogin = authService.login({
+    const tenantBOwnerLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });
@@ -293,7 +293,7 @@ describe('tRPC invoice contracts (e2e)', () => {
   });
 
   it('exposes the shipped invoice pdf path in tRPC invoice responses', async () => {
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -332,11 +332,11 @@ describe('tRPC invoice contracts (e2e)', () => {
   });
 
   it('resolves tenant from token and blocks cross-tenant paid side effects', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBLogin = authService.login({
+    const tenantBLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });

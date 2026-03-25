@@ -1,20 +1,20 @@
 -- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
+CREATE SCHEMA IF NOT EXISTS "app";
 
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('OWNER', 'PLANNER', 'SHOPFLOOR', 'FINANCE');
+CREATE TYPE "app"."UserRole" AS ENUM ('OWNER', 'PLANNER', 'SHOPFLOOR', 'FINANCE');
 
 -- CreateEnum
-CREATE TYPE "OperationStatus" AS ENUM ('READY', 'IN_PROGRESS', 'DONE', 'BLOCKED');
+CREATE TYPE "app"."OperationStatus" AS ENUM ('READY', 'IN_PROGRESS', 'DONE', 'BLOCKED');
 
 -- CreateEnum
-CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'ISSUED', 'PAID');
+CREATE TYPE "app"."InvoiceStatus" AS ENUM ('DRAFT', 'ISSUED', 'PAID');
 
 -- CreateEnum
-CREATE TYPE "CashflowKind" AS ENUM ('PLANNED_IN', 'ACTUAL_IN', 'PLANNED_OUT', 'ACTUAL_OUT');
+CREATE TYPE "app"."CashflowKind" AS ENUM ('PLANNED_IN', 'ACTUAL_IN', 'PLANNED_OUT', 'ACTUAL_OUT');
 
 -- CreateTable
-CREATE TABLE "Tenant" (
+CREATE TABLE "app"."Tenant" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,13 +24,13 @@ CREATE TABLE "Tenant" (
 );
 
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE "app"."User" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT,
     "magicLinkToken" TEXT,
-    "role" "UserRole" NOT NULL,
+    "role" "app"."UserRole" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -38,7 +38,7 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "Customer" (
+CREATE TABLE "app"."Customer" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE "Customer" (
 );
 
 -- CreateTable
-CREATE TABLE "Order" (
+CREATE TABLE "app"."Order" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
@@ -71,13 +71,13 @@ CREATE TABLE "Order" (
 );
 
 -- CreateTable
-CREATE TABLE "Operation" (
+CREATE TABLE "app"."Operation" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "title" TEXT NOT NULL,
-    "status" "OperationStatus" NOT NULL DEFAULT 'READY',
+    "status" "app"."OperationStatus" NOT NULL DEFAULT 'READY',
     "startDate" TIMESTAMP(3),
     "endDate" TIMESTAMP(3),
     "sortIndex" INTEGER NOT NULL DEFAULT 0,
@@ -90,7 +90,7 @@ CREATE TABLE "Operation" (
 );
 
 -- CreateTable
-CREATE TABLE "OperationDependency" (
+CREATE TABLE "app"."OperationDependency" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "operationId" TEXT NOT NULL,
@@ -100,12 +100,12 @@ CREATE TABLE "OperationDependency" (
 );
 
 -- CreateTable
-CREATE TABLE "Invoice" (
+CREATE TABLE "app"."Invoice" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "number" TEXT NOT NULL,
-    "status" "InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
+    "status" "app"."InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
     "currency" TEXT NOT NULL,
     "amountNet" DECIMAL(14,2) NOT NULL,
     "amountVat" DECIMAL(14,2) NOT NULL,
@@ -121,11 +121,11 @@ CREATE TABLE "Invoice" (
 );
 
 -- CreateTable
-CREATE TABLE "CashflowItem" (
+CREATE TABLE "app"."CashflowItem" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "invoiceId" TEXT,
-    "kind" "CashflowKind" NOT NULL,
+    "kind" "app"."CashflowKind" NOT NULL,
     "currency" TEXT NOT NULL,
     "amount" DECIMAL(14,2) NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
@@ -138,77 +138,76 @@ CREATE TABLE "CashflowItem" (
 );
 
 -- CreateIndex
-CREATE INDEX "User_tenantId_idx" ON "User"("tenantId");
+CREATE INDEX "User_tenantId_idx" ON "app"."User"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_tenantId_email_key" ON "User"("tenantId", "email");
+CREATE UNIQUE INDEX "User_tenantId_email_key" ON "app"."User"("tenantId", "email");
 
 -- CreateIndex
-CREATE INDEX "Customer_tenantId_idx" ON "Customer"("tenantId");
+CREATE INDEX "Customer_tenantId_idx" ON "app"."Customer"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Customer_tenantId_name_key" ON "Customer"("tenantId", "name");
+CREATE UNIQUE INDEX "Customer_tenantId_name_key" ON "app"."Customer"("tenantId", "name");
 
 -- CreateIndex
-CREATE INDEX "Order_tenantId_dueDate_idx" ON "Order"("tenantId", "dueDate");
+CREATE INDEX "Order_tenantId_dueDate_idx" ON "app"."Order"("tenantId", "dueDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Order_tenantId_code_key" ON "Order"("tenantId", "code");
+CREATE UNIQUE INDEX "Order_tenantId_code_key" ON "app"."Order"("tenantId", "code");
 
 -- CreateIndex
-CREATE INDEX "Operation_tenantId_startDate_endDate_idx" ON "Operation"("tenantId", "startDate", "endDate");
+CREATE INDEX "Operation_tenantId_startDate_endDate_idx" ON "app"."Operation"("tenantId", "startDate", "endDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Operation_tenantId_orderId_code_key" ON "Operation"("tenantId", "orderId", "code");
+CREATE UNIQUE INDEX "Operation_tenantId_orderId_code_key" ON "app"."Operation"("tenantId", "orderId", "code");
 
 -- CreateIndex
-CREATE INDEX "OperationDependency_tenantId_idx" ON "OperationDependency"("tenantId");
+CREATE INDEX "OperationDependency_tenantId_idx" ON "app"."OperationDependency"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "OperationDependency_tenantId_operationId_dependsOnId_key" ON "OperationDependency"("tenantId", "operationId", "dependsOnId");
+CREATE UNIQUE INDEX "OperationDependency_tenantId_operationId_dependsOnId_key" ON "app"."OperationDependency"("tenantId", "operationId", "dependsOnId");
 
 -- CreateIndex
-CREATE INDEX "Invoice_tenantId_status_dueAt_idx" ON "Invoice"("tenantId", "status", "dueAt");
+CREATE INDEX "Invoice_tenantId_status_dueAt_idx" ON "app"."Invoice"("tenantId", "status", "dueAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Invoice_tenantId_number_key" ON "Invoice"("tenantId", "number");
+CREATE UNIQUE INDEX "Invoice_tenantId_number_key" ON "app"."Invoice"("tenantId", "number");
 
 -- CreateIndex
-CREATE INDEX "CashflowItem_tenantId_date_kind_idx" ON "CashflowItem"("tenantId", "date", "kind");
+CREATE INDEX "CashflowItem_tenantId_date_kind_idx" ON "app"."CashflowItem"("tenantId", "date", "kind");
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."User" ADD CONSTRAINT "User_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "app"."Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Customer" ADD CONSTRAINT "Customer_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."Customer" ADD CONSTRAINT "Customer_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "app"."Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."Order" ADD CONSTRAINT "Order_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "app"."Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "app"."Order" ADD CONSTRAINT "Order_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "app"."Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Operation" ADD CONSTRAINT "Operation_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."Operation" ADD CONSTRAINT "Operation_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "app"."Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Operation" ADD CONSTRAINT "Operation_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."Operation" ADD CONSTRAINT "Operation_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "app"."Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OperationDependency" ADD CONSTRAINT "OperationDependency_operationId_fkey" FOREIGN KEY ("operationId") REFERENCES "Operation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."OperationDependency" ADD CONSTRAINT "OperationDependency_operationId_fkey" FOREIGN KEY ("operationId") REFERENCES "app"."Operation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OperationDependency" ADD CONSTRAINT "OperationDependency_dependsOnId_fkey" FOREIGN KEY ("dependsOnId") REFERENCES "Operation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."OperationDependency" ADD CONSTRAINT "OperationDependency_dependsOnId_fkey" FOREIGN KEY ("dependsOnId") REFERENCES "app"."Operation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."Invoice" ADD CONSTRAINT "Invoice_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "app"."Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "app"."Invoice" ADD CONSTRAINT "Invoice_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "app"."Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CashflowItem" ADD CONSTRAINT "CashflowItem_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "app"."CashflowItem" ADD CONSTRAINT "CashflowItem_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "app"."Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CashflowItem" ADD CONSTRAINT "CashflowItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
+ALTER TABLE "app"."CashflowItem" ADD CONSTRAINT "CashflowItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "app"."Invoice"("id") ON DELETE SET NULL ON UPDATE CASCADE;

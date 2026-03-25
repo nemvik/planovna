@@ -143,7 +143,7 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('forces tenant from auth context on operation.create even with payload override', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -169,11 +169,11 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('denies cross-tenant update and keeps original operation data unchanged', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBLogin = authService.login({
+    const tenantBLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });
@@ -216,7 +216,7 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('surfaces version-conflict path on stale operation.update', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -269,7 +269,7 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('clears a persisted endDate via operation.update when the payload sends null', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -310,7 +310,7 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('clears a persisted blockedReason via operation.update when the payload sends null', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -351,7 +351,7 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('loads persisted operations from Prisma after app restart for the same tenant', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -391,11 +391,11 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('keeps operation.list tenant-scoped for operations created via tRPC', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBLogin = authService.login({
+    const tenantBLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });
@@ -428,11 +428,11 @@ describe('tRPC operation contracts (e2e)', () => {
   });
 
   it('exposes capped same-tenant prerequisite codes on operation.list payloads', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBLogin = authService.login({
+    const tenantBLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });

@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   LoginDto,
   LoginResponseDto,
@@ -17,23 +18,12 @@ export type AuthTokenPayload = {
   exp: number;
 };
 
-type User = {
+type UserRecord = {
   id: string;
   tenantId: string;
   email: string;
-  passwordHash: string;
+  passwordHash: string | null;
   role: AuthRole;
-};
-
-type Tenant = {
-  id: string;
-  name: string;
-};
-
-type MagicLinkToken = {
-  tokenHash: string;
-  userId: string;
-  expiresAt: number;
 };
 
 type MagicLinkRequestResponse = {
@@ -46,9 +36,64 @@ type RegisterAttemptWindow = {
   count: number;
 };
 
+type SeedTenant = {
+  id: string;
+  name: string;
+  users: Array<{
+    id: string;
+    email: string;
+    password: string;
+    role: AuthRole;
+  }>;
+};
+
 const DEV_TOKEN_SECRET = 'planovna-dev-secret';
 const PRODUCTION_SECRET_ERROR =
   'AUTH_TOKEN_SECRET must be set to a non-default value in production';
+const TEST_AUTH_SEED: SeedTenant[] = [
+  {
+    id: 'tenant-a',
+    name: 'Tenant A',
+    users: [
+      {
+        id: 'u-tenant-a-owner',
+        email: 'owner@tenant-a.local',
+        password: 'tenant-a-pass',
+        role: 'OWNER',
+      },
+      {
+        id: 'u-tenant-a-finance',
+        email: 'finance@tenant-a.local',
+        password: 'tenant-a-pass',
+        role: 'FINANCE',
+      },
+      {
+        id: 'u-tenant-a-planner',
+        email: 'planner@tenant-a.local',
+        password: 'tenant-a-pass',
+        role: 'PLANNER',
+      },
+      {
+        id: 'u-tenant-a-shopfloor',
+        email: 'shopfloor@tenant-a.local',
+        password: 'tenant-a-pass',
+        role: 'SHOPFLOOR',
+      },
+    ],
+  },
+  {
+    id: 'tenant-b',
+    name: 'Tenant B',
+    users: [
+      {
+        id: 'u-tenant-b-owner',
+        email: 'owner@tenant-b.local',
+        password: 'tenant-b-pass',
+        role: 'OWNER',
+      },
+    ],
+  },
+];
 
 function resolveTokenSecret(env = process.env): string {
   const configuredSecret = env.AUTH_TOKEN_SECRET?.trim();
@@ -65,55 +110,23 @@ function resolveTokenSecret(env = process.env): string {
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly tokenSecret = resolveTokenSecret();
   private readonly tokenTtlSeconds = 60 * 60;
   private readonly magicLinkTtlSeconds = 15 * 60;
-  private readonly tenants: Tenant[] = [
-    { id: 'tenant-a', name: 'Tenant A' },
-    { id: 'tenant-b', name: 'Tenant B' },
-  ];
-  private readonly users: User[] = [
-    {
-      id: 'u-tenant-a-owner',
-      tenantId: 'tenant-a',
-      email: 'owner@tenant-a.local',
-      passwordHash: this.hashPassword('tenant-a-pass'),
-      role: 'OWNER',
-    },
-    {
-      id: 'u-tenant-a-finance',
-      tenantId: 'tenant-a',
-      email: 'finance@tenant-a.local',
-      passwordHash: this.hashPassword('tenant-a-pass'),
-      role: 'FINANCE',
-    },
-    {
-      id: 'u-tenant-a-planner',
-      tenantId: 'tenant-a',
-      email: 'planner@tenant-a.local',
-      passwordHash: this.hashPassword('tenant-a-pass'),
-      role: 'PLANNER',
-    },
-    {
-      id: 'u-tenant-a-shopfloor',
-      tenantId: 'tenant-a',
-      email: 'shopfloor@tenant-a.local',
-      passwordHash: this.hashPassword('tenant-a-pass'),
-      role: 'SHOPFLOOR',
-    },
-    {
-      id: 'u-tenant-b-owner',
-      tenantId: 'tenant-b',
-      email: 'owner@tenant-b.local',
-      passwordHash: this.hashPassword('tenant-b-pass'),
-      role: 'OWNER',
-    },
-  ];
-  private readonly magicLinkTokens = new Map<string, MagicLinkToken>();
   private readonly registerAttempts = new Map<string, RegisterAttemptWindow>();
   private readonly registerRateLimitWindowMs = 60_000;
   private readonly registerRateLimitMaxAttempts = 5;
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit() {
+    if (process.env.NODE_ENV !== 'test') {
+      return;
+    }
+
+    await this.ensureTestAuthSeed();
+  }
 
   isRegisterRateLimited(email: string, clientIp?: string): boolean {
     const key = this.registerAttemptKey(email, clientIp);
@@ -133,35 +146,48 @@ export class AuthService {
     return false;
   }
 
-  register(input: RegisterDto): LoginResponseDto | null {
+  async register(input: RegisterDto): Promise<LoginResponseDto | null> {
     const email = input.email.trim().toLowerCase();
-    if (this.findUserByEmail(email)) {
+    if (await this.findUserByEmail(email)) {
       return null;
     }
 
     const tenantId = `tenant-${randomUUID()}`;
     const ownerId = `u-${tenantId}-owner`;
+    const passwordHash = this.hashPassword(input.password);
 
-    this.tenants.push({
-      id: tenantId,
-      name: input.companyName,
+    const user = await this.prisma.$transaction(async (tx) => {
+      await tx.tenant.create({
+        data: {
+          id: tenantId,
+          name: input.companyName,
+        },
+      });
+
+      return await tx.user.create({
+        data: {
+          id: ownerId,
+          tenantId,
+          email,
+          passwordHash,
+          role: 'OWNER',
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          email: true,
+          passwordHash: true,
+          role: true,
+        },
+      });
     });
-
-    const user: User = {
-      id: ownerId,
-      tenantId,
-      email,
-      passwordHash: this.hashPassword(input.password),
-      role: 'OWNER',
-    };
-    this.users.push(user);
 
     return this.issueAccessToken(user);
   }
 
-  login(input: LoginDto): LoginResponseDto | null {
-    const user = this.findUserByEmail(input.email);
-    if (!user) return null;
+  async login(input: LoginDto): Promise<LoginResponseDto | null> {
+    const user = await this.findUserByEmail(input.email);
+    if (!user?.passwordHash) return null;
 
     const passwordHash = this.hashPassword(input.password);
     if (passwordHash !== user.passwordHash) return null;
@@ -169,16 +195,25 @@ export class AuthService {
     return this.issueAccessToken(user);
   }
 
-  requestMagicLink(input: MagicLinkRequestDto): MagicLinkRequestResponse | null {
-    const user = this.findUserByEmail(input.email);
+  async requestMagicLink(
+    input: MagicLinkRequestDto,
+  ): Promise<MagicLinkRequestResponse | null> {
+    const user = await this.findUserByEmail(input.email);
     if (!user) return null;
 
-    const token = randomUUID();
     const expiresAt = this.nowInSeconds() + this.magicLinkTtlSeconds;
-    this.magicLinkTokens.set(token, {
-      tokenHash: this.hashMagicToken(token),
-      userId: user.id,
-      expiresAt,
+    const token = `${randomUUID()}.${expiresAt}`;
+
+    await this.prisma.user.update({
+      where: {
+        tenantId_email: {
+          tenantId: user.tenantId,
+          email: user.email,
+        },
+      },
+      data: {
+        magicLinkToken: this.hashMagicToken(token),
+      },
     });
 
     return {
@@ -187,25 +222,41 @@ export class AuthService {
     };
   }
 
-  consumeMagicLink(input: MagicLinkConsumeDto): LoginResponseDto | null {
-    const storedToken = this.magicLinkTokens.get(input.token);
-    if (!storedToken) {
+  async consumeMagicLink(
+    input: MagicLinkConsumeDto,
+  ): Promise<LoginResponseDto | null> {
+    const expiresAt = this.extractMagicLinkExpiry(input.token);
+    if (!expiresAt || expiresAt <= this.nowInSeconds()) {
       return null;
     }
 
-    if (storedToken.expiresAt <= this.nowInSeconds()) {
-      this.magicLinkTokens.delete(input.token);
+    const tokenHash = this.hashMagicToken(input.token);
+    const user = await this.prisma.user.findFirst({
+      where: { magicLinkToken: tokenHash },
+      select: {
+        id: true,
+        tenantId: true,
+        email: true,
+        passwordHash: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
       return null;
     }
 
-    if (storedToken.tokenHash !== this.hashMagicToken(input.token)) {
-      return null;
-    }
-
-    const user = this.findUserById(storedToken.userId);
-    if (!user) return null;
-
-    this.magicLinkTokens.delete(input.token);
+    await this.prisma.user.update({
+      where: {
+        tenantId_email: {
+          tenantId: user.tenantId,
+          email: user.email,
+        },
+      },
+      data: {
+        magicLinkToken: null,
+      },
+    });
 
     return this.issueAccessToken(user);
   }
@@ -248,7 +299,42 @@ export class AuthService {
     }
   }
 
-  private issueAccessToken(user: User): LoginResponseDto {
+  private async ensureTestAuthSeed() {
+    for (const tenant of TEST_AUTH_SEED) {
+      await this.prisma.tenant.upsert({
+        where: { id: tenant.id },
+        update: { name: tenant.name },
+        create: {
+          id: tenant.id,
+          name: tenant.name,
+        },
+      });
+
+      for (const user of tenant.users) {
+        await this.prisma.user.upsert({
+          where: {
+            tenantId_email: {
+              tenantId: tenant.id,
+              email: user.email,
+            },
+          },
+          update: {
+            passwordHash: this.hashPassword(user.password),
+            role: user.role,
+          },
+          create: {
+            id: user.id,
+            tenantId: tenant.id,
+            email: user.email,
+            passwordHash: this.hashPassword(user.password),
+            role: user.role,
+          },
+        });
+      }
+    }
+  }
+
+  private issueAccessToken(user: UserRecord): LoginResponseDto {
     const exp = this.nowInSeconds() + this.tokenTtlSeconds;
     const payload: AuthTokenPayload = {
       tenantId: user.tenantId,
@@ -264,14 +350,24 @@ export class AuthService {
     };
   }
 
-  private findUserByEmail(email: string): User | undefined {
-    return this.users.find(
-      (candidate) => candidate.email.toLowerCase() === email.toLowerCase(),
-    );
-  }
+  private async findUserByEmail(email: string): Promise<UserRecord | null> {
+    const normalizedEmail = email.trim().toLowerCase();
 
-  private findUserById(userId: string): User | undefined {
-    return this.users.find((candidate) => candidate.id === userId);
+    return await this.prisma.user.findFirst({
+      where: {
+        email: normalizedEmail,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        email: true,
+        passwordHash: true,
+        role: true,
+      },
+    });
   }
 
   private registerAttemptKey(email: string, clientIp?: string): string {
@@ -282,6 +378,20 @@ export class AuthService {
 
   private hashMagicToken(token: string): string {
     return createHmac('sha256', this.tokenSecret).update(token).digest('hex');
+  }
+
+  private extractMagicLinkExpiry(token: string): number | null {
+    const [, expiresAtRaw] = token.split('.');
+    if (!expiresAtRaw) {
+      return null;
+    }
+
+    const expiresAt = Number(expiresAtRaw);
+    if (!Number.isFinite(expiresAt)) {
+      return null;
+    }
+
+    return expiresAt;
   }
 
   private nowInSeconds(): number {

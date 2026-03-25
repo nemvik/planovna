@@ -11,7 +11,7 @@ READINESS_URL="http://${HOST}:${PORT}/health/ready"
 BOOT_TIMEOUT_SECONDS="${PLANOVNA_SMOKE_TIMEOUT_SECONDS:-30}"
 PROD_SECRET="${PLANOVNA_SMOKE_AUTH_TOKEN_SECRET:-planovna-prod-smoke-secret}"
 EXPECTED_SECRET_ERROR='AUTH_TOKEN_SECRET must be set to a non-default value in production'
-EXPECTED_READY_DB_URL='postgresql://planovna:planovna@127.0.0.1:55432/planovna?schema=public'
+EXPECTED_READY_DB_URL='postgresql://planovna:planovna@127.0.0.1:55432/planovna?schema=app'
 
 TMP_DIR="$(mktemp -d)"
 LOG_FILE="$TMP_DIR/api.log"

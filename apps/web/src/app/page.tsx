@@ -452,14 +452,6 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
   },
 };
 
-const resolveAuthBaseUrl = () => {
-  const trpcUrl = process.env.NEXT_PUBLIC_API_TRPC_URL ?? 'http://localhost:3000/trpc';
-  const withoutTrailingSlash = trpcUrl.replace(/\/+$/, '');
-  return withoutTrailingSlash.replace(/\/trpc$/, '');
-};
-
-const getRegistrationEndpoint = () => `${resolveAuthBaseUrl()}/auth/register`;
-
 const defaultBoardFilters = (): BoardFilters => {
   if (typeof window === 'undefined') {
     return DEFAULT_BOARD_FILTERS;
@@ -986,38 +978,34 @@ export default function Home() {
     setAuthMessage('');
 
     try {
-      const response = await fetch(getRegistrationEndpoint(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: registerEmail,
-          password: registerPassword,
-          companyName: registerCompanyName,
-        }),
+      const result = await trpcClient.auth.register.mutate({
+        email: registerEmail,
+        password: registerPassword,
+        companyName: registerCompanyName,
       });
-
-      if (!response.ok) {
-        if (response.status === 409) {
-          setAuthMessage(homepageAuthCopy.registrationDuplicateEmail);
-          return;
-        }
-
-        if (response.status === 429) {
-          setAuthMessage(homepageAuthCopy.registrationRateLimit);
-          return;
-        }
-
-        setAuthMessage(homepageAuthCopy.registrationFailure);
-        return;
-      }
-
-      const result = (await response.json()) as { accessToken: string };
       const nextAccessToken = result.accessToken;
       completeAuthSession(nextAccessToken);
-    } catch {
-      setAuthMessage(homepageAuthCopy.registrationFailure);
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'data' in error &&
+        typeof error.data === 'object' &&
+        error.data !== null &&
+        'code' in error.data
+      ) {
+        const code = error.data.code;
+
+        if (code === 'CONFLICT') {
+          setAuthMessage(homepageAuthCopy.registrationDuplicateEmail);
+        } else if (code === 'TOO_MANY_REQUESTS') {
+          setAuthMessage(homepageAuthCopy.registrationRateLimit);
+        } else {
+          setAuthMessage(homepageAuthCopy.registrationFailure);
+        }
+      } else {
+        setAuthMessage(homepageAuthCopy.registrationFailure);
+      }
     } finally {
       registerPendingRef.current = false;
       setRegisterPending(false);

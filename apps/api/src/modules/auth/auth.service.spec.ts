@@ -34,29 +34,40 @@ describe('AuthService production secret guardrail', () => {
     process.env.NODE_ENV = 'production';
     delete process.env.AUTH_TOKEN_SECRET;
 
-    expect(() => new AuthService()).toThrow(PRODUCTION_SECRET_ERROR);
+    expect(() => new AuthService({} as never)).toThrow(PRODUCTION_SECRET_ERROR);
   });
 
   it('fails fast in production when AUTH_TOKEN_SECRET is blank', () => {
     process.env.NODE_ENV = 'production';
     process.env.AUTH_TOKEN_SECRET = '   ';
 
-    expect(() => new AuthService()).toThrow(PRODUCTION_SECRET_ERROR);
+    expect(() => new AuthService({} as never)).toThrow(PRODUCTION_SECRET_ERROR);
   });
 
   it('fails fast in production when AUTH_TOKEN_SECRET uses the dev fallback value', () => {
     process.env.NODE_ENV = 'production';
     process.env.AUTH_TOKEN_SECRET = DEV_TOKEN_SECRET;
 
-    expect(() => new AuthService()).toThrow(PRODUCTION_SECRET_ERROR);
+    expect(() => new AuthService({} as never)).toThrow(PRODUCTION_SECRET_ERROR);
   });
 
-  it('boots with an explicit production secret and signs verifiable tokens', () => {
+  it('boots with an explicit production secret and signs verifiable tokens', async () => {
     process.env.NODE_ENV = 'production';
     process.env.AUTH_TOKEN_SECRET = 'planovna-prod-secret-for-tests';
 
-    const service = new AuthService();
-    const loginResult = service.login({
+    const service = new AuthService({
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'u-tenant-a-owner',
+          tenantId: 'tenant-a',
+          email: 'owner@tenant-a.local',
+          passwordHash:
+            '69132fece59b048b31f71bdbf7d8a35b53773e6629db3c2e3158622b26f4da9e',
+          role: 'OWNER',
+        }),
+      },
+    } as never);
+    const loginResult = await service.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });

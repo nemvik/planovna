@@ -133,7 +133,7 @@ describe('tRPC order contracts (e2e)', () => {
   });
 
   it('resolves tenant from auth token on create even when payload tries to override', async () => {
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -157,11 +157,11 @@ describe('tRPC order contracts (e2e)', () => {
   });
 
   it('denies cross-tenant update and keeps original order data unchanged', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBLogin = authService.login({
+    const tenantBLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });
@@ -204,7 +204,7 @@ describe('tRPC order contracts (e2e)', () => {
   });
 
   it('surfaces version-conflict path on stale order.update', async () => {
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -253,7 +253,7 @@ describe('tRPC order contracts (e2e)', () => {
   });
 
   it('loads persisted orders from Prisma after app restart for the same tenant', async () => {
-    const tenantALogin = authService.login({
+    const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });

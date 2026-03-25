@@ -101,7 +101,7 @@ describe('tRPC cashflow read contracts (e2e)', () => {
       data: { code: 'UNAUTHORIZED' },
     });
 
-    const plannerLogin = authService.login({
+    const plannerLogin = await authService.login({
       email: 'planner@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -113,11 +113,11 @@ describe('tRPC cashflow read contracts (e2e)', () => {
       data: { code: 'FORBIDDEN' },
     });
 
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const financeLogin = authService.login({
+    const financeLogin = await authService.login({
       email: 'finance@tenant-a.local',
       password: 'tenant-a-pass',
     });
@@ -139,15 +139,15 @@ describe('tRPC cashflow read contracts (e2e)', () => {
   });
 
   it('reflects invoice.issue + invoice.paid lifecycle in tenant-scoped cashflow.list', async () => {
-    const ownerLogin = authService.login({
+    const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const financeLogin = authService.login({
+    const financeLogin = await authService.login({
       email: 'finance@tenant-a.local',
       password: 'tenant-a-pass',
     });
-    const tenantBLogin = authService.login({
+    const tenantBLogin = await authService.login({
       email: 'owner@tenant-b.local',
       password: 'tenant-b-pass',
     });

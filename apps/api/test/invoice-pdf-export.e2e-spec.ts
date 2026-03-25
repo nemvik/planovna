@@ -43,7 +43,7 @@ describe('Invoice PDF export (e2e)', () => {
     const customerService = app.get(CustomerService);
     const orderService = app.get(OrderService);
     const invoiceService = app.get(InvoiceService);
-    const login = authService.login({
+    const login = await authService.login({
       email: 'owner@tenant-a.local',
       password: 'tenant-a-pass',
     });

@@ -7,12 +7,8 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import {
-  RegisterSchema,
-} from './dto/auth.dto';
-import type {
-  RegisterDto,
-} from './dto/auth.dto';
+import { RegisterSchema } from './dto/auth.dto';
+import type { RegisterDto } from './dto/auth.dto';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 
@@ -21,7 +17,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() body: RegisterDto, @Req() request: Request) {
+  async register(@Body() body: RegisterDto, @Req() request: Request) {
     const parsedBody = RegisterSchema.parse(body);
     const clientIp = request.ip || request.socket.remoteAddress;
 
@@ -32,7 +28,7 @@ export class AuthController {
       );
     }
 
-    const result = this.authService.register(parsedBody);
+    const result = await this.authService.register(parsedBody);
     if (!result) {
       throw new ConflictException('Email already exists');
     }

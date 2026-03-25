@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -87,6 +88,7 @@ describe('legacy REST lockdown + tRPC smoke (e2e)', () => {
   });
 
   it('keeps tRPC customer/order/operation flows reachable', async () => {
+    const suffix = randomUUID().slice(0, 8);
     const loginClient = createTRPCProxyClient<AppRouter>({
       links: [
         httpBatchLink({
@@ -112,22 +114,22 @@ describe('legacy REST lockdown + tRPC smoke (e2e)', () => {
     });
 
     const customer = await tenantAClient.customer.create.mutate({
-      name: 'tRPC customer',
-      email: 'trpc-customer@example.com',
+      name: `tRPC customer ${suffix}`,
+      email: `trpc-customer-${suffix}@example.com`,
     });
 
     const order = await tenantAClient.order.create.mutate({
       tenantId: 'tenant-b',
       customerId: customer.id,
-      code: 'ORD-TRPC-LOCKDOWN',
-      title: 'tRPC order',
+      code: `ORD-TRPC-LOCKDOWN-${suffix}`,
+      title: `tRPC order ${suffix}`,
     });
 
     const operation = await tenantAClient.operation.create.mutate({
       tenantId: 'tenant-b',
       orderId: order.id,
-      code: 'OP-TRPC-LOCKDOWN',
-      title: 'tRPC operation',
+      code: `OP-TRPC-LOCKDOWN-${suffix}`,
+      title: `tRPC operation ${suffix}`,
     });
 
     expect(customer.tenantId).toBe('tenant-a');
