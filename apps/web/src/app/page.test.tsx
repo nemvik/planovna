@@ -31,6 +31,9 @@ const createClient = () => ({
     login: {
       mutate: jest.fn(),
     },
+    register: {
+      mutate: jest.fn(),
+    },
   },
   operation: {
     list: {
@@ -52,34 +55,6 @@ const createClient = () => ({
   },
 });
 
-const createFetchResponse = (
-  body: unknown,
-  init: { ok?: boolean; status?: number } = {},
-) =>
-  ({
-    ok: init.ok ?? true,
-    status: init.status ?? 200,
-    json: jest.fn().mockResolvedValue(body),
-  }) as unknown as Response;
-
-const setFetchMock = (response: Response) => {
-  const fetchScope = globalThis as Record<string, unknown>;
-  const previousFetch = fetchScope.fetch;
-  const fetchMock = jest.fn().mockResolvedValue(response);
-
-  fetchScope.fetch = fetchMock;
-
-  return {
-    fetchMock,
-    restore: () => {
-      if (previousFetch === undefined) {
-        delete fetchScope.fetch;
-      } else {
-        fetchScope.fetch = previousFetch;
-      }
-    },
-  };
-};
 
 const renderWithClient = (client: ReturnType<typeof createClient>) => {
   const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
@@ -192,26 +167,28 @@ describe('homepage operations board', () => {
 
   it('registers a new tenant owner and reuses the same post-login load flow', async () => {
     const client = createClient();
-    const fetchStub = setFetchMock(
-      createFetchResponse({ accessToken: 'token-tenant-new', tokenType: 'Bearer', expiresAt: '2099-01-01T00:00:00.000Z' }),
-    );
+    client.auth.register.mutate.mockResolvedValue({
+      accessToken: 'token-tenant-new',
+      tokenType: 'Bearer',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    });
 
-    try {
-      renderWithClient(client);
+    renderWithClient(client);
 
-      await register('owner-new@tenant-a.local', 'new-password', 'Acme Co.');
+    await register('owner-new@tenant-a.local', 'new-password', 'Acme Co.');
 
-      expect(await screen.findByText('Logged in')).toBeInTheDocument();
+    expect(await screen.findByText('Logged in')).toBeInTheDocument();
 
-      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-tenant-new');
-      expect(fetchStub.fetchMock).toHaveBeenCalledTimes(1);
-      expect(client.auth.login.mutate).not.toHaveBeenCalled();
-      expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
-      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
-      expect(client.operation.list.query).toHaveBeenCalledTimes(1);
-    } finally {
-      fetchStub.restore();
-    }
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBe('token-tenant-new');
+    expect(client.auth.register.mutate).toHaveBeenCalledWith({
+      email: 'owner-new@tenant-a.local',
+      password: 'new-password',
+      companyName: 'Acme Co.',
+    });
+    expect(client.auth.login.mutate).not.toHaveBeenCalled();
+    expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
+    expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
   });
 
   it('marks registration inputs as required to block empty browser submits', () => {
@@ -226,46 +203,42 @@ describe('homepage operations board', () => {
 
   it('shows a safe error when registering an already used email', async () => {
     const client = createClient();
-    const fetchStub = setFetchMock(
-      createFetchResponse({ message: 'Email already exists' }, { ok: false, status: 409 }),
-    );
+    client.auth.register.mutate.mockRejectedValue({
+      data: {
+        code: 'CONFLICT',
+      },
+    });
 
-    try {
-      renderWithClient(client);
+    renderWithClient(client);
 
-      await register('owner@tenant-a.local', 'tenant-a-pass', 'Acme Co.');
+    await register('owner@tenant-a.local', 'tenant-a-pass', 'Acme Co.');
 
-      expect(
-        await screen.findByText('This email is already registered. Please log in instead.'),
-      ).toBeInTheDocument();
-      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
-      expect(client.auth.login.mutate).not.toHaveBeenCalled();
-      expect(client.operation.list.query).not.toHaveBeenCalled();
-    } finally {
-      fetchStub.restore();
-    }
+    expect(
+      await screen.findByText('This email is already registered. Please log in instead.'),
+    ).toBeInTheDocument();
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(client.auth.login.mutate).not.toHaveBeenCalled();
+    expect(client.operation.list.query).not.toHaveBeenCalled();
   });
 
   it('shows explicit retry guidance when registration is rate-limited', async () => {
     const client = createClient();
-    const fetchStub = setFetchMock(
-      createFetchResponse({ message: 'Too many attempts' }, { ok: false, status: 429 }),
-    );
+    client.auth.register.mutate.mockRejectedValue({
+      data: {
+        code: 'TOO_MANY_REQUESTS',
+      },
+    });
 
-    try {
-      renderWithClient(client);
+    renderWithClient(client);
 
-      await register('owner@tenant-a.local', 'tenant-a-pass', 'Acme Co.');
+    await register('owner@tenant-a.local', 'tenant-a-pass', 'Acme Co.');
 
-      expect(
-        await screen.findByText('Too many registration attempts. Please wait a moment and try again.'),
-      ).toBeInTheDocument();
-      expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
-      expect(client.auth.login.mutate).not.toHaveBeenCalled();
-      expect(client.operation.list.query).not.toHaveBeenCalled();
-    } finally {
-      fetchStub.restore();
-    }
+    expect(
+      await screen.findByText('Too many registration attempts. Please wait a moment and try again.'),
+    ).toBeInTheDocument();
+    expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(client.auth.login.mutate).not.toHaveBeenCalled();
+    expect(client.operation.list.query).not.toHaveBeenCalled();
   });
 
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
