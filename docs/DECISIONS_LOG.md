@@ -12,7 +12,7 @@
 ## 2026-03-25
 - Tenant onboarding baseline for MVP: self-serve public Owner registration with automatic tenant creation
 - Out of MVP onboarding scope: self-serve invites, billing automation, email verification, 2FA
-- Public onboarding aligned to the shipped tRPC auth surface; legacy REST `/auth/register` remains as compatibility shim
+- Public onboarding aligned to the shipped tRPC auth surface; legacy REST `/auth/register` removed after repo audit confirmed no remaining in-repo caller dependency
 
 ## 2026-03-08
 - Production auth boot guardrail: API startup must fail fast in production unless `AUTH_TOKEN_SECRET` is explicitly set to a non-default value; smoke automation proves both reject-without-secret and healthy boot-with-secret paths.
