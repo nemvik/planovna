@@ -3,6 +3,15 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  closestCorners,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import {
   applyBoardFilters,
   BACKLOG_BUCKET,
   BOARD_STATUS_VALUES,
@@ -16,6 +25,16 @@ import {
   parseBoardFilters,
   serializeBoardFilters,
 } from './board-filters';
+import {
+  buildDragPlan,
+  type BoardOperationForDrag,
+} from './board-dnd-plan';
+import {
+  BoardBucket,
+  parseBucketDragId,
+  parseOperationDragId,
+  SortableOperationItem,
+} from './board-dnd';
 import { createTrpcClient } from '../lib/trpc/client';
 import { resolveSupportedLocale, type SupportedLocale } from '../lib/locale';
 
@@ -64,8 +83,9 @@ type OperationBucket = {
 };
 
 type OperationUpdate = Partial<
-  Pick<Operation, 'startDate' | 'status' | 'sortIndex' | 'title' | 'code'>
+  Pick<Operation, 'status' | 'sortIndex' | 'title' | 'code'>
 > & {
+  startDate?: string | null;
   blockedReason?: string | null;
   endDate?: string | null;
 };
@@ -156,6 +176,7 @@ type HomepageAuthLocaleStrings = {
   operationScheduleToDateLabel: string;
   operationScheduleButton: string;
   operationSavingLabel: string;
+  operationDragHandleLabel: string;
   operationCodeLabel: string;
   operationSaveCodeButton: string;
   operationTitleLabel: string;
@@ -249,6 +270,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationScheduleToDateLabel: 'Naplánovat na datum',
     operationScheduleButton: 'Naplánovat',
     operationSavingLabel: 'Ukládání…',
+    operationDragHandleLabel: 'Přetáhnout operaci',
     operationCodeLabel: 'Kód',
     operationSaveCodeButton: 'Uložit kód',
     operationTitleLabel: 'Název',
@@ -340,6 +362,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationScheduleToDateLabel: 'Schedule to date',
     operationScheduleButton: 'Schedule',
     operationSavingLabel: 'Saving…',
+    operationDragHandleLabel: 'Drag operation',
     operationCodeLabel: 'Code',
     operationSaveCodeButton: 'Save code',
     operationTitleLabel: 'Title',
@@ -431,6 +454,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationScheduleToDateLabel: 'Für Datum planen',
     operationScheduleButton: 'Planen',
     operationSavingLabel: 'Speichern…',
+    operationDragHandleLabel: 'Vorgang ziehen',
     operationCodeLabel: 'Code',
     operationSaveCodeButton: 'Code speichern',
     operationTitleLabel: 'Titel',
@@ -523,7 +547,7 @@ const buildBuckets = (operations: Operation[]): OperationBucket[] => {
 };
 
 const toStartDate = (bucketLabel: BucketFilter) =>
-  bucketLabel === BACKLOG_BUCKET ? undefined : `${bucketLabel}T00:00:00.000Z`;
+  bucketLabel === BACKLOG_BUCKET ? null : `${bucketLabel}T00:00:00.000Z`;
 
 const isDateBucket = (value: string): value is Exclude<BucketFilter, 'ALL' | typeof BACKLOG_BUCKET> =>
   /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -667,6 +691,7 @@ export default function Home() {
   const manualOperationLoadPendingRef = useRef(false);
   const mutatingOperationIdRef = useRef<string | null>(null);
   const operationLoadSessionRef = useRef(0);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const homepageLocale = resolveSupportedLocale();
   const homepageAuthCopy = HOMEPAGE_AUTH_LOCALES[homepageLocale];
 
@@ -851,6 +876,15 @@ export default function Home() {
     window.history.replaceState(window.history.state, '', nextUrl);
   }, [filters]);
 
+  const syncOperationDrafts = (nextOperations: Operation[]) => {
+    setScheduleDates(buildScheduleDateDrafts(nextOperations));
+    setEndDateDrafts(buildEndDateDrafts(nextOperations));
+    setBlockedReasonDrafts(buildBlockedReasonDrafts(nextOperations));
+    setTitleDrafts(buildTitleDrafts(nextOperations));
+    setCodeDrafts(buildCodeDrafts(nextOperations));
+    setSortIndexDrafts(buildSortIndexDrafts(nextOperations));
+  };
+
   const resetOperationsState = () => {
     setOperations([]);
     setCashflowItems([]);
@@ -915,12 +949,7 @@ export default function Home() {
       const loadedOperations = result as Operation[];
       setOperations(loadedOperations);
       setBoardMessage('');
-      setScheduleDates(buildScheduleDateDrafts(loadedOperations));
-      setEndDateDrafts(buildEndDateDrafts(loadedOperations));
-      setBlockedReasonDrafts(buildBlockedReasonDrafts(loadedOperations));
-      setTitleDrafts(buildTitleDrafts(loadedOperations));
-      setCodeDrafts(buildCodeDrafts(loadedOperations));
-      setSortIndexDrafts(buildSortIndexDrafts(loadedOperations));
+      syncOperationDrafts(loadedOperations);
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
       return loadedOperations;
     } catch (error) {
@@ -1127,6 +1156,128 @@ export default function Home() {
     }
 
     await onUpdateOperation(operation, { startDate: nextStartDate }, homepageAuthCopy.operationMoveFailed);
+  };
+
+  const onDragEnd = async (event: DragEndEvent) => {
+    if (mutatingOperationIdRef.current !== null) {
+      return;
+    }
+
+    const activeId = typeof event.active.id === 'string' ? event.active.id : '';
+    const activeOperationId = parseOperationDragId(activeId);
+    const overId = typeof event.over?.id === 'string' ? event.over.id : null;
+
+    if (!activeOperationId || !overId) {
+      return;
+    }
+
+    const overOperationId = parseOperationDragId(overId);
+    const overBucketLabel = parseBucketDragId(overId);
+    const target = overOperationId
+      ? { kind: 'operation' as const, operationId: overOperationId }
+      : overBucketLabel
+        ? { kind: 'bucket' as const, bucketLabel: overBucketLabel }
+        : null;
+
+    if (!target) {
+      return;
+    }
+
+    const dragPlan = buildDragPlan(operations as BoardOperationForDrag[], activeOperationId, target);
+    if (!dragPlan) {
+      return;
+    }
+
+    const nextOperations = dragPlan.nextOperations as Operation[];
+    const operationUpdates = new Map(
+      dragPlan.changedOperationIds.map((operationId) => {
+        const nextOperation = nextOperations.find((candidate) => candidate.id === operationId);
+        return [
+          operationId,
+          {
+            startDate: nextOperation?.startDate,
+            sortIndex: nextOperation?.sortIndex,
+          },
+        ];
+      }),
+    );
+
+    setBoardMessage('');
+    mutatingOperationIdRef.current = activeOperationId;
+    setMutatingOperationId(activeOperationId);
+    const mutationSession = operationLoadSessionRef.current;
+    setOperations(nextOperations);
+    syncOperationDrafts(nextOperations);
+
+    try {
+      let latestOperations = nextOperations;
+
+      for (const operationId of dragPlan.changedOperationIds) {
+        const operation = latestOperations.find((candidate) => candidate.id === operationId);
+        const updates = operationUpdates.get(operationId);
+
+        if (!operation || !updates) {
+          continue;
+        }
+
+        const updatedOperation = (await trpcClient.operation.update.mutate({
+          id: operation.id,
+          tenantId: operation.tenantId,
+          version: operation.version,
+          startDate: updates.startDate,
+          sortIndex: updates.sortIndex,
+        })) as Operation;
+
+        if (mutationSession !== operationLoadSessionRef.current) {
+          return;
+        }
+
+        latestOperations = latestOperations.map((candidate) =>
+          candidate.id === updatedOperation.id ? updatedOperation : candidate,
+        );
+        setOperations(latestOperations);
+      }
+
+      syncOperationDrafts(latestOperations);
+    } catch (error) {
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
+
+      if (hasForbiddenCode(error)) {
+        resetSession(homepageAuthCopy.sessionExpired);
+      } else if (extractConflictData(error)) {
+        try {
+          await loadOperations();
+
+          if (mutationSession !== operationLoadSessionRef.current) {
+            return;
+          }
+
+          setBoardMessage(homepageAuthCopy.boardConflictReloaded);
+        } catch {
+          if (mutationSession !== operationLoadSessionRef.current) {
+            return;
+          }
+
+          setBoardMessage(homepageAuthCopy.boardConflictReloadFailed);
+        }
+      } else {
+        try {
+          await loadOperations();
+        } catch {
+          // keep the generic drag failure message below
+        }
+        setBoardMessage(homepageAuthCopy.operationMoveFailed);
+      }
+    } finally {
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
+
+      mutatingOperationIdRef.current = null;
+      setMutatingOperationId(null);
+    }
   };
 
   const onStatusChange = async (operation: Operation, status: Operation['status']) => {
@@ -1534,318 +1685,338 @@ export default function Home() {
               <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.boardFilteredEmptyHint}</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {operationBuckets.map((bucket) => (
-                <section
-                  key={bucket.label}
-                  aria-label={getLocalizedBucketLabel(bucket.label)}
-                  className="rounded border bg-slate-50 p-4"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                    <h2 className="text-lg font-semibold text-slate-800">{getLocalizedBucketLabel(bucket.label)}</h2>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                      {bucket.operations.length}
-                    </span>
-                  </div>
+            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={(event) => void onDragEnd(event)}>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {operationBuckets.map((bucket) => (
+                  <BoardBucket
+                    key={bucket.label}
+                    bucketLabel={bucket.label}
+                    ariaLabel={getLocalizedBucketLabel(bucket.label)}
+                    count={bucket.operations.length}
+                    title={getLocalizedBucketLabel(bucket.label)}
+                  >
+                    <SortableContext
+                      items={bucket.operations.map((operation) => `operation:${operation.id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <ul className="space-y-2">
+                        {bucket.operations.map((operation) => {
+                          const isMutatingOperation = mutatingOperationId === operation.id;
+                          const isOperationLocked = mutatingOperationId !== null;
+                          const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
+                          const endDateValue = getEndDateValue(operation, endDateDrafts);
+                          const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
+                          const titleValue = getTitleValue(operation, titleDrafts);
+                          const codeValue = getCodeValue(operation, codeDrafts);
+                          const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
+                          const canSaveTitle = titleValue.trim() !== '' && titleValue !== operation.title;
+                          const canSaveCode = codeValue.trim() !== '' && codeValue !== operation.code;
+                          const canSchedule =
+                            isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
+                          const canSaveEndDate =
+                            isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
+                          const canClearEndDate = operation.endDate !== undefined;
+                          const canClearBlockedReason = operation.blockedReason !== undefined;
+                          const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
+                          const parsedSortIndex = Number(sortIndexValue.trim());
+                          const canSaveSortIndex =
+                            sortIndexValue.trim() !== '' &&
+                            Number.isInteger(parsedSortIndex) &&
+                            parsedSortIndex !== operation.sortIndex;
+                          const prerequisiteSummary = formatPrerequisiteSummary(operation, homepageAuthCopy);
 
-                  <ul className="space-y-2">
-                    {bucket.operations.map((operation) => {
-                      const isMutatingOperation = mutatingOperationId === operation.id;
-                      const isOperationLocked = mutatingOperationId !== null;
-                      const isOtherOperationLocked = isOperationLocked && !isMutatingOperation;
-                      const scheduledDateValue = getScheduledDateValue(operation, scheduleDates);
-                      const endDateValue = getEndDateValue(operation, endDateDrafts);
-                      const blockedReasonValue = getBlockedReasonValue(operation, blockedReasonDrafts);
-                      const titleValue = getTitleValue(operation, titleDrafts);
-                      const codeValue = getCodeValue(operation, codeDrafts);
-                      const sortIndexValue = getSortIndexValue(operation, sortIndexDrafts);
-                      const canSaveTitle = titleValue.trim() !== '' && titleValue !== operation.title;
-                      const canSaveCode = codeValue.trim() !== '' && codeValue !== operation.code;
-                      const canSchedule =
-                        isDateBucket(scheduledDateValue) && scheduledDateValue !== operation.startDate?.slice(0, 10);
-                      const canSaveEndDate =
-                        isDateBucket(endDateValue) && endDateValue !== operation.endDate?.slice(0, 10);
-                      const canClearEndDate = operation.endDate !== undefined;
-                      const canClearBlockedReason = operation.blockedReason !== undefined;
-                      const canSaveBlockedReason = blockedReasonValue !== (operation.blockedReason ?? '');
-                      const parsedSortIndex = Number(sortIndexValue.trim());
-                      const canSaveSortIndex =
-                        sortIndexValue.trim() !== '' &&
-                        Number.isInteger(parsedSortIndex) &&
-                        parsedSortIndex !== operation.sortIndex;
-                      const prerequisiteSummary = formatPrerequisiteSummary(
-                        operation,
-                        homepageAuthCopy,
-                      );
-
-                      return (
-                        <li key={operation.id} className="rounded border bg-white p-3 shadow-sm">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-1">
-                            <div className="font-semibold leading-5 text-slate-800">
-                              {operation.code} — {operation.title}
-                            </div>
-                            {prerequisiteSummary ? (
-                              <p className="text-sm leading-5 text-amber-700">{prerequisiteSummary}</p>
-                            ) : null}
-                            {isMutatingOperation ? (
-                              <p className="text-sm font-medium text-slate-600">{homepageAuthCopy.operationSavingLabel}</p>
-                            ) : null}
-                          </div>
-                          {operation.dependencyCount > 0 && !prerequisiteSummary ? (
-                            <span className="inline-flex items-center rounded-full border border-amber-300/90 bg-amber-100/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-950 shadow-sm">
-                              {homepageAuthCopy.operationBlockedByTemplate.replace(
-                                '{count}',
-                                String(operation.dependencyCount),
+                          return (
+                            <SortableOperationItem
+                              key={operation.id}
+                              operationId={operation.id}
+                              bucketLabel={bucket.label}
+                            >
+                              {({ dragHandleAttributes, dragHandleListeners }) => (
+                                <>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="space-y-1">
+                                      <div className="flex items-start gap-2">
+                                        <button
+                                          className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                          type="button"
+                                          aria-label={homepageAuthCopy.operationDragHandleLabel}
+                                          disabled={isOperationLocked}
+                                          {...dragHandleAttributes}
+                                          {...dragHandleListeners}
+                                        >
+                                          ⋮⋮
+                                        </button>
+                                        <div>
+                                          <div className="font-semibold leading-5 text-slate-800">
+                                            {operation.code} — {operation.title}
+                                          </div>
+                                          {prerequisiteSummary ? (
+                                            <p className="text-sm leading-5 text-amber-700">{prerequisiteSummary}</p>
+                                          ) : null}
+                                          {isMutatingOperation ? (
+                                            <p className="text-sm font-medium text-slate-600">{homepageAuthCopy.operationSavingLabel}</p>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {operation.dependencyCount > 0 && !prerequisiteSummary ? (
+                                      <span className="inline-flex items-center rounded-full border border-amber-300/90 bg-amber-100/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-950 shadow-sm">
+                                        {homepageAuthCopy.operationBlockedByTemplate.replace(
+                                          '{count}',
+                                          String(operation.dependencyCount),
+                                        )}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <form
+                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                                    onSubmit={(event) => void onSaveCode(event, operation)}
+                                  >
+                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                      {homepageAuthCopy.operationCodeLabel}
+                                      <input
+                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        value={codeValue}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          setCodeDrafts((currentCodeDrafts) => ({
+                                            ...currentCodeDrafts,
+                                            [operation.id]: event.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </label>
+                                    <button
+                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                                      type="submit"
+                                      disabled={isOperationLocked || !canSaveCode}
+                                    >
+                                      {homepageAuthCopy.operationSaveCodeButton}
+                                    </button>
+                                  </form>
+                                  <form
+                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                                    onSubmit={(event) => void onSaveTitle(event, operation)}
+                                  >
+                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                      {homepageAuthCopy.operationTitleLabel}
+                                      <input
+                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        value={titleValue}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          setTitleDrafts((currentTitleDrafts) => ({
+                                            ...currentTitleDrafts,
+                                            [operation.id]: event.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </label>
+                                    <button
+                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                                      type="submit"
+                                      disabled={isOperationLocked || !canSaveTitle}
+                                    >
+                                      {homepageAuthCopy.operationSaveTitleButton}
+                                    </button>
+                                  </form>
+                                  <form
+                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                                    onSubmit={(event) => void onSaveEndDate(event, operation)}
+                                  >
+                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                      {homepageAuthCopy.operationEndDateLabel}
+                                      <input
+                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        type="date"
+                                        value={endDateValue}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          setEndDateDrafts((currentEndDateDrafts) => ({
+                                            ...currentEndDateDrafts,
+                                            [operation.id]: event.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </label>
+                                    <button
+                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                                      type="submit"
+                                      disabled={isOperationLocked || !canSaveEndDate}
+                                    >
+                                      {homepageAuthCopy.operationSaveEndButton}
+                                    </button>
+                                    {canClearEndDate ? (
+                                      <button
+                                        className="inline-flex items-center rounded border bg-white px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                                        type="button"
+                                        disabled={isOperationLocked}
+                                        onClick={() => void onClearEndDate(operation)}
+                                      >
+                                        {homepageAuthCopy.operationClearEndButton}
+                                      </button>
+                                    ) : null}
+                                  </form>
+                                  <form
+                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
+                                    onSubmit={(event) => void onSaveSortIndex(event, operation)}
+                                  >
+                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                      {homepageAuthCopy.operationSortIndexLabel}
+                                      <input
+                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        type="number"
+                                        inputMode="numeric"
+                                        value={sortIndexValue}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          setSortIndexDrafts((currentSortIndexDrafts) => ({
+                                            ...currentSortIndexDrafts,
+                                            [operation.id]: event.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </label>
+                                    <button
+                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                                      type="submit"
+                                      disabled={isOperationLocked || !canSaveSortIndex}
+                                    >
+                                      {homepageAuthCopy.operationSaveSortButton}
+                                    </button>
+                                  </form>
+                                  {operation.blockedReason ? (
+                                    <div className="mt-3 flex items-start gap-2.5 rounded-md border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-sm text-amber-800">
+                                      <span className="min-w-0 flex-1 font-medium leading-5">
+                                        {homepageAuthCopy.operationBlockedReasonPrefix} {operation.blockedReason}
+                                      </span>
+                                      {operation.status !== 'BLOCKED' ? (
+                                        <button
+                                          className="rounded border border-amber-300/90 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
+                                          type="button"
+                                          disabled={isOperationLocked}
+                                          onClick={() => void onClearBlockedReason(operation)}
+                                        >
+                                          {homepageAuthCopy.operationClearReasonButton}
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                  {operation.status === 'BLOCKED' ? (
+                                    <form
+                                      className="mt-3 flex items-end gap-3 rounded-md border border-amber-200/70 bg-amber-50/50 p-2.5"
+                                      onSubmit={(event) => void onSaveBlockedReason(event, operation)}
+                                    >
+                                      <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium uppercase tracking-wide text-amber-900/80">
+                                        {homepageAuthCopy.operationBlockedReasonLabel}
+                                        <input
+                                          className="rounded border border-amber-300 bg-white px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                                          value={blockedReasonValue}
+                                          disabled={isOperationLocked}
+                                          onChange={(event) =>
+                                            setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
+                                              ...currentBlockedReasonDrafts,
+                                              [operation.id]: event.target.value,
+                                            }))
+                                          }
+                                        />
+                                      </label>
+                                      <button
+                                        className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                                        type="submit"
+                                        disabled={isOperationLocked || !canSaveBlockedReason}
+                                      >
+                                        {homepageAuthCopy.operationSaveReasonButton}
+                                      </button>
+                                      {canClearBlockedReason ? (
+                                        <button
+                                          className="rounded border border-amber-300/90 bg-white px-3 py-1.5 text-sm text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
+                                          type="button"
+                                          disabled={isOperationLocked}
+                                          onClick={() => void onClearBlockedReason(operation)}
+                                        >
+                                          {homepageAuthCopy.operationClearReasonButton}
+                                        </button>
+                                      ) : null}
+                                    </form>
+                                  ) : null}
+                                  <div className="mt-3.5 grid gap-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2 sm:grid-cols-2">
+                                    <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                      {homepageAuthCopy.operationCardStatusLabel}
+                                      <select
+                                        className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        value={operation.status}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          void onStatusChange(operation, event.target.value as Operation['status'])
+                                        }
+                                      >
+                                        {BOARD_STATUS_VALUES.map((status) => (
+                                          <option key={status} value={status}>
+                                            {getLocalizedOperationStatusLabel(status)}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                      {homepageAuthCopy.operationMoveToBucketLabel}
+                                      <select
+                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        value={getOperationBucketLabel(operation.startDate)}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          void onMoveOperation(
+                                            operation,
+                                            event.target.value as Exclude<BucketFilter, 'ALL'>,
+                                          )
+                                        }
+                                      >
+                                        {moveBucketOptions.map((moveBucket) => (
+                                          <option key={moveBucket} value={moveBucket}>
+                                            {getLocalizedBucketOptionLabel(moveBucket)}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  </div>
+                                  <form
+                                    className="mt-3 flex items-end gap-2.5 sm:gap-3 rounded-lg border border-slate-200/50 bg-slate-50/40 p-2 sm:p-2.5"
+                                    onSubmit={(event) => void onScheduleOperation(event, operation)}
+                                  >
+                                    <label className="flex min-w-0 flex-1 flex-col justify-end gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                      {homepageAuthCopy.operationScheduleToDateLabel}
+                                      <input
+                                        className="h-9 rounded border border-slate-200/80 bg-white/95 px-2 py-1.5 text-sm font-normal text-slate-700 placeholder:normal-case placeholder:text-[12px] placeholder:leading-[1.1] placeholder:text-slate-500/[0.02] placeholder:font-normal placeholder:tracking-[0em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        type="date"
+                                        value={scheduledDateValue}
+                                        disabled={isOperationLocked}
+                                        onChange={(event) =>
+                                          setScheduleDates((currentScheduleDates) => ({
+                                            ...currentScheduleDates,
+                                            [operation.id]: event.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </label>
+                                    <button
+                                      className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
+                                      type="submit"
+                                      disabled={isOperationLocked || !canSchedule}
+                                    >
+                                      {homepageAuthCopy.operationScheduleButton}
+                                    </button>
+                                  </form>
+                                </>
                               )}
-                            </span>
-                          ) : null}
-                        </div>
-                        <form
-                          className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                          onSubmit={(event) => void onSaveCode(event, operation)}
-                        >
-                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            {homepageAuthCopy.operationCodeLabel}
-                            <input
-                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                              value={codeValue}
-                               disabled={isOperationLocked}
-                              onChange={(event) =>
-                                setCodeDrafts((currentCodeDrafts) => ({
-                                  ...currentCodeDrafts,
-                                  [operation.id]: event.target.value,
-                                }))
-                              }
-                            />
-                          </label>
-                          <button
-                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                            type="submit"
-                             disabled={isOperationLocked || !canSaveCode}
-                          >
-                            {homepageAuthCopy.operationSaveCodeButton}
-                          </button>
-                        </form>
-                        <form
-                          className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                          onSubmit={(event) => void onSaveTitle(event, operation)}
-                        >
-                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            {homepageAuthCopy.operationTitleLabel}
-                            <input
-                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                              value={titleValue}
-                               disabled={isOperationLocked}
-                              onChange={(event) =>
-                                setTitleDrafts((currentTitleDrafts) => ({
-                                  ...currentTitleDrafts,
-                                  [operation.id]: event.target.value,
-                                }))
-                              }
-                            />
-                          </label>
-                          <button
-                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                            type="submit"
-                             disabled={isOperationLocked || !canSaveTitle}
-                          >
-                            {homepageAuthCopy.operationSaveTitleButton}
-                          </button>
-                        </form>
-                        <form
-                          className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                          onSubmit={(event) => void onSaveEndDate(event, operation)}
-                        >
-                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            {homepageAuthCopy.operationEndDateLabel}
-                            <input
-                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                              type="date"
-                              value={endDateValue}
-                               disabled={isOperationLocked}
-                              onChange={(event) =>
-                                setEndDateDrafts((currentEndDateDrafts) => ({
-                                  ...currentEndDateDrafts,
-                                  [operation.id]: event.target.value,
-                                }))
-                              }
-                            />
-                          </label>
-                          <button
-                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                            type="submit"
-                             disabled={isOperationLocked || !canSaveEndDate}
-                          >
-                            {homepageAuthCopy.operationSaveEndButton}
-                          </button>
-                          {canClearEndDate ? (
-                            <button
-                              className="inline-flex items-center rounded border bg-white px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
-                              type="button"
-                               disabled={isOperationLocked}
-                              onClick={() => void onClearEndDate(operation)}
-                            >
-                              {homepageAuthCopy.operationClearEndButton}
-                            </button>
-                          ) : null}
-                        </form>
-                        <form
-                          className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                          onSubmit={(event) => void onSaveSortIndex(event, operation)}
-                        >
-                          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            {homepageAuthCopy.operationSortIndexLabel}
-                            <input
-                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                              type="number"
-                              inputMode="numeric"
-                              value={sortIndexValue}
-                               disabled={isOperationLocked}
-                              onChange={(event) =>
-                                setSortIndexDrafts((currentSortIndexDrafts) => ({
-                                  ...currentSortIndexDrafts,
-                                  [operation.id]: event.target.value,
-                                }))
-                              }
-                            />
-                          </label>
-                          <button
-                            className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                            type="submit"
-                             disabled={isOperationLocked || !canSaveSortIndex}
-                          >
-                            {homepageAuthCopy.operationSaveSortButton}
-                          </button>
-                        </form>
-                        {operation.blockedReason ? (
-                          <div className="mt-3 flex items-start gap-2.5 rounded-md border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-sm text-amber-800">
-                            <span className="min-w-0 flex-1 font-medium leading-5">
-                              {homepageAuthCopy.operationBlockedReasonPrefix} {operation.blockedReason}
-                            </span>
-                            {operation.status !== 'BLOCKED' ? (
-                              <button
-                                className="rounded border border-amber-300/90 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
-                                type="button"
-                                 disabled={isOperationLocked}
-                                onClick={() => void onClearBlockedReason(operation)}
-                              >
-                                {homepageAuthCopy.operationClearReasonButton}
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : null}
-                          {operation.status === 'BLOCKED' ? (
-                            <form
-                              className="mt-3 flex items-end gap-3 rounded-md border border-amber-200/70 bg-amber-50/50 p-2.5"
-                              onSubmit={(event) => void onSaveBlockedReason(event, operation)}
-                            >
-                              <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium uppercase tracking-wide text-amber-900/80">
-                                {homepageAuthCopy.operationBlockedReasonLabel}
-                                <input
-                                  className="rounded border border-amber-300 bg-white px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-                                  value={blockedReasonValue}
-                                   disabled={isOperationLocked}
-                                  onChange={(event) =>
-                                    setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
-                                      ...currentBlockedReasonDrafts,
-                                      [operation.id]: event.target.value,
-                                    }))
-                                  }
-                                />
-                              </label>
-                              <button
-                                className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                type="submit"
-                                 disabled={isOperationLocked || !canSaveBlockedReason}
-                              >
-                                {homepageAuthCopy.operationSaveReasonButton}
-                              </button>
-                              {canClearBlockedReason ? (
-                                <button
-                                  className="rounded border border-amber-300/90 bg-white px-3 py-1.5 text-sm text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
-                                  type="button"
-                                   disabled={isOperationLocked}
-                                  onClick={() => void onClearBlockedReason(operation)}
-                                >
-                                  {homepageAuthCopy.operationClearReasonButton}
-                                </button>
-                              ) : null}
-                            </form>
-                          ) : null}
-                          <div className="mt-3.5 grid gap-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2 sm:grid-cols-2">
-                            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                              {homepageAuthCopy.operationCardStatusLabel}
-                              <select
-                                className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                value={operation.status}
-                                disabled={isOperationLocked}
-                                onChange={(event) =>
-                                  void onStatusChange(operation, event.target.value as Operation['status'])
-                                }
-                              >
-                                {BOARD_STATUS_VALUES.map((status) => (
-                                  <option key={status} value={status}>
-                                    {getLocalizedOperationStatusLabel(status)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                              {homepageAuthCopy.operationMoveToBucketLabel}
-                              <select
-                                className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                value={getOperationBucketLabel(operation.startDate)}
-                                disabled={isOperationLocked}
-                                onChange={(event) =>
-                                  void onMoveOperation(
-                                    operation,
-                                    event.target.value as Exclude<BucketFilter, 'ALL'>,
-                                  )
-                                }
-                              >
-                                {moveBucketOptions.map((moveBucket) => (
-                                  <option key={moveBucket} value={moveBucket}>
-                                    {getLocalizedBucketOptionLabel(moveBucket)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          </div>
-                          <form
-                            className="mt-3 flex items-end gap-2.5 sm:gap-3 rounded-lg border border-slate-200/50 bg-slate-50/40 p-2 sm:p-2.5"
-                            onSubmit={(event) => void onScheduleOperation(event, operation)}
-                          >
-                            <label className="flex min-w-0 flex-1 flex-col justify-end gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
-                              {homepageAuthCopy.operationScheduleToDateLabel}
-                              <input
-                                className="h-9 rounded border border-slate-200/80 bg-white/95 px-2 py-1.5 text-sm font-normal text-slate-700 placeholder:normal-case placeholder:text-[12px] placeholder:leading-[1.1] placeholder:text-slate-500/[0.02] placeholder:font-normal placeholder:tracking-[0em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                type="date"
-                                value={scheduledDateValue}
-                                disabled={isOperationLocked}
-                                onChange={(event) =>
-                                  setScheduleDates((currentScheduleDates) => ({
-                                    ...currentScheduleDates,
-                                    [operation.id]: event.target.value,
-                                  }))
-                                }
-                              />
-                            </label>
-                            <button
-                              className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
-                              type="submit"
-                              disabled={isOperationLocked || !canSchedule}
-                            >
-                              {homepageAuthCopy.operationScheduleButton}
-                            </button>
-                          </form>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
+                            </SortableOperationItem>
+                          );
+                        })}
+                      </ul>
+                    </SortableContext>
+                  </BoardBucket>
+                ))}
+              </div>
+            </DndContext>
           )}
         </>
       ) : null}

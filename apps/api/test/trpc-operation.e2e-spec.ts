@@ -268,6 +268,47 @@ describe('tRPC operation contracts (e2e)', () => {
     });
   });
 
+  it('clears a persisted startDate via operation.update when the payload sends null', async () => {
+    const tenantALogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+
+    const created = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-START-CLEAR-${uniqueSuffix()}`,
+      title: 'Operation with start date',
+      status: 'READY',
+      startDate: '2026-03-10T00:00:00.000Z',
+      sortIndex: 3,
+    });
+
+    const cleared = await tenantAClient.operation.update.mutate({
+      id: created.id,
+      tenantId: 'tenant-a',
+      version: created.version,
+      startDate: null,
+    });
+
+    expect(cleared).toBeDefined();
+    expect(cleared?.startDate).toBeUndefined();
+    expect(cleared?.version).toBe(created.version + 1);
+
+    const tenantAList = await tenantAClient.operation.list.query();
+    const stored = tenantAList.find((operation) => operation.id === created.id);
+
+    expect(stored).toBeDefined();
+    expect(stored?.id).toBe(created.id);
+    expect(stored?.startDate).toBeUndefined();
+    expect(stored?.version).toBe(created.version + 1);
+  });
+
   it('clears a persisted endDate via operation.update when the payload sends null', async () => {
     const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',
