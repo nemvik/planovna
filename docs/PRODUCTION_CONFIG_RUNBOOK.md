@@ -169,6 +169,21 @@ npm -w apps/api run prisma:migrate:deploy
 npm -w apps/api run prisma:migrate:status
 ```
 
+### Check schema drift (`app` vs legacy `public`)
+Run this after migrations, before release cutovers, and during incident review if an environment may have been initialized from the older divergent schema state.
+
+```bash
+npm run db:check:schema-drift
+```
+
+The drift check is metadata-only and exits non-zero when either of these is true:
+- required Planovna tables or enums are missing from schema `app`, or
+- matching Planovna business/auth tables or enums are present in schema `public`.
+
+Expected healthy result:
+- required objects exist in `app`
+- no Planovna business/auth objects are reported in `public`
+
 ### Seed demo tenant baseline
 Dry-run without DB writes:
 ```bash
@@ -291,15 +306,19 @@ Expected visible/API markers:
    ```bash
    npm -w apps/api run prisma:migrate:deploy
    ```
-6. Start the API:
+6. Check schema drift before boot:
+   ```bash
+   npm run db:check:schema-drift
+   ```
+7. Start the API:
    ```bash
    npm -w apps/api run start:prod
    ```
-7. Verify liveness:
+8. Verify liveness:
    ```bash
    curl http://127.0.0.1:${PORT:-3000}/health
    ```
-8. Verify readiness:
+9. Verify readiness:
    ```bash
    curl -i http://127.0.0.1:${PORT:-3000}/health/ready
    ```
@@ -353,6 +372,30 @@ Recommended rotation steps:
 - Confirm the database host is reachable from the API runtime.
 - Confirm credentials and network policy/firewall rules.
 - Check startup and request logs, then re-run the preflight.
+
+### Schema drift check fails
+A failed `npm run db:check:schema-drift` means the environment does not match the approved `app` schema baseline.
+
+Typical failure modes:
+- one or more required Planovna tables/enums are missing from `app`
+- duplicate legacy Planovna tables/enums still exist in `public`
+
+Recommended operator remediation path:
+1. Stop and back up the database before any manual correction.
+2. Run the drift check and save the JSON output.
+3. Determine which schema contains the live Planovna data (`app` vs `public`) before changing search paths or dropping objects.
+4. If live data is only in `public`, plan a controlled migration/copy into `app` before restart.
+5. If `app` is correct and `public` only contains stale duplicates, remove the duplicate legacy objects in a controlled maintenance window.
+6. Re-run:
+   ```bash
+   npm -w apps/api run prisma:migrate:deploy
+   npm run db:check:schema-drift
+   ```
+7. Only then restart the API and re-check `/health` and `/health/ready`.
+
+Important safety note:
+- the drift check itself is metadata-only and does not mutate database state
+- remediation is intentionally operator-driven because the older divergent `public` schema may contain real production data in some environments
 
 ### API boot fails in production
 - Confirm `NODE_ENV=production`.
