@@ -1,7 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateOperationDto, UpdateOperationDto } from './dto/operation.dto';
+import {
+  CreateOperationDependencyDto,
+  CreateOperationDto,
+  RemoveOperationDependencyDto,
+  UpdateOperationDto,
+} from './dto/operation.dto';
+
+export class OperationDependencyValidationError extends Error {
+  constructor(
+    readonly code:
+      | 'DEPENDENCY_SELF_REFERENCE'
+      | 'DEPENDENCY_DUPLICATE'
+      | 'DEPENDENCY_CYCLE'
+      | 'DEPENDENCY_INVALID_TARGET'
+      | 'DEPENDENCY_NOT_FOUND',
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 type OperationRecord = CreateOperationDto & {
   id: string;
@@ -52,52 +71,7 @@ export class OperationService {
         sortIndex: input.sortIndex,
         blockedReason: input.blockedReason,
       },
-      select: {
-        id: true,
-        tenantId: true,
-        orderId: true,
-        code: true,
-        title: true,
-        status: true,
-        startDate: true,
-        endDate: true,
-        sortIndex: true,
-        blockedReason: true,
-        version: true,
-        _count: {
-          select: {
-            dependsOn: {
-              where: {
-                tenantId: input.tenantId,
-                dependsOn: {
-                  tenantId: input.tenantId,
-                },
-              },
-            },
-          },
-        },
-        dependsOn: {
-          where: {
-            tenantId: input.tenantId,
-            dependsOn: {
-              tenantId: input.tenantId,
-            },
-          },
-          orderBy: {
-            dependsOn: {
-              code: 'asc',
-            },
-          },
-          take: BOARD_PREREQUISITE_CODE_LIMIT,
-          select: {
-            dependsOn: {
-              select: {
-                code: true,
-              },
-            },
-          },
-        },
-      },
+      select: this.operationSelect(input.tenantId),
     });
 
     return this.toOperationRecord(created);
@@ -107,52 +81,7 @@ export class OperationService {
     const operations = await this.prisma.operation.findMany({
       where: { tenantId },
       orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
-      select: {
-        id: true,
-        tenantId: true,
-        orderId: true,
-        code: true,
-        title: true,
-        status: true,
-        startDate: true,
-        endDate: true,
-        sortIndex: true,
-        blockedReason: true,
-        version: true,
-        _count: {
-          select: {
-            dependsOn: {
-              where: {
-                tenantId,
-                dependsOn: {
-                  tenantId,
-                },
-              },
-            },
-          },
-        },
-        dependsOn: {
-          where: {
-            tenantId,
-            dependsOn: {
-              tenantId,
-            },
-          },
-          orderBy: {
-            dependsOn: {
-              code: 'asc',
-            },
-          },
-          take: BOARD_PREREQUISITE_CODE_LIMIT,
-          select: {
-            dependsOn: {
-              select: {
-                code: true,
-              },
-            },
-          },
-        },
-      },
+      select: this.operationSelect(tenantId),
     });
 
     return operations.map((operation) => this.toOperationRecord(operation));
@@ -218,52 +147,7 @@ export class OperationService {
 
     const row = await this.prisma.operation.findUnique({
       where: { id: input.id },
-      select: {
-        id: true,
-        tenantId: true,
-        orderId: true,
-        code: true,
-        title: true,
-        status: true,
-        startDate: true,
-        endDate: true,
-        sortIndex: true,
-        blockedReason: true,
-        version: true,
-        _count: {
-          select: {
-            dependsOn: {
-              where: {
-                tenantId: existing.tenantId,
-                dependsOn: {
-                  tenantId: existing.tenantId,
-                },
-              },
-            },
-          },
-        },
-        dependsOn: {
-          where: {
-            tenantId: existing.tenantId,
-            dependsOn: {
-              tenantId: existing.tenantId,
-            },
-          },
-          orderBy: {
-            dependsOn: {
-              code: 'asc',
-            },
-          },
-          take: BOARD_PREREQUISITE_CODE_LIMIT,
-          select: {
-            dependsOn: {
-              select: {
-                code: true,
-              },
-            },
-          },
-        },
-      },
+      select: this.operationSelect(existing.tenantId),
     });
 
     if (!row) {
@@ -271,6 +155,195 @@ export class OperationService {
     }
 
     return this.toOperationRecord(row);
+  }
+
+  async addDependency(tenantId: string, input: CreateOperationDependencyDto) {
+    if (input.operationId === input.dependsOnId) {
+      throw new OperationDependencyValidationError(
+        'DEPENDENCY_SELF_REFERENCE',
+        'Operation cannot depend on itself',
+      );
+    }
+
+    const [operation, target, duplicate] = await Promise.all([
+      this.prisma.operation.findUnique({
+        where: { id: input.operationId },
+        select: { id: true, tenantId: true },
+      }),
+      this.prisma.operation.findUnique({
+        where: { id: input.dependsOnId },
+        select: { id: true, tenantId: true },
+      }),
+      this.prisma.operationDependency.findUnique({
+        where: {
+          tenantId_operationId_dependsOnId: {
+            tenantId,
+            operationId: input.operationId,
+            dependsOnId: input.dependsOnId,
+          },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (
+      !operation ||
+      !target ||
+      operation.tenantId !== tenantId ||
+      target.tenantId !== tenantId
+    ) {
+      throw new OperationDependencyValidationError(
+        'DEPENDENCY_INVALID_TARGET',
+        'Dependency target not found in tenant scope',
+      );
+    }
+
+    if (duplicate) {
+      throw new OperationDependencyValidationError(
+        'DEPENDENCY_DUPLICATE',
+        'Dependency already exists',
+      );
+    }
+
+    const createsCycle = await this.detectDependencyPath(
+      tenantId,
+      input.dependsOnId,
+      input.operationId,
+    );
+
+    if (createsCycle) {
+      throw new OperationDependencyValidationError(
+        'DEPENDENCY_CYCLE',
+        'Dependency would create a cycle',
+      );
+    }
+
+    await this.prisma.operationDependency.create({
+      data: {
+        tenantId,
+        operationId: input.operationId,
+        dependsOnId: input.dependsOnId,
+      },
+    });
+
+    const row = await this.prisma.operation.findUnique({
+      where: { id: input.operationId },
+      select: this.operationSelect(tenantId),
+    });
+
+    return row ? this.toOperationRecord(row) : null;
+  }
+
+  async removeDependency(tenantId: string, input: RemoveOperationDependencyDto) {
+    const dependency = await this.prisma.operationDependency.findUnique({
+      where: {
+        tenantId_operationId_dependsOnId: {
+          tenantId,
+          operationId: input.operationId,
+          dependsOnId: input.dependsOnId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!dependency) {
+      throw new OperationDependencyValidationError(
+        'DEPENDENCY_NOT_FOUND',
+        'Dependency not found',
+      );
+    }
+
+    await this.prisma.operationDependency.delete({
+      where: { id: dependency.id },
+    });
+
+    const row = await this.prisma.operation.findUnique({
+      where: { id: input.operationId },
+      select: this.operationSelect(tenantId),
+    });
+
+    return row ? this.toOperationRecord(row) : null;
+  }
+
+  private async detectDependencyPath(tenantId: string, startId: string, targetId: string) {
+    const visited = new Set<string>();
+    const queue = [startId];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current || visited.has(current)) {
+        continue;
+      }
+      if (current === targetId) {
+        return true;
+      }
+      visited.add(current);
+
+      const edges = await this.prisma.operationDependency.findMany({
+        where: {
+          tenantId,
+          operationId: current,
+        },
+        select: { dependsOnId: true },
+      });
+
+      for (const edge of edges) {
+        if (!visited.has(edge.dependsOnId)) {
+          queue.push(edge.dependsOnId);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private operationSelect(tenantId: string) {
+    return {
+      id: true,
+      tenantId: true,
+      orderId: true,
+      code: true,
+      title: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      sortIndex: true,
+      blockedReason: true,
+      version: true,
+      _count: {
+        select: {
+          dependsOn: {
+            where: {
+              tenantId,
+              dependsOn: {
+                tenantId,
+              },
+            },
+          },
+        },
+      },
+      dependsOn: {
+        where: {
+          tenantId,
+          dependsOn: {
+            tenantId,
+          },
+        },
+        orderBy: {
+          dependsOn: {
+            code: 'asc' as const,
+          },
+        },
+        take: BOARD_PREREQUISITE_CODE_LIMIT,
+        select: {
+          dependsOn: {
+            select: {
+              code: true,
+            },
+          },
+        },
+      },
+    };
   }
 
   private toOperationRecord(row: PrismaOperationRow): OperationRecord {

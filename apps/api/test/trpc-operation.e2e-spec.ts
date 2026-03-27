@@ -468,6 +468,103 @@ describe('tRPC operation contracts (e2e)', () => {
     expect(tenantBList.some((operation) => operation.id === createdByTenantB.id)).toBe(true);
   });
 
+  it('adds and removes same-tenant dependencies through tRPC', async () => {
+    const tenantALogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+    const prerequisite = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-PREREQ-${uniqueSuffix()}`,
+      title: 'Prerequisite operation',
+      status: 'DONE',
+      sortIndex: 1,
+    });
+    const blocked = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-BLOCKED-${uniqueSuffix()}`,
+      title: 'Blocked operation',
+      status: 'READY',
+      sortIndex: 2,
+    });
+
+    const withDependency = await tenantAClient.operation.addDependency.mutate({
+      operationId: blocked.id,
+      dependsOnId: prerequisite.id,
+    });
+
+    expect(withDependency).toMatchObject({
+      id: blocked.id,
+      dependencyCount: 1,
+      prerequisiteCodes: [prerequisite.code],
+      prerequisiteOverflowCount: 0,
+    });
+
+    const withoutDependency = await tenantAClient.operation.removeDependency.mutate({
+      operationId: blocked.id,
+      dependsOnId: prerequisite.id,
+    });
+
+    expect(withoutDependency).toMatchObject({
+      id: blocked.id,
+      dependencyCount: 0,
+      prerequisiteCodes: [],
+      prerequisiteOverflowCount: 0,
+    });
+  });
+
+  it('rejects self, duplicate, cross-tenant, and cyclic dependencies', async () => {
+    const tenantALogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBLogin = await authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+    const tenantBOrder = await createOperationOrder(tenantBClient, 'tenant-b');
+
+    const opA = await tenantAClient.operation.create.mutate({ tenantId: 'tenant-a', orderId: order.id, code: `OP-A-${uniqueSuffix()}`, title: 'A', status: 'READY', sortIndex: 1 });
+    const opB = await tenantAClient.operation.create.mutate({ tenantId: 'tenant-a', orderId: order.id, code: `OP-B-${uniqueSuffix()}`, title: 'B', status: 'READY', sortIndex: 2 });
+    const opC = await tenantAClient.operation.create.mutate({ tenantId: 'tenant-a', orderId: order.id, code: `OP-C-${uniqueSuffix()}`, title: 'C', status: 'READY', sortIndex: 3 });
+    const opTenantB = await tenantBClient.operation.create.mutate({ tenantId: 'tenant-b', orderId: tenantBOrder.id, code: `OP-BX-${uniqueSuffix()}`, title: 'BX', status: 'READY', sortIndex: 1 });
+
+    await expect(
+      tenantAClient.operation.addDependency.mutate({ operationId: opA.id, dependsOnId: opA.id }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+
+    const created = await tenantAClient.operation.addDependency.mutate({ operationId: opB.id, dependsOnId: opA.id });
+    expect(created.dependencyCount).toBe(1);
+
+    await expect(
+      tenantAClient.operation.addDependency.mutate({ operationId: opB.id, dependsOnId: opA.id }),
+    ).rejects.toMatchObject({ data: { code: 'CONFLICT' } });
+
+    await expect(
+      tenantAClient.operation.addDependency.mutate({ operationId: opB.id, dependsOnId: opTenantB.id }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+
+    await tenantAClient.operation.addDependency.mutate({ operationId: opC.id, dependsOnId: opB.id });
+
+    await expect(
+      tenantAClient.operation.addDependency.mutate({ operationId: opA.id, dependsOnId: opC.id }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+  });
+
   it('exposes capped same-tenant prerequisite codes on operation.list payloads', async () => {
     const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',

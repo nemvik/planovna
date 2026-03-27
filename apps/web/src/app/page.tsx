@@ -185,6 +185,12 @@ type HomepageAuthLocaleStrings = {
   operationSaveSortButton: string;
   operationPrerequisiteSummaryTemplate: string;
   operationPrerequisiteOverflowTemplate: string;
+  operationDependenciesLabel: string;
+  operationDependencyAddLabel: string;
+  operationDependencyAddButton: string;
+  operationDependencyRemoveButton: string;
+  operationDependencyNone: string;
+  operationDependencyUpdateFailed: string;
   operationMoveFailed: string;
   operationUpdateStatusFailed: string;
   operationUpdateBlockedReasonFailed: string;
@@ -279,6 +285,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveSortButton: 'Uložit pořadí',
     operationPrerequisiteSummaryTemplate: 'Čeká na {codes}{overflow}',
     operationPrerequisiteOverflowTemplate: ' +{count} dalších',
+    operationDependenciesLabel: 'Závislosti',
+    operationDependencyAddLabel: 'Přidat závislost',
+    operationDependencyAddButton: 'Přidat',
+    operationDependencyRemoveButton: 'Odebrat',
+    operationDependencyNone: 'Bez závislostí',
+    operationDependencyUpdateFailed: 'Uložení závislosti se nepodařilo.',
     operationMoveFailed: 'Přesun operace se nepodařil.',
     operationUpdateStatusFailed: 'Nepodařilo se aktualizovat stav operace.',
     operationUpdateBlockedReasonFailed: 'Nepodařilo se aktualizovat důvod blokace.',
@@ -371,6 +383,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveSortButton: 'Save sort',
     operationPrerequisiteSummaryTemplate: 'Waiting on {codes}{overflow}',
     operationPrerequisiteOverflowTemplate: ' +{count} more',
+    operationDependenciesLabel: 'Dependencies',
+    operationDependencyAddLabel: 'Add dependency',
+    operationDependencyAddButton: 'Add',
+    operationDependencyRemoveButton: 'Remove',
+    operationDependencyNone: 'No dependencies',
+    operationDependencyUpdateFailed: 'Failed to update dependencies.',
     operationMoveFailed: 'Failed to move operation.',
     operationUpdateStatusFailed: 'Failed to update operation status.',
     operationUpdateBlockedReasonFailed: 'Failed to update blocked reason.',
@@ -463,6 +481,12 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationSaveSortButton: 'Sortierung speichern',
     operationPrerequisiteSummaryTemplate: 'Wartet auf {codes}{overflow}',
     operationPrerequisiteOverflowTemplate: ' +{count} weitere',
+    operationDependenciesLabel: 'Abhängigkeiten',
+    operationDependencyAddLabel: 'Abhängigkeit hinzufügen',
+    operationDependencyAddButton: 'Hinzufügen',
+    operationDependencyRemoveButton: 'Entfernen',
+    operationDependencyNone: 'Keine Abhängigkeiten',
+    operationDependencyUpdateFailed: 'Abhängigkeiten konnten nicht gespeichert werden.',
     operationMoveFailed: 'Vorgang konnte nicht verschoben werden.',
     operationUpdateStatusFailed: 'Vorgangsstatus konnte nicht aktualisiert werden.',
     operationUpdateBlockedReasonFailed: 'Sperrgrund konnte nicht aktualisiert werden.',
@@ -684,6 +708,7 @@ export default function Home() {
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
   const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
   const [sortIndexDrafts, setSortIndexDrafts] = useState<Record<string, string>>({});
+  const [dependencySelections, setDependencySelections] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<BoardFilters>(defaultBoardFilters);
   const hydrationAutoLoadPendingRef = useRef(false);
   const loginPendingRef = useRef(false);
@@ -898,6 +923,7 @@ export default function Home() {
     setTitleDrafts({});
     setCodeDrafts({});
     setSortIndexDrafts({});
+    setDependencySelections({});
     setOperationLoadState('idle');
   };
 
@@ -1388,6 +1414,63 @@ export default function Home() {
       { sortIndex },
       homepageAuthCopy.operationUpdateSortIndexFailed,
     );
+  };
+
+  const onAddDependency = async (operation: Operation) => {
+    const dependsOnId = dependencySelections[operation.id];
+
+    if (!dependsOnId) {
+      return;
+    }
+
+    setBoardMessage('');
+
+    try {
+      const updated = (await trpcClient.operation.addDependency.mutate({
+        operationId: operation.id,
+        dependsOnId,
+      })) as Operation;
+
+      setOperations((currentOperations) =>
+        currentOperations.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        ),
+      );
+      setDependencySelections((currentSelections) => ({
+        ...currentSelections,
+        [operation.id]: '',
+      }));
+    } catch {
+      await loadOperations().catch(() => undefined);
+      setBoardMessage(homepageAuthCopy.operationDependencyUpdateFailed);
+    }
+  };
+
+  const onRemoveDependency = async (operation: Operation, dependsOnCode: string) => {
+    const dependsOnOperation = operations.find((candidate) => candidate.code === dependsOnCode);
+
+    if (!dependsOnOperation) {
+      setBoardMessage(homepageAuthCopy.operationDependencyUpdateFailed);
+      return;
+    }
+
+    setBoardMessage('');
+
+    try {
+      const updated = (await trpcClient.operation.removeDependency.mutate({
+        operationId: operation.id,
+        dependsOnId: dependsOnOperation.id,
+      })) as Operation;
+
+      setOperations((currentOperations) =>
+        currentOperations.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        ),
+      );
+    } catch {
+      await loadOperations().catch(() => undefined);
+      setBoardMessage(homepageAuthCopy.operationDependencyUpdateFailed);
+    }
   };
 
   const controlsDisabled = !accessToken;
@@ -1940,6 +2023,66 @@ export default function Home() {
                                       ) : null}
                                     </form>
                                   ) : null}
+                                  <div className="mt-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2.5">
+                                    <div className="text-xs font-medium uppercase tracking-wide text-slate-600">
+                                      {homepageAuthCopy.operationDependenciesLabel}
+                                    </div>
+                                    <div className="mt-2 space-y-2">
+                                      {operation.prerequisiteCodes && operation.prerequisiteCodes.length > 0 ? (
+                                        operation.prerequisiteCodes.map((code) => (
+                                          <div key={code} className="flex items-center justify-between gap-2 rounded border bg-white px-2 py-1.5 text-sm text-slate-800">
+                                            <span>{code}</span>
+                                            <button
+                                              className="rounded border bg-white px-2 py-1 text-xs transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
+                                              type="button"
+                                              disabled={isOperationLocked}
+                                              onClick={() => void onRemoveDependency(operation, code)}
+                                            >
+                                              {homepageAuthCopy.operationDependencyRemoveButton}
+                                            </button>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <p className="text-sm text-slate-600">{homepageAuthCopy.operationDependencyNone}</p>
+                                      )}
+                                    </div>
+                                    <div className="mt-3 flex items-end gap-3">
+                                      <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                        {homepageAuthCopy.operationDependencyAddLabel}
+                                        <select
+                                          className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                          value={dependencySelections[operation.id] ?? ''}
+                                          disabled={isOperationLocked}
+                                          onChange={(event) =>
+                                            setDependencySelections((currentSelections) => ({
+                                              ...currentSelections,
+                                              [operation.id]: event.target.value,
+                                            }))
+                                          }
+                                        >
+                                          <option value="">—</option>
+                                          {operations
+                                            .filter((candidate) => candidate.id !== operation.id)
+                                            .filter(
+                                              (candidate) => !(operation.prerequisiteCodes ?? []).includes(candidate.code),
+                                            )
+                                            .map((candidate) => (
+                                              <option key={candidate.id} value={candidate.id}>
+                                                {candidate.code} — {candidate.title}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      </label>
+                                      <button
+                                        className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
+                                        type="button"
+                                        disabled={isOperationLocked || !(dependencySelections[operation.id] ?? '')}
+                                        onClick={() => void onAddDependency(operation)}
+                                      >
+                                        {homepageAuthCopy.operationDependencyAddButton}
+                                      </button>
+                                    </div>
+                                  </div>
                                   <div className="mt-3.5 grid gap-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2 sm:grid-cols-2">
                                     <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                                       {homepageAuthCopy.operationCardStatusLabel}

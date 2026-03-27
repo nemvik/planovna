@@ -21,5 +21,17 @@ export const UpdateOperationSchema = CreateOperationSchema.partial().extend({
   version: z.number().int().positive(),
 });
 
+export const CreateOperationDependencySchema = z.object({
+  operationId: z.string().min(1),
+  dependsOnId: z.string().min(1),
+});
+
+export const RemoveOperationDependencySchema = z.object({
+  operationId: z.string().min(1),
+  dependsOnId: z.string().min(1),
+});
+
 export type CreateOperationDto = z.infer<typeof CreateOperationSchema>;
 export type UpdateOperationDto = z.infer<typeof UpdateOperationSchema>;
+export type CreateOperationDependencyDto = z.infer<typeof CreateOperationDependencySchema>;
+export type RemoveOperationDependencyDto = z.infer<typeof RemoveOperationDependencySchema>;
