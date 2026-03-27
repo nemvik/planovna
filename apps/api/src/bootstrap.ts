@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { NextFunction, Request, Response } from 'express';
 import { AuthService } from './modules/auth/auth.service';
@@ -12,6 +12,7 @@ import { createAppRouter } from './trpc/routers/app.router';
 
 const API_CORS_ALLOWED_ORIGINS_ENV = 'API_CORS_ALLOWED_ORIGINS';
 const PROD_DEFAULT_CORS_ALLOWED_ORIGINS = ['https://planovna.nemvik.com'];
+const logger = new Logger('HttpAccess');
 
 function normalizeOrigin(origin: string): string {
   return origin.trim().replace(/\/+$/, '');
@@ -66,6 +67,18 @@ export function configureApiApp(app: INestApplication) {
 
       callback(null, false);
     },
+  });
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const startedAt = Date.now();
+
+    res.on('finish', () => {
+      logger.log(
+        `${req.method} ${req.originalUrl ?? req.url} ${res.statusCode} ${Date.now() - startedAt}ms`,
+      );
+    });
+
+    next();
   });
 
   app.use('/trpc', (req: Request, res: Response, next: NextFunction) => {

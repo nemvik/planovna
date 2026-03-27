@@ -19,6 +19,26 @@ This runbook makes the production runtime contract explicit before boot.
 
 ## Optional environment variables
 
+### `SENTRY_DSN`
+- Optional.
+- When set, enables Sentry error monitoring for the API runtime and Next.js server runtime.
+- Leave unset to keep the monitoring baseline in log-only mode.
+- Treat as a secret.
+
+### `NEXT_PUBLIC_SENTRY_DSN`
+- Optional.
+- When set, enables Sentry browser-side error monitoring for the web app.
+- Leave unset to keep browser monitoring disabled.
+- Public by nature in the client bundle; do not treat it as a secret.
+
+### `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT`
+- Optional.
+- Label Sentry events by environment (for example `production`, `staging`).
+
+### `SENTRY_RELEASE` / `NEXT_PUBLIC_SENTRY_RELEASE`
+- Optional.
+- Label Sentry events by release/build identifier.
+
 ### `PORT`
 - Optional.
 - Defaults to `3000` when unset.
@@ -135,6 +155,27 @@ Default behavior:
 - boots the production API locally when `PLANOVNA_CORS_SMOKE_API_URL` is unset,
 - checks an allowed origin preflight against `/trpc/auth.login`,
 - checks a blocked origin preflight against the same endpoint.
+
+## Monitoring baseline (`Sentry + logy`)
+Minimal M4 baseline now consists of:
+- API startup/error logging via Nest logger
+- API access logs for incoming HTTP requests
+- env-gated Sentry capture for API runtime and Next.js runtime when DSNs are configured
+- env-gated browser Sentry capture when `NEXT_PUBLIC_SENTRY_DSN` is configured
+
+Safe default when DSNs are unset:
+- app continues to boot normally
+- logs remain active
+- Sentry stays disabled without failing the build/runtime
+
+Minimal verification path:
+1. Build the workspace with DSNs unset.
+2. Start the API and web normally.
+3. Confirm startup log includes either:
+   - `API monitoring baseline active: Sentry + access/error logs`, or
+   - `API monitoring baseline active: access/error logs (Sentry disabled: missing SENTRY_DSN)`
+4. Hit `/health` or `/trpc/auth.login` and confirm access logs are emitted.
+5. If DSNs are configured, trigger a handled test error in a non-production environment and confirm it appears in Sentry.
 
 Common overrides:
 - `PLANOVNA_CORS_SMOKE_API_URL`: target an already running API instead of booting a local one.
