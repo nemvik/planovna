@@ -91,6 +91,17 @@ type RoutingTemplate = {
   }>;
 };
 
+type BoardAuditEvent = {
+  id: string;
+  tenantId: string;
+  actorUserId?: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  summary: string;
+  createdAt: string;
+};
+
 type InvoiceSummary = {
   id: string;
   number: string;
@@ -170,6 +181,14 @@ type HomepageAuthLocaleStrings = {
   routingTemplatesApplyFailed: string;
   routingTemplatesPreviewLabel: string;
   routingTemplatesLoading: string;
+  auditLogTitle: string;
+  auditLogOpenButton: string;
+  auditLogCloseButton: string;
+  auditLogLoading: string;
+  auditLogEmpty: string;
+  auditLogLoadFailed: string;
+  auditLogActorFallback: string;
+  auditLogTimestampFallback: string;
   cashflowPlannedIn: string;
   cashflowActualIn: string;
   invoiceStatusLabel: string;
@@ -279,6 +298,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     routingTemplatesApplyFailed: 'Použití šablony se nepodařilo.',
     routingTemplatesPreviewLabel: 'Náhled operací',
     routingTemplatesLoading: 'Načítání šablon…',
+    auditLogTitle: 'Audit boardu',
+    auditLogOpenButton: 'Otevřít audit',
+    auditLogCloseButton: 'Zavřít audit',
+    auditLogLoading: 'Načítání auditu…',
+    auditLogEmpty: 'Zatím nejsou dostupné žádné auditní záznamy.',
+    auditLogLoadFailed: 'Auditní záznamy se nepodařilo načíst.',
+    auditLogActorFallback: 'Neznámý aktér',
+    auditLogTimestampFallback: 'Neznámý čas',
     cashflowPlannedIn: 'Plánovaný příjem',
     cashflowActualIn: 'Skutečný příjem',
     invoiceStatusLabel: 'Stav faktur',
@@ -387,6 +414,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     routingTemplatesApplyFailed: 'Failed to apply routing template.',
     routingTemplatesPreviewLabel: 'Operation preview',
     routingTemplatesLoading: 'Loading templates…',
+    auditLogTitle: 'Board audit log',
+    auditLogOpenButton: 'Open audit log',
+    auditLogCloseButton: 'Close audit log',
+    auditLogLoading: 'Loading audit log…',
+    auditLogEmpty: 'No audit events are available yet.',
+    auditLogLoadFailed: 'Failed to load audit events.',
+    auditLogActorFallback: 'Unknown actor',
+    auditLogTimestampFallback: 'Unknown time',
     cashflowPlannedIn: 'Planned in',
     cashflowActualIn: 'Actual in',
     invoiceStatusLabel: 'Invoice status',
@@ -495,6 +530,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     routingTemplatesApplyFailed: 'Ablaufvorlage konnte nicht angewendet werden.',
     routingTemplatesPreviewLabel: 'Vorgangs-Vorschau',
     routingTemplatesLoading: 'Vorlagen werden geladen…',
+    auditLogTitle: 'Board-Auditlog',
+    auditLogOpenButton: 'Auditlog öffnen',
+    auditLogCloseButton: 'Auditlog schließen',
+    auditLogLoading: 'Auditlog wird geladen…',
+    auditLogEmpty: 'Noch keine Audit-Ereignisse verfügbar.',
+    auditLogLoadFailed: 'Audit-Ereignisse konnten nicht geladen werden.',
+    auditLogActorFallback: 'Unbekannter Akteur',
+    auditLogTimestampFallback: 'Unbekannte Zeit',
     cashflowPlannedIn: 'Geplant eingehend',
     cashflowActualIn: 'Tatsächlich eingehend',
     invoiceStatusLabel: 'Rechnungsstatus',
@@ -764,6 +807,10 @@ export default function Home() {
   const [routingTemplates, setRoutingTemplates] = useState<RoutingTemplate[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
+  const [auditLogLoading, setAuditLogLoading] = useState(false);
+  const [auditLogError, setAuditLogError] = useState('');
+  const [auditLogEvents, setAuditLogEvents] = useState<BoardAuditEvent[]>([]);
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
   const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
   const [authMessage, setAuthMessage] = useState('');
@@ -984,6 +1031,10 @@ export default function Home() {
     setRoutingTemplates([]);
     setSelectedOrderId('');
     setSelectedTemplateId('');
+    setAuditLogOpen(false);
+    setAuditLogLoading(false);
+    setAuditLogError('');
+    setAuditLogEvents([]);
     setCashflowItems([]);
     setInvoiceSummaries([]);
     setBoardMessage('');
@@ -1500,6 +1551,24 @@ export default function Home() {
     );
   };
 
+  const loadAuditLog = async () => {
+    setAuditLogLoading(true);
+    setAuditLogError('');
+
+    try {
+      const events = await trpcClient.operation.auditLog.query() as BoardAuditEvent[];
+      setAuditLogEvents(events);
+    } catch (error) {
+      if (hasForbiddenCode(error)) {
+        resetSession(homepageAuthCopy.sessionExpired);
+      } else {
+        setAuditLogError(homepageAuthCopy.auditLogLoadFailed);
+      }
+    } finally {
+      setAuditLogLoading(false);
+    }
+  };
+
   const onApplyRoutingTemplate = async () => {
     if (!selectedOrderId || !selectedTemplateId) {
       return;
@@ -1691,18 +1760,65 @@ export default function Home() {
             : homepageAuthCopy.loadOperationsButton}
         </button>
         {accessToken ? (
-          <button
-            className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-            type="button"
-            onClick={() => resetSession()}
-          >
-            {homepageAuthCopy.logoutResetSessionButton}
-          </button>
+          <>
+            <button
+              className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              type="button"
+              onClick={() => {
+                setAuditLogOpen(true);
+                void loadAuditLog();
+              }}
+            >
+              {homepageAuthCopy.auditLogOpenButton}
+            </button>
+            <button
+              className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              type="button"
+              onClick={() => resetSession()}
+            >
+              {homepageAuthCopy.logoutResetSessionButton}
+            </button>
+          </>
         ) : null}
       </div>
 
       {authMessage ? <p>{authMessage}</p> : null}
       {boardMessage ? <p>{boardMessage}</p> : null}
+
+      {auditLogOpen ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30">
+          <aside className="h-full w-full max-w-xl overflow-y-auto bg-white p-4 shadow-xl">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">{homepageAuthCopy.auditLogTitle}</h2>
+              <button
+                className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                type="button"
+                onClick={() => setAuditLogOpen(false)}
+              >
+                {homepageAuthCopy.auditLogCloseButton}
+              </button>
+            </div>
+            {auditLogLoading ? (
+              <p className="mt-4 text-sm text-slate-600">{homepageAuthCopy.auditLogLoading}</p>
+            ) : auditLogError ? (
+              <p className="mt-4 text-sm text-rose-700">{auditLogError}</p>
+            ) : auditLogEvents.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-600">{homepageAuthCopy.auditLogEmpty}</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {auditLogEvents.map((event) => (
+                  <li key={event.id} className="rounded border bg-slate-50 p-3">
+                    <p className="text-sm font-medium text-slate-900">{event.summary}</p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {event.actorUserId ?? homepageAuthCopy.auditLogActorFallback} · {event.createdAt ? new Date(event.createdAt).toLocaleString() : homepageAuthCopy.auditLogTimestampFallback}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        </div>
+      ) : null}
 
       {accessToken ? (
         <section className="rounded border bg-slate-50 p-4">

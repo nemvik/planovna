@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { BoardAuditService } from '../operation/board-audit.service';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateOrderDto, UpdateOrderDto } from './dto/order.dto';
+import { ApplyRoutingTemplateDto, CreateOrderDto, UpdateOrderDto } from './dto/order.dto';
 
 type OrderRecord = CreateOrderDto & { id: string; version: number };
 
@@ -69,7 +70,10 @@ const ROUTING_TEMPLATES: RoutingTemplateRecord[] = [
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly boardAuditService: BoardAuditService,
+  ) {}
 
   async create(input: CreateOrderDto) {
     const created = await this.prisma.order.create({
@@ -102,23 +106,26 @@ export class OrderService {
     return ROUTING_TEMPLATES;
   }
 
-  async applyRoutingTemplate(tenantId: string, orderId: string, templateId: string) {
+  async applyRoutingTemplate(
+    tenantId: string,
+    input: ApplyRoutingTemplateDto & { actorUserId?: string },
+  ) {
     const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      select: { id: true, tenantId: true },
+      where: { id: input.orderId },
+      select: { id: true, tenantId: true, code: true },
     });
 
     if (!order || order.tenantId !== tenantId) {
       return null;
     }
 
-    const template = ROUTING_TEMPLATES.find((candidate) => candidate.id === templateId);
+    const template = ROUTING_TEMPLATES.find((candidate) => candidate.id === input.templateId);
     if (!template) {
       return { code: 'TEMPLATE_NOT_FOUND' as const };
     }
 
     const existingCount = await this.prisma.operation.count({
-      where: { tenantId, orderId },
+      where: { tenantId, orderId: input.orderId },
     });
 
     const suffix = String(existingCount + 1).padStart(2, '0');
@@ -126,7 +133,7 @@ export class OrderService {
     await this.prisma.operation.createMany({
       data: template.operations.map((operation, index) => ({
         tenantId,
-        orderId,
+        orderId: input.orderId,
         code: `${operation.code}-${suffix}-${index + 1}`,
         title: operation.title,
         status: operation.status,
@@ -134,11 +141,20 @@ export class OrderService {
       })),
     });
 
+    await this.boardAuditService.append({
+      tenantId,
+      actorUserId: input.actorUserId,
+      entityType: 'order',
+      entityId: order.id,
+      action: 'routing_template_apply',
+      summary: `${order.code}: applied routing template ${template.name}`,
+    });
+
     return {
       appliedCount: template.operations.length,
       template,
       operations: (await this.prisma.operation.findMany({
-        where: { tenantId, orderId },
+        where: { tenantId, orderId: input.orderId },
         orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
         select: {
           id: true,

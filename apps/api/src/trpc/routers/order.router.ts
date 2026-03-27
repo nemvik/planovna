@@ -48,11 +48,10 @@ export const createOrderRouter = (orderService: OrderService) =>
     applyRoutingTemplate: protectedProcedure
       .input(ApplyRoutingTemplateSchema)
       .mutation(async ({ ctx, input }) => {
-        const result = await orderService.applyRoutingTemplate(
-          ctx.auth.tenantId,
-          input.orderId,
-          input.templateId,
-        );
+        const result = await orderService.applyRoutingTemplate(ctx.auth.tenantId, {
+          ...input,
+          actorUserId: ctx.auth.userId,
+        });
 
         if (!result) {
           throw new TRPCError({

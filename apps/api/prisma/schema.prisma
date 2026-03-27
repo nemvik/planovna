@@ -43,6 +43,22 @@ enum CashflowKind {
   @@schema("app")
 }
 
+model BoardAuditEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  actorUserId String?
+  entityType  String
+  entityId    String
+  action      String
+  summary     String
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@schema("app")
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -55,6 +71,7 @@ model Tenant {
   operations Operation[]
   invoices   Invoice[]
   cashflows  CashflowItem[]
+  boardAuditEvents BoardAuditEvent[]
 
   @@schema("app")
 }

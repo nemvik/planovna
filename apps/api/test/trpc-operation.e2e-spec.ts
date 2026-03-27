@@ -565,6 +565,58 @@ describe('tRPC operation contracts (e2e)', () => {
     ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
   });
 
+  it('records board audit events for operation updates and dependency changes', async () => {
+    const tenantALogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const order = await createOperationOrder(tenantAClient, 'tenant-a');
+    const prerequisite = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-AUDIT-P-${uniqueSuffix()}`,
+      title: 'Audit prerequisite',
+      status: 'READY',
+      sortIndex: 1,
+    });
+    const operation = await tenantAClient.operation.create.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      code: `OP-A-AUDIT-${uniqueSuffix()}`,
+      title: 'Audit operation',
+      status: 'READY',
+      sortIndex: 2,
+    });
+
+    await tenantAClient.operation.update.mutate({
+      id: operation.id,
+      tenantId: 'tenant-a',
+      version: operation.version,
+      status: 'IN_PROGRESS',
+      startDate: '2026-03-11T00:00:00.000Z',
+      sortIndex: 3000,
+    });
+    await tenantAClient.operation.addDependency.mutate({
+      operationId: operation.id,
+      dependsOnId: prerequisite.id,
+    });
+    await tenantAClient.operation.removeDependency.mutate({
+      operationId: operation.id,
+      dependsOnId: prerequisite.id,
+    });
+
+    const events = await tenantAClient.operation.auditLog.query();
+
+    expect(events.some((event) => event.action === 'create' && event.entityId === operation.id)).toBe(true);
+    expect(events.some((event) => event.action === 'update' && event.entityId === operation.id)).toBe(true);
+    expect(events.some((event) => event.action === 'dependency_add' && event.entityId === operation.id)).toBe(true);
+    expect(events.some((event) => event.action === 'dependency_remove' && event.entityId === operation.id)).toBe(true);
+  });
+
   it('exposes capped same-tenant prerequisite codes on operation.list payloads', async () => {
     const tenantALogin = await authService.login({
       email: 'owner@tenant-a.local',

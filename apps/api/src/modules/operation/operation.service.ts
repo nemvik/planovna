@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BoardAuditService } from './board-audit.service';
 import {
   CreateOperationDependencyDto,
   CreateOperationDto,
@@ -56,9 +57,12 @@ type PrismaOperationRow = {
 
 @Injectable()
 export class OperationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly boardAuditService: BoardAuditService,
+  ) {}
 
-  async create(input: CreateOperationDto) {
+  async create(input: CreateOperationDto & { actorUserId?: string }) {
     const created = await this.prisma.operation.create({
       data: {
         tenantId: input.tenantId,
@@ -74,6 +78,15 @@ export class OperationService {
       select: this.operationSelect(input.tenantId),
     });
 
+    await this.boardAuditService.append({
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      entityType: 'operation',
+      entityId: created.id,
+      action: 'create',
+      summary: `Created operation ${created.code} — ${created.title}`,
+    });
+
     return this.toOperationRecord(created);
   }
 
@@ -87,7 +100,11 @@ export class OperationService {
     return operations.map((operation) => this.toOperationRecord(operation));
   }
 
-  async update(input: UpdateOperationDto) {
+  async listAudit(tenantId: string) {
+    return this.boardAuditService.list(tenantId);
+  }
+
+  async update(input: UpdateOperationDto & { actorUserId?: string }) {
     const existing = await this.prisma.operation.findUnique({
       where: { id: input.id },
       select: {
@@ -103,10 +120,22 @@ export class OperationService {
 
     assertVersion('Operation', existing.id, input.version, existing.version);
 
+    const before = await this.prisma.operation.findUnique({
+      where: { id: input.id },
+      select: {
+        code: true,
+        title: true,
+        status: true,
+        startDate: true,
+        sortIndex: true,
+      },
+    });
+
     const {
       id: _ignoredId,
       tenantId: _ignoredTenantId,
       version: _ignoredVersion,
+      actorUserId: _ignoredActorUserId,
       ...patch
     } = input;
     const updateData = {
@@ -154,10 +183,42 @@ export class OperationService {
       return null;
     }
 
+    const summaries: string[] = [];
+    if (before) {
+      if (before.status !== row.status) {
+        summaries.push(`status ${before.status} → ${row.status}`);
+      }
+      const beforeStart = before.startDate?.toISOString().slice(0, 10) ?? 'Backlog';
+      const afterStart = row.startDate?.toISOString().slice(0, 10) ?? 'Backlog';
+      if (beforeStart !== afterStart) {
+        summaries.push(`bucket ${beforeStart} → ${afterStart}`);
+      }
+      if (before.sortIndex !== row.sortIndex) {
+        summaries.push(`sort ${before.sortIndex} → ${row.sortIndex}`);
+      }
+      if (before.title !== row.title) {
+        summaries.push(`title updated to ${row.title}`);
+      }
+    }
+
+    if (summaries.length > 0) {
+      await this.boardAuditService.append({
+        tenantId: row.tenantId,
+        actorUserId: input.actorUserId,
+        entityType: 'operation',
+        entityId: row.id,
+        action: 'update',
+        summary: `${row.code}: ${summaries.join(', ')}`,
+      });
+    }
+
     return this.toOperationRecord(row);
   }
 
-  async addDependency(tenantId: string, input: CreateOperationDependencyDto) {
+  async addDependency(
+    tenantId: string,
+    input: CreateOperationDependencyDto & { actorUserId?: string },
+  ) {
     if (input.operationId === input.dependsOnId) {
       throw new OperationDependencyValidationError(
         'DEPENDENCY_SELF_REFERENCE',
@@ -168,11 +229,11 @@ export class OperationService {
     const [operation, target, duplicate] = await Promise.all([
       this.prisma.operation.findUnique({
         where: { id: input.operationId },
-        select: { id: true, tenantId: true },
+        select: { id: true, tenantId: true, code: true },
       }),
       this.prisma.operation.findUnique({
         where: { id: input.dependsOnId },
-        select: { id: true, tenantId: true },
+        select: { id: true, tenantId: true, code: true },
       }),
       this.prisma.operationDependency.findUnique({
         where: {
@@ -231,20 +292,44 @@ export class OperationService {
       select: this.operationSelect(tenantId),
     });
 
+    if (row) {
+      await this.boardAuditService.append({
+        tenantId,
+        actorUserId: input.actorUserId,
+        entityType: 'operation',
+        entityId: row.id,
+        action: 'dependency_add',
+        summary: `${row.code}: added dependency on ${target.code}`,
+      });
+    }
+
     return row ? this.toOperationRecord(row) : null;
   }
 
-  async removeDependency(tenantId: string, input: RemoveOperationDependencyDto) {
-    const dependency = await this.prisma.operationDependency.findUnique({
-      where: {
-        tenantId_operationId_dependsOnId: {
-          tenantId,
-          operationId: input.operationId,
-          dependsOnId: input.dependsOnId,
+  async removeDependency(
+    tenantId: string,
+    input: RemoveOperationDependencyDto & { actorUserId?: string },
+  ) {
+    const [dependency, operation, target] = await Promise.all([
+      this.prisma.operationDependency.findUnique({
+        where: {
+          tenantId_operationId_dependsOnId: {
+            tenantId,
+            operationId: input.operationId,
+            dependsOnId: input.dependsOnId,
+          },
         },
-      },
-      select: { id: true },
-    });
+        select: { id: true },
+      }),
+      this.prisma.operation.findUnique({
+        where: { id: input.operationId },
+        select: { code: true },
+      }),
+      this.prisma.operation.findUnique({
+        where: { id: input.dependsOnId },
+        select: { code: true },
+      }),
+    ]);
 
     if (!dependency) {
       throw new OperationDependencyValidationError(
@@ -261,6 +346,17 @@ export class OperationService {
       where: { id: input.operationId },
       select: this.operationSelect(tenantId),
     });
+
+    if (row) {
+      await this.boardAuditService.append({
+        tenantId,
+        actorUserId: input.actorUserId,
+        entityType: 'operation',
+        entityId: row.id,
+        action: 'dependency_remove',
+        summary: `${operation?.code ?? row.code}: removed dependency on ${target?.code ?? input.dependsOnId}`,
+      });
+    }
 
     return row ? this.toOperationRecord(row) : null;
   }
