@@ -16,5 +16,11 @@ export const UpdateOrderSchema = CreateOrderSchema.partial().extend({
   version: z.number().int().positive(),
 });
 
+export const ApplyRoutingTemplateSchema = z.object({
+  orderId: z.string().min(1),
+  templateId: z.string().min(1),
+});
+
 export type CreateOrderDto = z.infer<typeof CreateOrderSchema>;
 export type UpdateOrderDto = z.infer<typeof UpdateOrderSchema>;
+export type ApplyRoutingTemplateDto = z.infer<typeof ApplyRoutingTemplateSchema>;

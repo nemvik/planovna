@@ -67,6 +67,30 @@ type CashflowItem = {
   date: string;
 };
 
+type OrderSummary = {
+  id: string;
+  tenantId: string;
+  customerId: string;
+  code: string;
+  title: string;
+  status: string;
+  dueDate?: string;
+  notes?: string;
+  version: number;
+};
+
+type RoutingTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  operations: Array<{
+    code: string;
+    title: string;
+    status: 'READY';
+    sortIndex: number;
+  }>;
+};
+
 type InvoiceSummary = {
   id: string;
   number: string;
@@ -136,6 +160,16 @@ type HomepageAuthLocaleStrings = {
   boardForbidden: string;
   cashflowSummarySectionLabel: string;
   cashflowSnapshotTitle: string;
+  routingTemplatesTitle: string;
+  routingTemplatesOrderLabel: string;
+  routingTemplatesPickerLabel: string;
+  routingTemplatesApplyButton: string;
+  routingTemplatesEmptyOrders: string;
+  routingTemplatesEmptyTemplates: string;
+  routingTemplatesAppliedTemplate: string;
+  routingTemplatesApplyFailed: string;
+  routingTemplatesPreviewLabel: string;
+  routingTemplatesLoading: string;
   cashflowPlannedIn: string;
   cashflowActualIn: string;
   invoiceStatusLabel: string;
@@ -235,6 +269,16 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardForbidden: 'Zakázáno: vaše role nemá oprávnění zobrazit operace.',
     cashflowSummarySectionLabel: 'Přehled peněžního toku',
     cashflowSnapshotTitle: 'Přehled peněžního toku',
+    routingTemplatesTitle: 'Šablony postupů',
+    routingTemplatesOrderLabel: 'Zakázka',
+    routingTemplatesPickerLabel: 'Šablona',
+    routingTemplatesApplyButton: 'Použít šablonu',
+    routingTemplatesEmptyOrders: 'Nejsou dostupné žádné zakázky pro použití šablony.',
+    routingTemplatesEmptyTemplates: 'Žádné šablony nejsou dostupné.',
+    routingTemplatesAppliedTemplate: 'Šablona byla přidána do zakázky.',
+    routingTemplatesApplyFailed: 'Použití šablony se nepodařilo.',
+    routingTemplatesPreviewLabel: 'Náhled operací',
+    routingTemplatesLoading: 'Načítání šablon…',
     cashflowPlannedIn: 'Plánovaný příjem',
     cashflowActualIn: 'Skutečný příjem',
     invoiceStatusLabel: 'Stav faktur',
@@ -333,6 +377,16 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardForbidden: 'Forbidden: your role is not allowed to view operations.',
     cashflowSummarySectionLabel: 'Cashflow summary',
     cashflowSnapshotTitle: 'Cashflow snapshot',
+    routingTemplatesTitle: 'Routing templates',
+    routingTemplatesOrderLabel: 'Order',
+    routingTemplatesPickerLabel: 'Template',
+    routingTemplatesApplyButton: 'Apply template',
+    routingTemplatesEmptyOrders: 'No orders available for template apply.',
+    routingTemplatesEmptyTemplates: 'No routing templates are available.',
+    routingTemplatesAppliedTemplate: 'Template was appended to the order.',
+    routingTemplatesApplyFailed: 'Failed to apply routing template.',
+    routingTemplatesPreviewLabel: 'Operation preview',
+    routingTemplatesLoading: 'Loading templates…',
     cashflowPlannedIn: 'Planned in',
     cashflowActualIn: 'Actual in',
     invoiceStatusLabel: 'Invoice status',
@@ -431,6 +485,16 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardForbidden: 'Verboten: Ihre Rolle darf keine Vorgänge anzeigen.',
     cashflowSummarySectionLabel: 'Cashflow-Übersicht',
     cashflowSnapshotTitle: 'Cashflow-Snapshot',
+    routingTemplatesTitle: 'Ablaufvorlagen',
+    routingTemplatesOrderLabel: 'Auftrag',
+    routingTemplatesPickerLabel: 'Vorlage',
+    routingTemplatesApplyButton: 'Vorlage anwenden',
+    routingTemplatesEmptyOrders: 'Keine Aufträge für die Vorlagenanwendung verfügbar.',
+    routingTemplatesEmptyTemplates: 'Keine Ablaufvorlagen verfügbar.',
+    routingTemplatesAppliedTemplate: 'Vorlage wurde an den Auftrag angehängt.',
+    routingTemplatesApplyFailed: 'Ablaufvorlage konnte nicht angewendet werden.',
+    routingTemplatesPreviewLabel: 'Vorgangs-Vorschau',
+    routingTemplatesLoading: 'Vorlagen werden geladen…',
     cashflowPlannedIn: 'Geplant eingehend',
     cashflowActualIn: 'Tatsächlich eingehend',
     invoiceStatusLabel: 'Rechnungsstatus',
@@ -696,6 +760,10 @@ export default function Home() {
   const [loginPending, setLoginPending] = useState(false);
   const [registerPending, setRegisterPending] = useState(false);
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [routingTemplates, setRoutingTemplates] = useState<RoutingTemplate[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
   const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
   const [authMessage, setAuthMessage] = useState('');
@@ -912,6 +980,10 @@ export default function Home() {
 
   const resetOperationsState = () => {
     setOperations([]);
+    setOrders([]);
+    setRoutingTemplates([]);
+    setSelectedOrderId('');
+    setSelectedTemplateId('');
     setCashflowItems([]);
     setInvoiceSummaries([]);
     setBoardMessage('');
@@ -967,13 +1039,23 @@ export default function Home() {
     setOperationLoadState('loading');
 
     try {
-      const result = await client.operation.list.query();
+      const [operationResult, orderResult, templateResult] = await Promise.all([
+        client.operation.list.query(),
+        client.order.list.query(),
+        client.order.routingTemplates.query(),
+      ]);
       if (loadSession !== operationLoadSessionRef.current) {
         return [];
       }
 
-      const loadedOperations = result as Operation[];
+      const loadedOperations = operationResult as Operation[];
+      const loadedOrders = orderResult as OrderSummary[];
+      const loadedTemplates = templateResult as RoutingTemplate[];
       setOperations(loadedOperations);
+      setOrders(loadedOrders);
+      setRoutingTemplates(loadedTemplates);
+      setSelectedOrderId((current) => current || loadedOrders[0]?.id || '');
+      setSelectedTemplateId((current) => current || loadedTemplates[0]?.id || '');
       setBoardMessage('');
       syncOperationDrafts(loadedOperations);
       setOperationLoadState(loadedOperations.length > 0 ? 'loaded' : 'empty');
@@ -990,6 +1072,8 @@ export default function Home() {
         setOperationLoadState('loaded');
       } else {
         setOperations([]);
+        setOrders([]);
+        setRoutingTemplates([]);
         setOperationLoadState('error');
       }
 
@@ -1416,6 +1500,36 @@ export default function Home() {
     );
   };
 
+  const onApplyRoutingTemplate = async () => {
+    if (!selectedOrderId || !selectedTemplateId) {
+      return;
+    }
+
+    setBoardMessage('');
+
+    try {
+      const result = await trpcClient.order.applyRoutingTemplate.mutate({
+        orderId: selectedOrderId,
+        templateId: selectedTemplateId,
+      }) as { operations: Operation[] };
+
+      setOperations(result.operations);
+      syncOperationDrafts(result.operations);
+      setOperationLoadState(result.operations.length > 0 ? 'loaded' : 'empty');
+      setBoardMessage(homepageAuthCopy.routingTemplatesAppliedTemplate);
+    } catch (error) {
+      if (hasForbiddenCode(error)) {
+        resetSession(homepageAuthCopy.sessionExpired);
+      } else if (extractConflictData(error)) {
+        await loadOperations().catch(() => undefined);
+        setBoardMessage(homepageAuthCopy.boardConflictReloaded);
+      } else {
+        await loadOperations().catch(() => undefined);
+        setBoardMessage(homepageAuthCopy.routingTemplatesApplyFailed);
+      }
+    }
+  };
+
   const onAddDependency = async (operation: Operation) => {
     const dependsOnId = dependencySelections[operation.id];
 
@@ -1589,6 +1703,74 @@ export default function Home() {
 
       {authMessage ? <p>{authMessage}</p> : null}
       {boardMessage ? <p>{boardMessage}</p> : null}
+
+      {accessToken ? (
+        <section className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">{homepageAuthCopy.routingTemplatesTitle}</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+            <label className="flex flex-col gap-1 text-sm">
+              {homepageAuthCopy.routingTemplatesOrderLabel}
+              <select
+                className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900"
+                value={selectedOrderId}
+                onChange={(event) => setSelectedOrderId(event.target.value)}
+                disabled={orders.length === 0}
+              >
+                {orders.length === 0 ? (
+                  <option value="">{homepageAuthCopy.routingTemplatesEmptyOrders}</option>
+                ) : (
+                  orders.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      {order.code} — {order.title}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              {homepageAuthCopy.routingTemplatesPickerLabel}
+              <select
+                className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900"
+                value={selectedTemplateId}
+                onChange={(event) => setSelectedTemplateId(event.target.value)}
+                disabled={routingTemplates.length === 0}
+              >
+                {routingTemplates.length === 0 ? (
+                  <option value="">{homepageAuthCopy.routingTemplatesEmptyTemplates}</option>
+                ) : (
+                  routingTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <button
+              className="self-end rounded bg-slate-900 px-3 py-2 text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
+              type="button"
+              disabled={!selectedOrderId || !selectedTemplateId || routingTemplates.length === 0 || orders.length === 0}
+              onClick={() => void onApplyRoutingTemplate()}
+            >
+              {homepageAuthCopy.routingTemplatesApplyButton}
+            </button>
+          </div>
+          <div className="mt-3 rounded border bg-white p-3">
+            <p className="text-sm font-medium text-slate-700">{homepageAuthCopy.routingTemplatesPreviewLabel}</p>
+            {routingTemplates.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-600">{homepageAuthCopy.routingTemplatesEmptyTemplates}</p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                {(routingTemplates.find((template) => template.id === selectedTemplateId)?.operations ?? []).map((operation) => (
+                  <li key={`${selectedTemplateId}-${operation.code}`}>
+                    {operation.code} — {operation.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {accessToken ? (
         <section aria-label={homepageAuthCopy.cashflowSummarySectionLabel} className="rounded border bg-slate-50 p-4">

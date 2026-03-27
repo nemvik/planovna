@@ -289,4 +289,79 @@ describe('tRPC order contracts (e2e)', () => {
       version: 1,
     });
   });
+
+  it('lists routing templates and append-applies them to an order', async () => {
+    const tenantALogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    expect(tenantALogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const customer = await createOrderCustomer(tenantAClient, 'tenant-a');
+    const order = await tenantAClient.order.create.mutate({
+      tenantId: 'tenant-a',
+      customerId: customer.id,
+      code: `ORD-TPL-${uniqueSuffix()}`,
+      title: 'Template apply order',
+      status: 'OPEN',
+    });
+
+    const templates = await tenantAClient.order.routingTemplates.query();
+    expect(templates.length).toBeGreaterThan(0);
+
+    const applied = await tenantAClient.order.applyRoutingTemplate.mutate({
+      orderId: order.id,
+      templateId: templates[0]!.id,
+    });
+
+    expect(applied.appliedCount).toBe(templates[0]!.operations.length);
+    expect(applied.operations.length).toBe(templates[0]!.operations.length);
+    expect(applied.operations.every((operation) => operation.orderId === order.id)).toBe(true);
+
+    const appended = await tenantAClient.order.applyRoutingTemplate.mutate({
+      orderId: order.id,
+      templateId: templates[0]!.id,
+    });
+
+    expect(appended.operations.length).toBe(templates[0]!.operations.length * 2);
+  });
+
+  it('rejects template apply for invalid template or cross-tenant order', async () => {
+    const tenantALogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBLogin = await authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+    expect(tenantALogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
+
+    const tenantAClient = createClient(tenantALogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
+    const customer = await createOrderCustomer(tenantAClient, 'tenant-a');
+    const order = await tenantAClient.order.create.mutate({
+      tenantId: 'tenant-a',
+      customerId: customer.id,
+      code: `ORD-TPL-BLOCK-${uniqueSuffix()}`,
+      title: 'Blocked template order',
+      status: 'OPEN',
+    });
+
+    await expect(
+      tenantAClient.order.applyRoutingTemplate.mutate({
+        orderId: order.id,
+        templateId: 'missing-template',
+      }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+
+    await expect(
+      tenantBClient.order.applyRoutingTemplate.mutate({
+        orderId: order.id,
+        templateId: 'standard-casting',
+      }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+  });
 });

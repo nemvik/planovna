@@ -5,6 +5,18 @@ import { CreateOrderDto, UpdateOrderDto } from './dto/order.dto';
 
 type OrderRecord = CreateOrderDto & { id: string; version: number };
 
+type RoutingTemplateRecord = {
+  id: string;
+  name: string;
+  description: string;
+  operations: Array<{
+    code: string;
+    title: string;
+    status: 'READY';
+    sortIndex: number;
+  }>;
+};
+
 type PrismaOrderRow = {
   id: string;
   tenantId: string;
@@ -28,6 +40,32 @@ const orderRecordSelect = {
   notes: true,
   version: true,
 } as const;
+
+const ROUTING_TEMPLATES: RoutingTemplateRecord[] = [
+  {
+    id: 'standard-casting',
+    name: 'Standard casting flow',
+    description: 'Pattern prep -> mould -> casting -> finishing -> QA',
+    operations: [
+      { code: 'TPL-10', title: 'Pattern preparation', status: 'READY', sortIndex: 1000 },
+      { code: 'TPL-20', title: 'Mould preparation', status: 'READY', sortIndex: 2000 },
+      { code: 'TPL-30', title: 'Casting', status: 'READY', sortIndex: 3000 },
+      { code: 'TPL-40', title: 'Finishing', status: 'READY', sortIndex: 4000 },
+      { code: 'TPL-50', title: 'Quality check', status: 'READY', sortIndex: 5000 },
+    ],
+  },
+  {
+    id: 'express-repair',
+    name: 'Express repair flow',
+    description: 'Intake -> repair -> verification -> release',
+    operations: [
+      { code: 'TPL-10', title: 'Intake check', status: 'READY', sortIndex: 1000 },
+      { code: 'TPL-20', title: 'Repair work', status: 'READY', sortIndex: 2000 },
+      { code: 'TPL-30', title: 'Verification', status: 'READY', sortIndex: 3000 },
+      { code: 'TPL-40', title: 'Release', status: 'READY', sortIndex: 4000 },
+    ],
+  },
+];
 
 @Injectable()
 export class OrderService {
@@ -58,6 +96,86 @@ export class OrderService {
     });
 
     return orders.map((order) => this.toOrderRecord(order));
+  }
+
+  listRoutingTemplates() {
+    return ROUTING_TEMPLATES;
+  }
+
+  async applyRoutingTemplate(tenantId: string, orderId: string, templateId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, tenantId: true },
+    });
+
+    if (!order || order.tenantId !== tenantId) {
+      return null;
+    }
+
+    const template = ROUTING_TEMPLATES.find((candidate) => candidate.id === templateId);
+    if (!template) {
+      return { code: 'TEMPLATE_NOT_FOUND' as const };
+    }
+
+    const existingCount = await this.prisma.operation.count({
+      where: { tenantId, orderId },
+    });
+
+    const suffix = String(existingCount + 1).padStart(2, '0');
+
+    await this.prisma.operation.createMany({
+      data: template.operations.map((operation, index) => ({
+        tenantId,
+        orderId,
+        code: `${operation.code}-${suffix}-${index + 1}`,
+        title: operation.title,
+        status: operation.status,
+        sortIndex: existingCount * 1000 + operation.sortIndex,
+      })),
+    });
+
+    return {
+      appliedCount: template.operations.length,
+      template,
+      operations: (await this.prisma.operation.findMany({
+        where: { tenantId, orderId },
+        orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          id: true,
+          tenantId: true,
+          orderId: true,
+          code: true,
+          title: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          sortIndex: true,
+          blockedReason: true,
+          version: true,
+          _count: { select: { dependsOn: true } },
+          dependsOn: {
+            orderBy: { dependsOn: { code: 'asc' } },
+            take: 3,
+            select: { dependsOn: { select: { code: true } } },
+          },
+        },
+      })).map((operation) => ({
+        id: operation.id,
+        tenantId: operation.tenantId,
+        orderId: operation.orderId,
+        code: operation.code,
+        title: operation.title,
+        status: operation.status,
+        startDate: operation.startDate?.toISOString(),
+        endDate: operation.endDate?.toISOString(),
+        sortIndex: operation.sortIndex,
+        blockedReason: operation.blockedReason ?? undefined,
+        version: operation.version,
+        dependencyCount: operation._count.dependsOn,
+        prerequisiteCodes: operation.dependsOn.map((dependency) => dependency.dependsOn.code),
+        prerequisiteOverflowCount: Math.max(0, operation._count.dependsOn - operation.dependsOn.length),
+      })),
+    };
   }
 
   async update(input: UpdateOrderDto) {
