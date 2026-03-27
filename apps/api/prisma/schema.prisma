@@ -71,6 +71,7 @@ model Tenant {
   operations Operation[]
   invoices   Invoice[]
   cashflows  CashflowItem[]
+  recurringCashflowRules RecurringCashflowRule[]
   boardAuditEvents BoardAuditEvent[]
 
   @@schema("app")
@@ -220,5 +221,27 @@ model CashflowItem {
   invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, date, kind])
+  @@schema("app")
+}
+
+model RecurringCashflowRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  label       String
+  amount      Decimal  @db.Decimal(14, 2)
+  currency    String
+  interval    String
+  startDate   DateTime
+  nextRunAt   DateTime
+  note        String?
+  status      String
+  stoppedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, nextRunAt])
   @@schema("app")
 }

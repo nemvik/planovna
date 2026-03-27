@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  CreateRecurringCashflowRuleDto,
+  RecurringCashflowRuleActionDto,
+  UpdateRecurringCashflowRuleDto,
+} from './dto/recurring-cashflow.dto';
 
 export type CashflowKind = 'PLANNED_IN' | 'ACTUAL_IN';
 export type CashflowItem = {
@@ -13,6 +18,21 @@ export type CashflowItem = {
   date: string;
 };
 
+export type RecurringCashflowRule = {
+  id: string;
+  tenantId: string;
+  label: string;
+  amount: number;
+  currency: 'CZK' | 'EUR';
+  interval: 'MONTHLY';
+  startDate: string;
+  nextRunAt: string;
+  note?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'STOPPED';
+  stoppedAt?: string;
+  version: number;
+};
+
 type CashflowInput = Omit<CashflowItem, 'id' | 'kind'>;
 
 type PrismaCashflowRow = {
@@ -20,11 +40,24 @@ type PrismaCashflowRow = {
   tenantId: string;
   invoiceId: string | null;
   kind: string;
-  amount: {
-    toNumber(): number;
-  };
+  amount: { toNumber(): number };
   currency: string;
   date: Date;
+};
+
+type PrismaRecurringRuleRow = {
+  id: string;
+  tenantId: string;
+  label: string;
+  amount: { toNumber(): number };
+  currency: string;
+  interval: string;
+  startDate: Date;
+  nextRunAt: Date;
+  note: string | null;
+  status: string;
+  stoppedAt: Date | null;
+  version: number;
 };
 
 @Injectable()
@@ -66,6 +99,110 @@ export class CashflowService {
     });
   }
 
+  async listRecurringRules(tenantId: string) {
+    if (!this.prisma) {
+      return [];
+    }
+
+    const rows = await this.prisma.recurringCashflowRule.findMany({
+      where: { tenantId },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    return rows.map((row) => this.toRecurringRule(row));
+  }
+
+  async createRecurringRule(tenantId: string, input: CreateRecurringCashflowRuleDto) {
+    if (!this.prisma) {
+      throw new Error('Recurring cashflow requires Prisma');
+    }
+
+    const row = await this.prisma.recurringCashflowRule.create({
+      data: {
+        tenantId,
+        label: input.label,
+        amount: input.amount,
+        currency: input.currency,
+        interval: input.interval,
+        startDate: input.startDate,
+        nextRunAt: input.startDate,
+        note: input.note,
+        status: 'ACTIVE',
+      },
+    });
+
+    return this.toRecurringRule(row);
+  }
+
+  async updateRecurringRule(tenantId: string, input: UpdateRecurringCashflowRuleDto) {
+    if (!this.prisma) {
+      throw new Error('Recurring cashflow requires Prisma');
+    }
+
+    const existing = await this.prisma.recurringCashflowRule.findUnique({ where: { id: input.id } });
+    if (!existing || existing.tenantId !== tenantId) {
+      return null;
+    }
+    if (existing.version !== input.version) {
+      throw new Error('VERSION_CONFLICT');
+    }
+
+    const row = await this.prisma.recurringCashflowRule.update({
+      where: { id: existing.id },
+      data: {
+        ...(input.label !== undefined ? { label: input.label } : {}),
+        ...(input.amount !== undefined ? { amount: input.amount } : {}),
+        ...(input.currency !== undefined ? { currency: input.currency } : {}),
+        ...(input.startDate !== undefined ? { startDate: input.startDate, nextRunAt: input.startDate } : {}),
+        ...(input.note !== undefined ? { note: input.note } : {}),
+        version: { increment: 1 },
+      },
+    });
+
+    return this.toRecurringRule(row);
+  }
+
+  async pauseRecurringRule(tenantId: string, input: RecurringCashflowRuleActionDto) {
+    return this.transitionRecurringRule(tenantId, input, 'PAUSED');
+  }
+
+  async resumeRecurringRule(tenantId: string, input: RecurringCashflowRuleActionDto) {
+    return this.transitionRecurringRule(tenantId, input, 'ACTIVE');
+  }
+
+  async stopRecurringRule(tenantId: string, input: RecurringCashflowRuleActionDto) {
+    return this.transitionRecurringRule(tenantId, input, 'STOPPED');
+  }
+
+  private async transitionRecurringRule(
+    tenantId: string,
+    input: RecurringCashflowRuleActionDto,
+    status: 'ACTIVE' | 'PAUSED' | 'STOPPED',
+  ) {
+    if (!this.prisma) {
+      throw new Error('Recurring cashflow requires Prisma');
+    }
+
+    const existing = await this.prisma.recurringCashflowRule.findUnique({ where: { id: input.id } });
+    if (!existing || existing.tenantId !== tenantId) {
+      return null;
+    }
+    if (existing.version !== input.version) {
+      throw new Error('VERSION_CONFLICT');
+    }
+
+    const row = await this.prisma.recurringCashflowRule.update({
+      where: { id: existing.id },
+      data: {
+        status,
+        stoppedAt: status === 'STOPPED' ? new Date() : null,
+        version: { increment: 1 },
+      },
+    });
+
+    return this.toRecurringRule(row);
+  }
+
   private async upsertByKind(kind: CashflowKind, input: CashflowInput) {
     if (!this.prisma) {
       const existing = Array.from(this.db.values()).find(
@@ -87,9 +224,7 @@ export class CashflowService {
         invoiceId: input.invoiceId,
         kind,
       },
-      select: {
-        id: true,
-      },
+      select: { id: true },
     });
 
     const row = existing
@@ -131,6 +266,23 @@ export class CashflowService {
         });
 
     return this.toCashflowItemOrThrow(row);
+  }
+
+  private toRecurringRule(row: PrismaRecurringRuleRow): RecurringCashflowRule {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      label: row.label,
+      amount: row.amount.toNumber(),
+      currency: row.currency as 'CZK' | 'EUR',
+      interval: 'MONTHLY',
+      startDate: row.startDate.toISOString(),
+      nextRunAt: row.nextRunAt.toISOString(),
+      note: row.note ?? undefined,
+      status: row.status as 'ACTIVE' | 'PAUSED' | 'STOPPED',
+      stoppedAt: row.stoppedAt?.toISOString(),
+      version: row.version,
+    };
   }
 
   private toCashflowItemOrThrow(row: PrismaCashflowRow): CashflowItem {

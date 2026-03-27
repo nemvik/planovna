@@ -102,6 +102,21 @@ type BoardAuditEvent = {
   createdAt: string;
 };
 
+type RecurringCashflowRule = {
+  id: string;
+  tenantId: string;
+  label: string;
+  amount: number;
+  currency: 'CZK' | 'EUR';
+  interval: 'MONTHLY';
+  startDate: string;
+  nextRunAt: string;
+  note?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'STOPPED';
+  stoppedAt?: string;
+  version: number;
+};
+
 type InvoiceSummary = {
   id: string;
   number: string;
@@ -189,6 +204,19 @@ type HomepageAuthLocaleStrings = {
   auditLogLoadFailed: string;
   auditLogActorFallback: string;
   auditLogTimestampFallback: string;
+  recurringCashflowTitle: string;
+  recurringCashflowCreateButton: string;
+  recurringCashflowEmpty: string;
+  recurringCashflowLabelField: string;
+  recurringCashflowAmountField: string;
+  recurringCashflowStartDateField: string;
+  recurringCashflowNoteField: string;
+  recurringCashflowPauseButton: string;
+  recurringCashflowResumeButton: string;
+  recurringCashflowStopButton: string;
+  recurringCashflowSaveButton: string;
+  recurringCashflowLoadFailed: string;
+  recurringCashflowSaveFailed: string;
   cashflowPlannedIn: string;
   cashflowActualIn: string;
   invoiceStatusLabel: string;
@@ -306,6 +334,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogLoadFailed: 'Auditní záznamy se nepodařilo načíst.',
     auditLogActorFallback: 'Neznámý aktér',
     auditLogTimestampFallback: 'Neznámý čas',
+    recurringCashflowTitle: 'Opakovaný cashflow',
+    recurringCashflowCreateButton: 'Vytvořit pravidlo',
+    recurringCashflowEmpty: 'Zatím nejsou definovaná žádná opakovaná pravidla.',
+    recurringCashflowLabelField: 'Název',
+    recurringCashflowAmountField: 'Částka',
+    recurringCashflowStartDateField: 'Začátek',
+    recurringCashflowNoteField: 'Poznámka',
+    recurringCashflowPauseButton: 'Pozastavit',
+    recurringCashflowResumeButton: 'Obnovit',
+    recurringCashflowStopButton: 'Ukončit',
+    recurringCashflowSaveButton: 'Uložit změny',
+    recurringCashflowLoadFailed: 'Opakovaný cashflow se nepodařilo načíst.',
+    recurringCashflowSaveFailed: 'Opakovaný cashflow se nepodařilo uložit.',
     cashflowPlannedIn: 'Plánovaný příjem',
     cashflowActualIn: 'Skutečný příjem',
     invoiceStatusLabel: 'Stav faktur',
@@ -422,6 +463,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogLoadFailed: 'Failed to load audit events.',
     auditLogActorFallback: 'Unknown actor',
     auditLogTimestampFallback: 'Unknown time',
+    recurringCashflowTitle: 'Recurring cashflow',
+    recurringCashflowCreateButton: 'Create rule',
+    recurringCashflowEmpty: 'No recurring rules defined yet.',
+    recurringCashflowLabelField: 'Label',
+    recurringCashflowAmountField: 'Amount',
+    recurringCashflowStartDateField: 'Start date',
+    recurringCashflowNoteField: 'Note',
+    recurringCashflowPauseButton: 'Pause',
+    recurringCashflowResumeButton: 'Resume',
+    recurringCashflowStopButton: 'Stop',
+    recurringCashflowSaveButton: 'Save changes',
+    recurringCashflowLoadFailed: 'Failed to load recurring cashflow.',
+    recurringCashflowSaveFailed: 'Failed to save recurring cashflow.',
     cashflowPlannedIn: 'Planned in',
     cashflowActualIn: 'Actual in',
     invoiceStatusLabel: 'Invoice status',
@@ -538,6 +592,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogLoadFailed: 'Audit-Ereignisse konnten nicht geladen werden.',
     auditLogActorFallback: 'Unbekannter Akteur',
     auditLogTimestampFallback: 'Unbekannte Zeit',
+    recurringCashflowTitle: 'Wiederkehrender Cashflow',
+    recurringCashflowCreateButton: 'Regel erstellen',
+    recurringCashflowEmpty: 'Noch keine wiederkehrenden Regeln definiert.',
+    recurringCashflowLabelField: 'Name',
+    recurringCashflowAmountField: 'Betrag',
+    recurringCashflowStartDateField: 'Startdatum',
+    recurringCashflowNoteField: 'Notiz',
+    recurringCashflowPauseButton: 'Pausieren',
+    recurringCashflowResumeButton: 'Fortsetzen',
+    recurringCashflowStopButton: 'Beenden',
+    recurringCashflowSaveButton: 'Änderungen speichern',
+    recurringCashflowLoadFailed: 'Wiederkehrender Cashflow konnte nicht geladen werden.',
+    recurringCashflowSaveFailed: 'Wiederkehrender Cashflow konnte nicht gespeichert werden.',
     cashflowPlannedIn: 'Geplant eingehend',
     cashflowActualIn: 'Tatsächlich eingehend',
     invoiceStatusLabel: 'Rechnungsstatus',
@@ -811,6 +878,11 @@ export default function Home() {
   const [auditLogLoading, setAuditLogLoading] = useState(false);
   const [auditLogError, setAuditLogError] = useState('');
   const [auditLogEvents, setAuditLogEvents] = useState<BoardAuditEvent[]>([]);
+  const [recurringRules, setRecurringRules] = useState<RecurringCashflowRule[]>([]);
+  const [recurringLabel, setRecurringLabel] = useState('');
+  const [recurringAmount, setRecurringAmount] = useState('');
+  const [recurringStartDate, setRecurringStartDate] = useState('');
+  const [recurringNote, setRecurringNote] = useState('');
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
   const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
   const [authMessage, setAuthMessage] = useState('');
@@ -1035,6 +1107,11 @@ export default function Home() {
     setAuditLogLoading(false);
     setAuditLogError('');
     setAuditLogEvents([]);
+    setRecurringRules([]);
+    setRecurringLabel('');
+    setRecurringAmount('');
+    setRecurringStartDate('');
+    setRecurringNote('');
     setCashflowItems([]);
     setInvoiceSummaries([]);
     setBoardMessage('');
@@ -1090,10 +1167,11 @@ export default function Home() {
     setOperationLoadState('loading');
 
     try {
-      const [operationResult, orderResult, templateResult] = await Promise.all([
+      const [operationResult, orderResult, templateResult, recurringRuleResult] = await Promise.all([
         client.operation.list.query(),
         client.order.list.query(),
         client.order.routingTemplates.query(),
+        client.cashflow.listRecurringRules.query(),
       ]);
       if (loadSession !== operationLoadSessionRef.current) {
         return [];
@@ -1102,9 +1180,11 @@ export default function Home() {
       const loadedOperations = operationResult as Operation[];
       const loadedOrders = orderResult as OrderSummary[];
       const loadedTemplates = templateResult as RoutingTemplate[];
+      const loadedRecurringRules = recurringRuleResult as RecurringCashflowRule[];
       setOperations(loadedOperations);
       setOrders(loadedOrders);
       setRoutingTemplates(loadedTemplates);
+      setRecurringRules(loadedRecurringRules);
       setSelectedOrderId((current) => current || loadedOrders[0]?.id || '');
       setSelectedTemplateId((current) => current || loadedTemplates[0]?.id || '');
       setBoardMessage('');
@@ -1569,6 +1649,59 @@ export default function Home() {
     }
   };
 
+  const onCreateRecurringRule = async () => {
+    if (!recurringLabel.trim() || !recurringAmount.trim() || !recurringStartDate) {
+      return;
+    }
+
+    try {
+      const created = await trpcClient.cashflow.createRecurringRule.mutate({
+        label: recurringLabel.trim(),
+        amount: Number(recurringAmount),
+        currency: 'CZK',
+        interval: 'MONTHLY',
+        startDate: `${recurringStartDate}T00:00:00.000Z`,
+        note: recurringNote.trim() || undefined,
+      }) as RecurringCashflowRule;
+
+      setRecurringRules((current) => [...current, created]);
+      setRecurringLabel('');
+      setRecurringAmount('');
+      setRecurringStartDate('');
+      setRecurringNote('');
+      setBoardMessage('');
+    } catch (error) {
+      if (hasForbiddenCode(error)) {
+        resetSession(homepageAuthCopy.sessionExpired);
+      } else {
+        setBoardMessage(homepageAuthCopy.recurringCashflowSaveFailed);
+      }
+    }
+  };
+
+  const onTransitionRecurringRule = async (
+    rule: RecurringCashflowRule,
+    action: 'pause' | 'resume' | 'stop',
+  ) => {
+    try {
+      const mutate =
+        action === 'pause'
+          ? trpcClient.cashflow.pauseRecurringRule.mutate
+          : action === 'resume'
+            ? trpcClient.cashflow.resumeRecurringRule.mutate
+            : trpcClient.cashflow.stopRecurringRule.mutate;
+      const updated = await mutate({ id: rule.id, version: rule.version }) as RecurringCashflowRule;
+      setRecurringRules((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
+      setBoardMessage('');
+    } catch (error) {
+      if (hasForbiddenCode(error)) {
+        resetSession(homepageAuthCopy.sessionExpired);
+      } else {
+        setBoardMessage(homepageAuthCopy.recurringCashflowSaveFailed);
+      }
+    }
+  };
+
   const onApplyRoutingTemplate = async () => {
     if (!selectedOrderId || !selectedTemplateId) {
       return;
@@ -1883,6 +2016,56 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {accessToken ? (
+        <section className="rounded border bg-slate-50 p-4">
+          <h2 className="text-lg font-medium">{homepageAuthCopy.recurringCashflowTitle}</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
+            <label className="flex flex-col gap-1 text-sm">
+              {homepageAuthCopy.recurringCashflowLabelField}
+              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" value={recurringLabel} onChange={(event) => setRecurringLabel(event.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              {homepageAuthCopy.recurringCashflowAmountField}
+              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" type="number" value={recurringAmount} onChange={(event) => setRecurringAmount(event.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              {homepageAuthCopy.recurringCashflowStartDateField}
+              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" type="date" value={recurringStartDate} onChange={(event) => setRecurringStartDate(event.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              {homepageAuthCopy.recurringCashflowNoteField}
+              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" value={recurringNote} onChange={(event) => setRecurringNote(event.target.value)} />
+            </label>
+          </div>
+          <div className="mt-3">
+            <button className="rounded bg-slate-900 px-3 py-2 text-white" type="button" onClick={() => void onCreateRecurringRule()}>
+              {homepageAuthCopy.recurringCashflowCreateButton}
+            </button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {recurringRules.length === 0 ? (
+              <p className="text-sm text-slate-600">{homepageAuthCopy.recurringCashflowEmpty}</p>
+            ) : (
+              recurringRules.map((rule) => (
+                <div key={rule.id} className="rounded border bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{rule.label}</p>
+                      <p className="text-xs text-slate-600">{rule.amount} {rule.currency} · {rule.interval} · next {rule.nextRunAt.slice(0,10)} · {rule.status}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {rule.status === 'ACTIVE' ? <button className="rounded border px-2 py-1 text-xs" type="button" onClick={() => void onTransitionRecurringRule(rule, 'pause')}>{homepageAuthCopy.recurringCashflowPauseButton}</button> : null}
+                      {rule.status === 'PAUSED' ? <button className="rounded border px-2 py-1 text-xs" type="button" onClick={() => void onTransitionRecurringRule(rule, 'resume')}>{homepageAuthCopy.recurringCashflowResumeButton}</button> : null}
+                      {rule.status !== 'STOPPED' ? <button className="rounded border px-2 py-1 text-xs" type="button" onClick={() => void onTransitionRecurringRule(rule, 'stop')}>{homepageAuthCopy.recurringCashflowStopButton}</button> : null}
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </section>

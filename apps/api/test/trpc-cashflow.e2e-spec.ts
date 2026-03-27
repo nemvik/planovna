@@ -138,6 +138,75 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     );
   });
 
+  it('creates, updates, and transitions recurring cashflow rules with tenant scoping', async () => {
+    const ownerLogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBLogin = await authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(ownerLogin).not.toBeNull();
+    expect(tenantBLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const tenantBClient = createClient(tenantBLogin!.accessToken);
+
+    const created = await ownerClient.cashflow.createRecurringRule.mutate({
+      label: `Rent ${uniqueSuffix()}`,
+      amount: 12000,
+      currency: 'CZK',
+      interval: 'MONTHLY',
+      startDate: new Date('2026-06-01').toISOString(),
+      note: 'Workshop rent',
+    });
+
+    expect(created.status).toBe('ACTIVE');
+
+    const updated = await ownerClient.cashflow.updateRecurringRule.mutate({
+      id: created.id,
+      version: created.version,
+      amount: 12500,
+      note: 'Workshop rent updated',
+    });
+    expect(updated.amount).toBe(12500);
+
+    const paused = await ownerClient.cashflow.pauseRecurringRule.mutate({
+      id: created.id,
+      version: updated.version,
+    });
+    expect(paused.status).toBe('PAUSED');
+
+    const resumed = await ownerClient.cashflow.resumeRecurringRule.mutate({
+      id: created.id,
+      version: paused.version,
+    });
+    expect(resumed.status).toBe('ACTIVE');
+
+    const stopped = await ownerClient.cashflow.stopRecurringRule.mutate({
+      id: created.id,
+      version: resumed.version,
+    });
+    expect(stopped.status).toBe('STOPPED');
+
+    const listed = await ownerClient.cashflow.listRecurringRules.query();
+    expect(listed.some((rule) => rule.id === created.id)).toBe(true);
+
+    await expect(
+      ownerClient.cashflow.updateRecurringRule.mutate({
+        id: created.id,
+        version: created.version,
+        amount: 13000,
+      }),
+    ).rejects.toMatchObject({ data: { code: 'CONFLICT' } });
+
+    await expect(
+      tenantBClient.cashflow.pauseRecurringRule.mutate({ id: created.id, version: stopped.version }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+  });
+
   it('reflects invoice.issue + invoice.paid lifecycle in tenant-scoped cashflow.list', async () => {
     const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
