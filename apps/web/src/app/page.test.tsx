@@ -281,7 +281,7 @@ describe('homepage operations board', () => {
       {
         id: 'cf-actual',
         tenantId: 'tenant-a',
-        invoiceId: 'inv-1',
+        invoiceId: 'inv-2',
         kind: 'ACTUAL_IN',
         amount: 60000,
         currency: 'CZK',
@@ -293,7 +293,11 @@ describe('homepage operations board', () => {
         id: 'inv-1',
         number: '2026-0001',
         status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
         amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
         currency: 'CZK',
         dueAt: '2026-03-15T00:00:00.000Z',
         pdfPath: '/invoices/inv-1/pdf',
@@ -302,7 +306,11 @@ describe('homepage operations board', () => {
         id: 'inv-2',
         number: '2026-0002',
         status: 'PAID',
+        amountNet: 50000,
+        amountVat: 0,
         amountGross: 50000,
+        vatRatePercent: 0,
+        hasBreakdown: false,
         currency: 'CZK',
         dueAt: '2026-03-10T00:00:00.000Z',
         pdfPath: '/invoices/inv-2/pdf',
@@ -327,6 +335,9 @@ describe('homepage operations board', () => {
     );
     expect(cashflowSummary).toHaveTextContent('03/10/2026');
     expect(cashflowSummary).toHaveTextContent('Next cashflow items');
+    expect(cashflowSummary).toHaveTextContent('Invoice breakdown: 2026-0001 · net');
+    expect(cashflowSummary).toHaveTextContent('VAT 21% =');
+    expect(cashflowSummary).toHaveTextContent('legacy gross-only fallback');
     expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
     expect(screen.getByRole('link', { name: 'Open invoices page' })).toHaveAttribute('href', '/invoices');
     expect(screen.getByRole('link', { name: 'Open invoices workspace' })).toHaveAttribute('href', '/invoices');

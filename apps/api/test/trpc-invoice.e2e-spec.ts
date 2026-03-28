@@ -11,6 +11,7 @@ import { CustomerService } from '../src/modules/customer/customer.service';
 import { InvoiceService } from '../src/modules/invoice/invoice.service';
 import { OperationService } from '../src/modules/operation/operation.service';
 import { OrderService } from '../src/modules/order/order.service';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { createTrpcContext } from '../src/trpc/context';
 import { createAppRouter, type AppRouter } from '../src/trpc/routers/app.router';
 
@@ -18,6 +19,7 @@ describe('tRPC invoice contracts (e2e)', () => {
   let app: INestApplication<App>;
   let baseUrl: string;
   let authService: AuthService;
+  let prismaService: PrismaService;
 
   const createClient = (accessToken?: string) =>
     createTRPCProxyClient<AppRouter>({
@@ -62,6 +64,7 @@ describe('tRPC invoice contracts (e2e)', () => {
     app = moduleFixture.createNestApplication();
 
     authService = app.get(AuthService);
+    prismaService = app.get(PrismaService);
     const customerService = app.get(CustomerService);
     const invoiceService = app.get(InvoiceService);
     const orderService = app.get(OrderService);
@@ -107,7 +110,8 @@ describe('tRPC invoice contracts (e2e)', () => {
         orderId: 'order-authz-1',
         number: 'INV-TRPC-100',
         currency: 'CZK',
-        amountGross: 1000,
+        amountNet: 826.45,
+        vatRatePercent: 21,
         dueAt: new Date('2026-04-10').toISOString(),
       }),
     ).rejects.toMatchObject({ data: { code: 'UNAUTHORIZED' } });
@@ -138,7 +142,8 @@ describe('tRPC invoice contracts (e2e)', () => {
         orderId: 'order-authz-2',
         number: 'INV-TRPC-101',
         currency: 'CZK',
-        amountGross: 1500,
+        amountNet: 1239.67,
+        vatRatePercent: 21,
         dueAt: new Date('2026-04-10').toISOString(),
       }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
@@ -183,7 +188,8 @@ describe('tRPC invoice contracts (e2e)', () => {
         orderId: 'order-invalid-1',
         number: 'INV-TRPC-INVALID',
         currency: 'CZK',
-        amountGross: -10,
+        amountNet: -10,
+        vatRatePercent: 21,
         dueAt: new Date('2026-04-10').toISOString(),
       }),
     ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
@@ -204,7 +210,8 @@ describe('tRPC invoice contracts (e2e)', () => {
       orderId: order.id,
       number: `INV-TRPC-CONFLICT-${suffix}`,
       currency: 'CZK',
-      amountGross: 900,
+      amountNet: 743.8,
+      vatRatePercent: 21,
       dueAt: new Date('2026-04-12').toISOString(),
     });
 
@@ -264,12 +271,20 @@ describe('tRPC invoice contracts (e2e)', () => {
       orderId: order.id,
       number: `INV-TRPC-LIST-${suffix}`,
       currency: 'CZK',
-      amountGross: 3333,
+      amountNet: 2754.55,
+      vatRatePercent: 21,
       dueAt: new Date('2026-04-20').toISOString(),
     });
 
     expect(issued.tenantId).toBe('tenant-a');
     expect(issued.status).toBe('ISSUED');
+    expect(issued).toMatchObject({
+      amountNet: 2754.55,
+      amountVat: 578.46,
+      amountGross: 3333.01,
+      vatRatePercent: 21,
+      hasBreakdown: true,
+    });
 
     const tenantABeforePaid = await tenantAFinanceClient.invoice.list.query();
     const tenantAIssued = tenantABeforePaid.find((invoice) => invoice.id === issued.id);
@@ -292,6 +307,62 @@ describe('tRPC invoice contracts (e2e)', () => {
     expect(tenantBAfterPaid.some((invoice) => invoice.id === issued.id)).toBe(false);
   });
 
+  it('supports explicit 0% VAT and safe legacy breakdown fallback in invoice responses', async () => {
+    const ownerLogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    expect(ownerLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const order = await createInvoiceOrder(ownerClient, 'tenant-a');
+    const zeroVatSuffix = uniqueSuffix();
+
+    const zeroVatIssued = await ownerClient.invoice.issue.mutate({
+      tenantId: 'tenant-a',
+      orderId: order.id,
+      number: `INV-TRPC-ZERO-${zeroVatSuffix}`,
+      currency: 'CZK',
+      amountNet: 1000,
+      vatRatePercent: 0,
+      dueAt: new Date('2026-04-22').toISOString(),
+    });
+
+    expect(zeroVatIssued).toMatchObject({
+      amountNet: 1000,
+      amountVat: 0,
+      amountGross: 1000,
+      vatRatePercent: 0,
+      hasBreakdown: true,
+    });
+
+    await prismaService.invoice.create({
+      data: {
+        tenantId: 'tenant-a',
+        orderId: order.id,
+        number: `INV-TRPC-LEGACY-${uniqueSuffix()}`,
+        status: 'ISSUED',
+        currency: 'CZK',
+        amountNet: 0,
+        amountVat: 0,
+        amountGross: 1210,
+        dueAt: new Date('2026-04-25').toISOString(),
+      },
+    });
+
+    const listed = await ownerClient.invoice.list.query();
+    expect(listed).toContainEqual(
+      expect.objectContaining({
+        number: expect.stringMatching(/^INV-TRPC-LEGACY-/),
+        amountNet: 1210,
+        amountVat: 0,
+        amountGross: 1210,
+        vatRatePercent: 0,
+        hasBreakdown: false,
+      }),
+    );
+  });
+
   it('exposes the shipped invoice pdf path in tRPC invoice responses', async () => {
     const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
@@ -308,7 +379,8 @@ describe('tRPC invoice contracts (e2e)', () => {
       orderId: order.id,
       number: `INV-TRPC-PDF-${suffix}`,
       currency: 'CZK',
-      amountGross: 4444,
+      amountNet: 3672.73,
+      vatRatePercent: 21,
       dueAt: new Date('2026-04-22').toISOString(),
     });
 
@@ -354,7 +426,8 @@ describe('tRPC invoice contracts (e2e)', () => {
       orderId: order.id,
       number: `INV-TRPC-200-${suffix}`,
       currency: 'CZK',
-      amountGross: 2100,
+      amountNet: 1735.54,
+      vatRatePercent: 21,
       dueAt: new Date('2026-04-12').toISOString(),
     });
 

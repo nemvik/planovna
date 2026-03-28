@@ -7,6 +7,9 @@ import { CreateInvoiceDto, MarkPaidDto } from './dto/invoice.dto';
 type Invoice = CreateInvoiceDto & {
   id: string;
   status: 'DRAFT' | 'ISSUED' | 'PAID';
+  amountVat: number;
+  amountGross: number;
+  hasBreakdown: boolean;
   paidAt?: string;
   pdfPath: string;
   version: number;
@@ -24,6 +27,12 @@ type PrismaInvoiceRow = {
   number: string;
   status: 'DRAFT' | 'ISSUED' | 'PAID';
   currency: string;
+  amountNet: {
+    toNumber(): number;
+  };
+  amountVat: {
+    toNumber(): number;
+  };
   amountGross: {
     toNumber(): number;
   };
@@ -51,6 +60,8 @@ export class InvoiceService {
         number: true,
         status: true,
         currency: true,
+        amountNet: true,
+        amountVat: true,
         amountGross: true,
         issuedAt: true,
         dueAt: true,
@@ -63,6 +74,7 @@ export class InvoiceService {
   }
 
   async issue(actorTenantId: string, input: CreateInvoiceDto) {
+    const computed = this.computeInvoiceBreakdown(input.amountNet, input.vatRatePercent);
     const created = await this.prisma.invoice.create({
       data: {
         tenantId: actorTenantId,
@@ -70,9 +82,9 @@ export class InvoiceService {
         number: input.number,
         status: 'ISSUED',
         currency: input.currency,
-        amountNet: 0,
-        amountVat: 0,
-        amountGross: input.amountGross,
+        amountNet: computed.amountNet,
+        amountVat: computed.amountVat,
+        amountGross: computed.amountGross,
         issuedAt: input.issuedAt,
         dueAt: input.dueAt,
       },
@@ -83,6 +95,8 @@ export class InvoiceService {
         number: true,
         status: true,
         currency: true,
+        amountNet: true,
+        amountVat: true,
         amountGross: true,
         issuedAt: true,
         dueAt: true,
@@ -161,6 +175,8 @@ export class InvoiceService {
         number: true,
         status: true,
         currency: true,
+        amountNet: true,
+        amountVat: true,
         amountGross: true,
         issuedAt: true,
         dueAt: true,
@@ -199,6 +215,8 @@ export class InvoiceService {
         number: true,
         status: true,
         currency: true,
+        amountNet: true,
+        amountVat: true,
         amountGross: true,
         issuedAt: true,
         dueAt: true,
@@ -220,6 +238,14 @@ export class InvoiceService {
   }
 
   private toInvoiceRecord(row: PrismaInvoiceRow): Invoice {
+    const amountNet = row.amountNet.toNumber();
+    const amountVat = row.amountVat.toNumber();
+    const amountGross = row.amountGross.toNumber();
+    const hasBreakdown = amountNet > 0 || amountVat > 0;
+    const effectiveAmountNet = hasBreakdown ? amountNet : amountGross;
+    const effectiveAmountVat = hasBreakdown ? amountVat : 0;
+    const vatRatePercent = effectiveAmountNet > 0 ? (effectiveAmountVat / effectiveAmountNet) * 100 : 0;
+
     return {
       id: row.id,
       tenantId: row.tenantId,
@@ -227,7 +253,11 @@ export class InvoiceService {
       number: row.number,
       status: row.status,
       currency: row.currency as 'CZK' | 'EUR',
-      amountGross: row.amountGross.toNumber(),
+      amountNet: Number(effectiveAmountNet.toFixed(2)),
+      amountVat: Number(effectiveAmountVat.toFixed(2)),
+      amountGross: Number(amountGross.toFixed(2)),
+      vatRatePercent: Number(vatRatePercent.toFixed(2)),
+      hasBreakdown,
       issuedAt: row.issuedAt?.toISOString(),
       dueAt: row.dueAt?.toISOString(),
       paidAt: row.paidAt?.toISOString(),
@@ -240,11 +270,27 @@ export class InvoiceService {
     return `/invoices/${encodeURIComponent(invoiceId)}/pdf`;
   }
 
+  private computeInvoiceBreakdown(amountNet: number, vatRatePercent: number) {
+    const roundedNet = Number(amountNet.toFixed(2));
+    const roundedVatRatePercent = Number(vatRatePercent.toFixed(2));
+    const amountVat = Number(((roundedNet * roundedVatRatePercent) / 100).toFixed(2));
+    const amountGross = Number((roundedNet + amountVat).toFixed(2));
+
+    return {
+      amountNet: roundedNet,
+      vatRatePercent: roundedVatRatePercent,
+      amountVat,
+      amountGross,
+    };
+  }
+
   private buildInvoicePdf(invoice: Invoice): Buffer {
     const lines = [
       `Invoice ${invoice.number}`,
       `Status: ${invoice.status}`,
       `Order: ${invoice.orderId}`,
+      `Amount net: ${invoice.amountNet.toFixed(2)} ${invoice.currency}`,
+      `VAT ${invoice.vatRatePercent.toFixed(2)}%: ${invoice.amountVat.toFixed(2)} ${invoice.currency}`,
       `Amount gross: ${invoice.amountGross.toFixed(2)} ${invoice.currency}`,
       `Issued at: ${invoice.issuedAt ?? '-'}`,
       `Due at: ${invoice.dueAt ?? '-'}`,

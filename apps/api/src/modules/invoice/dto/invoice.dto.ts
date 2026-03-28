@@ -5,7 +5,8 @@ export const CreateInvoiceSchema = z.object({
   orderId: z.string().min(1),
   number: z.string().min(1),
   currency: z.enum(['CZK', 'EUR']),
-  amountGross: z.number().positive(),
+  amountNet: z.number().positive(),
+  vatRatePercent: z.number().min(0).max(100),
   issuedAt: z.string().datetime().optional(),
   dueAt: z.string().datetime().optional(),
 });

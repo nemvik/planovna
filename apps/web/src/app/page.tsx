@@ -121,7 +121,11 @@ type InvoiceSummary = {
   id: string;
   number: string;
   status: 'DRAFT' | 'ISSUED' | 'PAID';
+  amountNet: number;
+  amountVat: number;
   amountGross: number;
+  vatRatePercent: number;
+  hasBreakdown: boolean;
   currency: 'CZK' | 'EUR';
   dueAt?: string;
   pdfPath: string;
@@ -256,6 +260,8 @@ type HomepageAuthLocaleStrings = {
   invoiceIssuedSuffix: string;
   invoicePaidSuffix: string;
   invoicesLoadedSuffix: string;
+  invoiceBreakdownLabel: string;
+  invoiceBreakdownLegacySuffix: string;
   boardFilterQueryLabel: string;
   boardFilterStatusLabel: string;
   boardFilterBucketLabel: string;
@@ -406,6 +412,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuedSuffix: 'vystaveno',
     invoicePaidSuffix: 'zaplaceno',
     invoicesLoadedSuffix: 'faktur načteno',
+    invoiceBreakdownLabel: 'Rozpad faktury',
+    invoiceBreakdownLegacySuffix: 'legacy fallback z hrubé částky',
     boardFilterQueryLabel: 'Kód nebo název',
     boardFilterStatusLabel: 'Stav',
     boardFilterBucketLabel: 'Koš podle data',
@@ -554,6 +562,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuedSuffix: 'issued',
     invoicePaidSuffix: 'paid',
     invoicesLoadedSuffix: 'invoices loaded',
+    invoiceBreakdownLabel: 'Invoice breakdown',
+    invoiceBreakdownLegacySuffix: 'legacy gross-only fallback',
     boardFilterQueryLabel: 'Code or title',
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Date bucket',
@@ -702,6 +712,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuedSuffix: 'ausgestellt',
     invoicePaidSuffix: 'bezahlt',
     invoicesLoadedSuffix: 'Rechnungen geladen',
+    invoiceBreakdownLabel: 'Rechnungsaufschlüsselung',
+    invoiceBreakdownLegacySuffix: 'Legacy-Fallback aus Bruttobetrag',
     boardFilterQueryLabel: 'Code oder Titel',
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Datums-Bucket',
@@ -1087,11 +1099,13 @@ export default function Home() {
   const invoiceSummary = useMemo(() => {
     const issuedCount = invoiceSummaries.filter((invoice) => invoice.status === 'ISSUED').length;
     const paidCount = invoiceSummaries.filter((invoice) => invoice.status === 'PAID').length;
+    const byId = new Map(invoiceSummaries.map((invoice) => [invoice.id, invoice]));
 
     return {
       totalCount: invoiceSummaries.length,
       issuedCount,
       paidCount,
+      byId,
     };
   }, [invoiceSummaries]);
   const showOperationBoard =
@@ -2500,16 +2514,34 @@ export default function Home() {
             {cashflowSummary.nextItems.length === 0 ? (
               <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.noCashflowItems}</p>
             ) : (
-              <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                {cashflowSummary.nextItems.map((item) => (
-                  <li key={item.id}>
-                    {formatDateForDisplay(item.date, homepageLocale)} —{' '}
-                    {item.kind === 'PLANNED_IN'
-                      ? homepageAuthCopy.cashflowPlannedIn
-                      : homepageAuthCopy.cashflowActualIn}{' '}
-                    — {formatMoney(item.amount, item.currency, homepageLocale)}
-                  </li>
-                ))}
+              <ul className="mt-2 space-y-2 text-sm text-slate-700">
+                {cashflowSummary.nextItems.map((item) => {
+                  const invoice = invoiceSummary.byId.get(item.invoiceId);
+
+                  return (
+                    <li key={item.id}>
+                      <p>
+                        {formatDateForDisplay(item.date, homepageLocale)} —{' '}
+                        {item.kind === 'PLANNED_IN'
+                          ? homepageAuthCopy.cashflowPlannedIn
+                          : homepageAuthCopy.cashflowActualIn}{' '}
+                        — {formatMoney(item.amount, item.currency, homepageLocale)}
+                      </p>
+                      {invoice ? (
+                        <p className="text-xs text-slate-500">
+                          {homepageAuthCopy.invoiceBreakdownLabel}: {invoice.number} · net{' '}
+                          {formatMoney(invoice.amountNet, invoice.currency, homepageLocale)} · VAT{' '}
+                          {invoice.vatRatePercent.toFixed(0)}% ={' '}
+                          {formatMoney(invoice.amountVat, invoice.currency, homepageLocale)} · gross{' '}
+                          {formatMoney(invoice.amountGross, invoice.currency, homepageLocale)}
+                          {!invoice.hasBreakdown
+                            ? ` · ${homepageAuthCopy.invoiceBreakdownLegacySuffix}`
+                            : ''}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
