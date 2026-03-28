@@ -18,9 +18,9 @@ type Deferred<T> = {
 const createDeferred = <T,>(): Deferred<T> => {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
   });
 
   return { promise, resolve, reject };
@@ -41,6 +41,9 @@ const createClient = () => ({
     },
     update: {
       mutate: jest.fn(),
+    },
+    auditLog: {
+      query: jest.fn().mockResolvedValue([]),
     },
   },
   order: {
@@ -66,6 +69,10 @@ const createClient = () => ({
   },
 });
 
+
+beforeEach(() => {
+  jest.useRealTimers();
+});
 
 const renderWithClient = (client: ReturnType<typeof createClient>) => {
   const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;

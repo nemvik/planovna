@@ -200,8 +200,10 @@ type HomepageAuthLocaleStrings = {
   auditLogOpenButton: string;
   auditLogCloseButton: string;
   auditLogLoading: string;
+  auditLogDelayed: string;
   auditLogEmpty: string;
   auditLogLoadFailed: string;
+  auditLogRetryButton: string;
   auditLogActorFallback: string;
   auditLogTimestampFallback: string;
   recurringCashflowTitle: string;
@@ -331,8 +333,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogOpenButton: 'Otevřít audit',
     auditLogCloseButton: 'Zavřít audit',
     auditLogLoading: 'Načítání auditu…',
+    auditLogDelayed: 'Načítání trvá déle než obvykle…',
     auditLogEmpty: 'Zatím nejsou dostupné žádné auditní záznamy.',
     auditLogLoadFailed: 'Auditní záznamy se nepodařilo načíst.',
+    auditLogRetryButton: 'Zkusit znovu',
     auditLogActorFallback: 'Neznámý aktér',
     auditLogTimestampFallback: 'Neznámý čas',
     recurringCashflowTitle: 'Opakovaný cashflow',
@@ -461,8 +465,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogOpenButton: 'Open audit log',
     auditLogCloseButton: 'Close audit log',
     auditLogLoading: 'Loading audit log…',
+    auditLogDelayed: 'Loading is taking longer than usual…',
     auditLogEmpty: 'No audit events are available yet.',
     auditLogLoadFailed: 'Failed to load audit events.',
+    auditLogRetryButton: 'Retry',
     auditLogActorFallback: 'Unknown actor',
     auditLogTimestampFallback: 'Unknown time',
     recurringCashflowTitle: 'Recurring cashflow',
@@ -591,8 +597,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogOpenButton: 'Auditlog öffnen',
     auditLogCloseButton: 'Auditlog schließen',
     auditLogLoading: 'Auditlog wird geladen…',
+    auditLogDelayed: 'Das Laden dauert länger als üblich…',
     auditLogEmpty: 'Noch keine Audit-Ereignisse verfügbar.',
     auditLogLoadFailed: 'Audit-Ereignisse konnten nicht geladen werden.',
+    auditLogRetryButton: 'Erneut versuchen',
     auditLogActorFallback: 'Unbekannter Akteur',
     auditLogTimestampFallback: 'Unbekannte Zeit',
     recurringCashflowTitle: 'Wiederkehrender Cashflow',
@@ -880,6 +888,8 @@ export default function Home() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [auditLogLoading, setAuditLogLoading] = useState(false);
+  const [auditLogDelayed, setAuditLogDelayed] = useState(false);
+  const [auditLogLoadedOnce, setAuditLogLoadedOnce] = useState(false);
   const [auditLogError, setAuditLogError] = useState('');
   const [auditLogEvents, setAuditLogEvents] = useState<BoardAuditEvent[]>([]);
   const [recurringRules, setRecurringRules] = useState<RecurringCashflowRule[]>([]);
@@ -1109,6 +1119,8 @@ export default function Home() {
     setSelectedTemplateId('');
     setAuditLogOpen(false);
     setAuditLogLoading(false);
+    setAuditLogDelayed(false);
+    setAuditLogLoadedOnce(false);
     setAuditLogError('');
     setAuditLogEvents([]);
     setRecurringRules([]);
@@ -1651,11 +1663,17 @@ export default function Home() {
 
   const loadAuditLog = async () => {
     setAuditLogLoading(true);
+    setAuditLogDelayed(false);
     setAuditLogError('');
+
+    const delayTimer = window.setTimeout(() => {
+      setAuditLogDelayed(true);
+    }, 800);
 
     try {
       const events = await trpcClient.operation.auditLog.query() as BoardAuditEvent[];
       setAuditLogEvents(events);
+      setAuditLogLoadedOnce(true);
     } catch (error) {
       if (hasForbiddenCode(error)) {
         resetSession(homepageAuthCopy.sessionExpired);
@@ -1663,6 +1681,7 @@ export default function Home() {
         setAuditLogError(homepageAuthCopy.auditLogLoadFailed);
       }
     } finally {
+      window.clearTimeout(delayTimer);
       setAuditLogLoading(false);
     }
   };
@@ -1917,7 +1936,9 @@ export default function Home() {
               type="button"
               onClick={() => {
                 setAuditLogOpen(true);
-                void loadAuditLog();
+                if (!auditLogLoadedOnce && !auditLogLoading) {
+                  void loadAuditLog();
+                }
               }}
             >
               {homepageAuthCopy.auditLogOpenButton}
@@ -1950,9 +1971,23 @@ export default function Home() {
               </button>
             </div>
             {auditLogLoading ? (
-              <p className="mt-4 text-sm text-slate-600">{homepageAuthCopy.auditLogLoading}</p>
+              <div className="mt-4 space-y-2">
+                <p className="text-sm text-slate-600">{homepageAuthCopy.auditLogLoading}</p>
+                {auditLogDelayed ? (
+                  <p className="text-sm text-amber-700">{homepageAuthCopy.auditLogDelayed}</p>
+                ) : null}
+              </div>
             ) : auditLogError ? (
-              <p className="mt-4 text-sm text-rose-700">{auditLogError}</p>
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-rose-700">{auditLogError}</p>
+                <button
+                  className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                  type="button"
+                  onClick={() => void loadAuditLog()}
+                >
+                  {homepageAuthCopy.auditLogRetryButton}
+                </button>
+              </div>
             ) : auditLogEvents.length === 0 ? (
               <p className="mt-4 text-sm text-slate-600">{homepageAuthCopy.auditLogEmpty}</p>
             ) : (
