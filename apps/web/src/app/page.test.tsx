@@ -45,6 +45,12 @@ const createClient = () => ({
     auditLog: {
       query: jest.fn().mockResolvedValue([]),
     },
+    listBoardColumns: {
+      query: jest.fn().mockResolvedValue([]),
+    },
+    saveBoardColumns: {
+      mutate: jest.fn(),
+    },
   },
   order: {
     list: {
@@ -1462,7 +1468,7 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
     expect(screen.getByLabelText('Code or title')).toHaveValue('frame');
     expect(screen.queryByText('Status — Ready')).not.toBeInTheDocument();
-    expect(screen.getByText('Bucket — 03/06/2026')).toBeInTheDocument();
+    expect(screen.getByText('Bucket — 2026-03-06')).toBeInTheDocument();
     expect(screen.getByText('Search — frame')).toBeInTheDocument();
     expect(screen.getByText('OP-200 — Cut frame blocked')).toBeInTheDocument();
     expect(client.operation.list.query).toHaveBeenCalledTimes(1);
@@ -1537,7 +1543,7 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Date bucket')).toHaveValue('ALL');
     expect(screen.getByLabelText('Code or title')).toHaveValue('cut');
     expect(screen.getByText('Status — Ready')).toBeInTheDocument();
-    expect(screen.queryByText('Bucket — 03/06/2026')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bucket — 2026-03-06')).not.toBeInTheDocument();
     expect(screen.getByText('Search — cut')).toBeInTheDocument();
     expect(screen.getByText('OP-100 — Cut steel')).toBeInTheDocument();
     expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
@@ -1613,7 +1619,7 @@ describe('homepage operations board', () => {
     expect(screen.getByLabelText('Date bucket')).toHaveValue('2026-03-06');
     expect(screen.getByLabelText('Code or title')).toHaveValue('');
     expect(screen.getByText('Status — Ready')).toBeInTheDocument();
-    expect(screen.getByText('Bucket — 03/06/2026')).toBeInTheDocument();
+    expect(screen.getByText('Bucket — 2026-03-06')).toBeInTheDocument();
     expect(screen.queryByText('Search — cut')).not.toBeInTheDocument();
     expect(screen.getByText('OP-300 — Cut frame')).toBeInTheDocument();
     expect(screen.getByText('OP-400 — Weld frame')).toBeInTheDocument();
@@ -2569,8 +2575,8 @@ describe('homepage operations board', () => {
 
     const moveSelect = within(operationCard as HTMLElement).getByLabelText('Move to bucket');
     expect(within(moveSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      '03/06/2026',
-      '03/07/2026',
+      '2026-03-06',
+      '2026-03-07',
     ]);
 
     const scheduleInput = within(operationCard as HTMLElement).getByLabelText('Schedule to date');
@@ -2582,6 +2588,97 @@ describe('homepage operations board', () => {
     fireEvent.change(scheduleInput, { target: { value: '2026-03-08' } });
 
     expect(scheduleButton).toBeEnabled();
+  });
+
+  it('saves tenant-shared board column rename and reorder from the homepage editor', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+    client.operation.listBoardColumns.query.mockResolvedValue([
+      { key: 'Backlog', name: 'Ideas', order: 0, hidden: false },
+      { key: 'custom:review', name: 'Review later', order: 1, hidden: false },
+    ]);
+    client.operation.saveBoardColumns.mutate.mockImplementation(async (input: { columns: unknown[] }) => input.columns);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Edit board columns' }));
+
+    const nameInputs = screen.getAllByLabelText('Column name');
+    await user.clear(nameInputs[0]);
+    await user.type(nameInputs[0], 'Queued');
+    await user.click(screen.getAllByRole('button', { name: 'Move down' })[0]);
+    await user.click(screen.getByRole('button', { name: 'Save columns' }));
+
+    await waitFor(() => {
+      expect(client.operation.saveBoardColumns.mutate).toHaveBeenCalledWith({
+        columns: [
+          { key: 'custom:review', name: 'Review later', order: 0, hidden: false },
+          { key: 'Backlog', name: 'Queued', order: 1, hidden: false },
+        ],
+      });
+    });
+
+    expect(screen.getByRole('region', { name: 'Queued' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review later' })).toBeInTheDocument();
+    expect(screen.getByText('Board columns saved.')).toBeInTheDocument();
+  });
+
+  it('blocks invalid and non-empty destructive board column changes in the homepage editor', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+    ]);
+    client.operation.listBoardColumns.query.mockResolvedValue([
+      { key: 'Backlog', name: 'Backlog', order: 0, hidden: false },
+    ]);
+    client.operation.saveBoardColumns.mutate.mockRejectedValue(
+      new Error('Non-empty columns cannot be hidden or removed.'),
+    );
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Edit board columns' }));
+    await user.click(screen.getByRole('button', { name: 'Add column' }));
+
+    const nameInputs = screen.getAllByLabelText('Column name');
+    await user.type(nameInputs[1], 'Backlog');
+    await user.click(screen.getByRole('button', { name: 'Save columns' }));
+
+    expect(screen.getByText('Column names must be unique.')).toBeInTheDocument();
+    expect(client.operation.saveBoardColumns.mutate).not.toHaveBeenCalled();
+
+    await user.clear(nameInputs[1]);
+    await user.type(nameInputs[1], 'Archive');
+    await user.click(screen.getAllByRole('button', { name: 'Hide column' })[0]);
+    await user.click(screen.getByRole('button', { name: 'Save columns' }));
+
+    expect(await screen.findByText('Non-empty columns cannot be hidden or removed.')).toBeInTheDocument();
   });
 
   it('shows explicit success feedback for a direct column move and keeps a single rendered card in the target bucket', async () => {

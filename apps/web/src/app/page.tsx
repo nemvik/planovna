@@ -127,7 +127,15 @@ type InvoiceSummary = {
   pdfPath: string;
 };
 
+type BoardColumnConfig = {
+  key: string;
+  name: string;
+  order: number;
+  hidden: boolean;
+};
+
 type OperationBucket = {
+  key: string;
   label: string;
   operations: Operation[];
 };
@@ -206,6 +214,22 @@ type HomepageAuthLocaleStrings = {
   auditLogRetryButton: string;
   auditLogActorFallback: string;
   auditLogTimestampFallback: string;
+  boardColumnsTitle: string;
+  boardColumnsOpenButton: string;
+  boardColumnsCloseButton: string;
+  boardColumnsAddButton: string;
+  boardColumnsSaveButton: string;
+  boardColumnsSavingButton: string;
+  boardColumnsNameLabel: string;
+  boardColumnsMoveUpButton: string;
+  boardColumnsMoveDownButton: string;
+  boardColumnsHideButton: string;
+  boardColumnsRemoveButton: string;
+  boardColumnsValidationRequired: string;
+  boardColumnsValidationUnique: string;
+  boardColumnsSaveSuccess: string;
+  boardColumnsSaveFailed: string;
+  boardColumnsNonEmptyDeleteBlocked: string;
   recurringCashflowTitle: string;
   recurringCashflowCreateButton: string;
   recurringCashflowEmpty: string;
@@ -339,6 +363,22 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogRetryButton: 'Zkusit znovu',
     auditLogActorFallback: 'Neznámý aktér',
     auditLogTimestampFallback: 'Neznámý čas',
+    boardColumnsTitle: 'Sdílené sloupce boardu',
+    boardColumnsOpenButton: 'Upravit sloupce boardu',
+    boardColumnsCloseButton: 'Zavřít sloupce boardu',
+    boardColumnsAddButton: 'Přidat sloupec',
+    boardColumnsSaveButton: 'Uložit sloupce',
+    boardColumnsSavingButton: 'Ukládání sloupců…',
+    boardColumnsNameLabel: 'Název sloupce',
+    boardColumnsMoveUpButton: 'Posunout nahoru',
+    boardColumnsMoveDownButton: 'Posunout dolů',
+    boardColumnsHideButton: 'Skrýt sloupec',
+    boardColumnsRemoveButton: 'Odstranit sloupec',
+    boardColumnsValidationRequired: 'Názvy sloupců jsou povinné.',
+    boardColumnsValidationUnique: 'Názvy sloupců musí být unikátní.',
+    boardColumnsSaveSuccess: 'Sloupce boardu byly uloženy.',
+    boardColumnsSaveFailed: 'Sloupce boardu se nepodařilo uložit.',
+    boardColumnsNonEmptyDeleteBlocked: 'Neprázdné sloupce nelze skrýt ani odstranit.',
     recurringCashflowTitle: 'Opakovaný cashflow',
     recurringCashflowCreateButton: 'Vytvořit pravidlo',
     recurringCashflowEmpty: 'Zatím nejsou definovaná žádná opakovaná pravidla.',
@@ -471,6 +511,22 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogRetryButton: 'Retry',
     auditLogActorFallback: 'Unknown actor',
     auditLogTimestampFallback: 'Unknown time',
+    boardColumnsTitle: 'Shared board columns',
+    boardColumnsOpenButton: 'Edit board columns',
+    boardColumnsCloseButton: 'Close board columns',
+    boardColumnsAddButton: 'Add column',
+    boardColumnsSaveButton: 'Save columns',
+    boardColumnsSavingButton: 'Saving columns…',
+    boardColumnsNameLabel: 'Column name',
+    boardColumnsMoveUpButton: 'Move up',
+    boardColumnsMoveDownButton: 'Move down',
+    boardColumnsHideButton: 'Hide column',
+    boardColumnsRemoveButton: 'Remove column',
+    boardColumnsValidationRequired: 'Column names are required.',
+    boardColumnsValidationUnique: 'Column names must be unique.',
+    boardColumnsSaveSuccess: 'Board columns saved.',
+    boardColumnsSaveFailed: 'Failed to save board columns.',
+    boardColumnsNonEmptyDeleteBlocked: 'Non-empty columns cannot be hidden or removed.',
     recurringCashflowTitle: 'Recurring cashflow',
     recurringCashflowCreateButton: 'Create rule',
     recurringCashflowEmpty: 'No recurring rules defined yet.',
@@ -603,6 +659,22 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     auditLogRetryButton: 'Erneut versuchen',
     auditLogActorFallback: 'Unbekannter Akteur',
     auditLogTimestampFallback: 'Unbekannte Zeit',
+    boardColumnsTitle: 'Geteilte Board-Spalten',
+    boardColumnsOpenButton: 'Board-Spalten bearbeiten',
+    boardColumnsCloseButton: 'Board-Spalten schließen',
+    boardColumnsAddButton: 'Spalte hinzufügen',
+    boardColumnsSaveButton: 'Spalten speichern',
+    boardColumnsSavingButton: 'Spalten werden gespeichert…',
+    boardColumnsNameLabel: 'Spaltenname',
+    boardColumnsMoveUpButton: 'Nach oben',
+    boardColumnsMoveDownButton: 'Nach unten',
+    boardColumnsHideButton: 'Spalte ausblenden',
+    boardColumnsRemoveButton: 'Spalte entfernen',
+    boardColumnsValidationRequired: 'Spaltennamen sind erforderlich.',
+    boardColumnsValidationUnique: 'Spaltennamen müssen eindeutig sein.',
+    boardColumnsSaveSuccess: 'Board-Spalten wurden gespeichert.',
+    boardColumnsSaveFailed: 'Board-Spalten konnten nicht gespeichert werden.',
+    boardColumnsNonEmptyDeleteBlocked: 'Nicht leere Spalten können nicht ausgeblendet oder entfernt werden.',
     recurringCashflowTitle: 'Wiederkehrender Cashflow',
     recurringCashflowCreateButton: 'Regel erstellen',
     recurringCashflowEmpty: 'Noch keine wiederkehrenden Regeln definiert.',
@@ -738,21 +810,57 @@ const compareOperations = (left: Operation, right: Operation) => {
   return leftFallback.localeCompare(rightFallback);
 };
 
-const buildBuckets = (operations: Operation[]): OperationBucket[] => {
+const getOperationBucketKey = (operation: Pick<Operation, 'startDate'>) =>
+  getOperationBucketLabel(operation.startDate);
+
+const mergeBoardColumns = (
+  operations: Operation[],
+  boardColumns: BoardColumnConfig[],
+): BoardColumnConfig[] => {
+  const operationKeys = Array.from(new Set(operations.map((operation) => getOperationBucketKey(operation))));
+  const columnMap = new Map(boardColumns.map((column) => [column.key, column]));
+  const merged = [...boardColumns]
+    .sort((left, right) => left.order - right.order || left.key.localeCompare(right.key))
+    .map((column, index) => ({ ...column, order: index }));
+
+  for (const key of operationKeys.sort(compareBucketLabels)) {
+    if (!columnMap.has(key)) {
+      merged.push({
+        key,
+        name: key,
+        order: merged.length,
+        hidden: false,
+      });
+    }
+  }
+
+  return merged.map((column, index) => ({ ...column, order: index }));
+};
+
+const buildBuckets = (
+  operations: Operation[],
+  boardColumns: BoardColumnConfig[],
+): OperationBucket[] => {
+  const mergedColumns = mergeBoardColumns(operations, boardColumns);
+  const explicitColumnKeys = new Set(boardColumns.map((column) => column.key));
   const bucketMap = new Map<string, Operation[]>();
 
   for (const operation of operations) {
-    const bucketLabel = getOperationBucketLabel(operation.startDate);
-    const bucketOperations = bucketMap.get(bucketLabel) ?? [];
+    const bucketKey = getOperationBucketKey(operation);
+    const bucketOperations = bucketMap.get(bucketKey) ?? [];
     bucketOperations.push(operation);
-    bucketMap.set(bucketLabel, bucketOperations);
+    bucketMap.set(bucketKey, bucketOperations);
   }
 
-  return Array.from(bucketMap.entries())
-    .sort(([leftLabel], [rightLabel]) => compareBucketLabels(leftLabel, rightLabel))
-    .map(([label, bucketOperations]) => ({
-      label,
-      operations: [...bucketOperations].sort(compareOperations),
+  return mergedColumns
+    .filter((column) => {
+      const count = bucketMap.get(column.key)?.length ?? 0;
+      return count > 0 || (explicitColumnKeys.has(column.key) && !column.hidden);
+    })
+    .map((column) => ({
+      key: column.key,
+      label: column.name,
+      operations: [...(bucketMap.get(column.key) ?? [])].sort(compareOperations),
     }));
 };
 
@@ -901,6 +1009,11 @@ export default function Home() {
   const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
   const [authMessage, setAuthMessage] = useState('');
   const [boardMessage, setBoardMessage] = useState('');
+  const [boardColumns, setBoardColumns] = useState<BoardColumnConfig[]>([]);
+  const [boardColumnsDraft, setBoardColumnsDraft] = useState<BoardColumnConfig[]>([]);
+  const [boardColumnsOpen, setBoardColumnsOpen] = useState(false);
+  const [boardColumnsSaving, setBoardColumnsSaving] = useState(false);
+  const [boardColumnsError, setBoardColumnsError] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
   const [mutatingOperationId, setMutatingOperationId] = useState<string | null>(null);
   const [scheduleDates, setScheduleDates] = useState<Record<string, string>>({});
@@ -951,7 +1064,10 @@ export default function Home() {
   );
   const filteredOperations = useMemo(() => applyBoardFilters(operations, filters), [operations, filters]);
   const activeFilters = useMemo(() => getActiveBoardFilters(filters), [filters]);
-  const operationBuckets = useMemo(() => buildBuckets(filteredOperations), [filteredOperations]);
+  const operationBuckets = useMemo(
+    () => buildBuckets(filteredOperations, boardColumns),
+    [filteredOperations, boardColumns],
+  );
   const cashflowSummary = useMemo(() => {
     const plannedIn = cashflowItems
       .filter((item) => item.kind === 'PLANNED_IN')
@@ -986,10 +1102,19 @@ export default function Home() {
   const boardSummaryShowingText = homepageAuthCopy.boardSummaryShowingTemplate
     .replace('{filtered}', String(filteredOperations.length))
     .replace('{total}', String(operations.length));
-  const getLocalizedBucketLabel = (bucket: string) =>
-    bucket === BACKLOG_BUCKET ? homepageAuthCopy.commonBacklogOption : bucket;
-  const getLocalizedBucketOptionLabel = (bucket: string) =>
-    bucket === BACKLOG_BUCKET ? homepageAuthCopy.commonBacklogOption : formatDateForDisplay(bucket, homepageLocale);
+  const getConfiguredBoardColumn = (bucket: string) =>
+    boardColumns.find((column) => column.key === bucket) ?? null;
+  const getConfiguredBucketName = (bucket: string) => {
+    const configuredColumn = getConfiguredBoardColumn(bucket);
+
+    if (configuredColumn && configuredColumn.name !== bucket) {
+      return configuredColumn.name;
+    }
+
+    return bucket === BACKLOG_BUCKET ? homepageAuthCopy.commonBacklogOption : bucket;
+  };
+  const getLocalizedBucketLabel = (bucket: string) => getConfiguredBucketName(bucket);
+  const getLocalizedBucketOptionLabel = (bucket: string) => getConfiguredBucketName(bucket);
   const getActiveFilterLabel = (key: (typeof activeFilters)[number]['key']) => {
     switch (key) {
       case 'status':
@@ -1131,6 +1256,11 @@ export default function Home() {
     setCashflowItems([]);
     setInvoiceSummaries([]);
     setBoardMessage('');
+    setBoardColumns([]);
+    setBoardColumnsDraft([]);
+    setBoardColumnsOpen(false);
+    setBoardColumnsSaving(false);
+    setBoardColumnsError('');
     mutatingOperationIdRef.current = null;
     setMutatingOperationId(null);
     setScheduleDates({});
@@ -1183,11 +1313,12 @@ export default function Home() {
     setOperationLoadState('loading');
 
     try {
-      const [operationResult, orderResult, templateResult, recurringRuleResult] = await Promise.all([
+      const [operationResult, orderResult, templateResult, recurringRuleResult, boardColumnResult] = await Promise.all([
         client.operation.list.query(),
         client.order.list.query(),
         client.order.routingTemplates.query(),
         client.cashflow.listRecurringRules.query(),
+        client.operation.listBoardColumns.query(),
       ]);
       if (loadSession !== operationLoadSessionRef.current) {
         return [];
@@ -1197,10 +1328,14 @@ export default function Home() {
       const loadedOrders = orderResult as OrderSummary[];
       const loadedTemplates = templateResult as RoutingTemplate[];
       const loadedRecurringRules = recurringRuleResult as RecurringCashflowRule[];
+      const loadedBoardColumns = boardColumnResult as BoardColumnConfig[];
       setOperations(loadedOperations);
       setOrders(loadedOrders);
       setRoutingTemplates(loadedTemplates);
       setRecurringRules(loadedRecurringRules);
+      setBoardColumns(loadedBoardColumns);
+      setBoardColumnsDraft(mergeBoardColumns(loadedOperations, loadedBoardColumns));
+      setBoardColumnsError('');
       setSelectedOrderId((current) => current || loadedOrders[0]?.id || '');
       setSelectedTemplateId((current) => current || loadedTemplates[0]?.id || '');
       setBoardMessage('');
@@ -1225,6 +1360,86 @@ export default function Home() {
       }
 
       throw error;
+    }
+  };
+
+  const validateBoardColumnDraft = (columns: BoardColumnConfig[]) => {
+    const normalizedNames = columns.map((column) => column.name.trim());
+
+    if (normalizedNames.some((name) => name.length === 0)) {
+      return homepageAuthCopy.boardColumnsValidationRequired;
+    }
+
+    const uniqueNames = new Set(normalizedNames.map((name) => name.toLocaleLowerCase('en-US')));
+    if (uniqueNames.size !== normalizedNames.length) {
+      return homepageAuthCopy.boardColumnsValidationUnique;
+    }
+
+    return '';
+  };
+
+  const onAddBoardColumn = () => {
+    setBoardColumnsDraft((currentColumns) => ([
+      ...currentColumns,
+      {
+        key: `custom:${Date.now()}:${currentColumns.length}`,
+        name: '',
+        order: currentColumns.length,
+        hidden: false,
+      },
+    ]));
+    setBoardColumnsError('');
+  };
+
+  const onReorderBoardColumn = (index: number, direction: -1 | 1) => {
+    setBoardColumnsDraft((currentColumns) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= currentColumns.length) {
+        return currentColumns;
+      }
+
+      const nextColumns = [...currentColumns];
+      const [moved] = nextColumns.splice(index, 1);
+      nextColumns.splice(nextIndex, 0, moved);
+      return nextColumns.map((column, order) => ({ ...column, order }));
+    });
+  };
+
+  const onSaveBoardColumns = async () => {
+    const normalizedColumns = boardColumnsDraft.map((column, order) => ({
+      ...column,
+      name: column.name.trim(),
+      order,
+    }));
+    const validationMessage = validateBoardColumnDraft(normalizedColumns);
+    if (validationMessage) {
+      setBoardColumnsError(validationMessage);
+      return;
+    }
+
+    setBoardColumnsSaving(true);
+    setBoardColumnsError('');
+
+    try {
+      const savedColumns = (await trpcClient.operation.saveBoardColumns.mutate({
+        columns: normalizedColumns,
+      })) as BoardColumnConfig[];
+      setBoardColumns(savedColumns);
+      setBoardColumnsDraft(mergeBoardColumns(operations, savedColumns));
+      setBoardColumnsOpen(false);
+      setBoardMessage(homepageAuthCopy.boardColumnsSaveSuccess);
+    } catch (error) {
+      const message =
+        error &&
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof error.message === 'string' &&
+        error.message.length > 0
+          ? error.message
+          : homepageAuthCopy.boardColumnsSaveFailed;
+      setBoardColumnsError(message);
+    } finally {
+      setBoardColumnsSaving(false);
     }
   };
 
@@ -1946,6 +2161,18 @@ export default function Home() {
             <button
               className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               type="button"
+              onClick={() => {
+                const mergedColumns = mergeBoardColumns(operations, boardColumns);
+                setBoardColumnsDraft(mergedColumns);
+                setBoardColumnsError('');
+                setBoardColumnsOpen(true);
+              }}
+            >
+              {homepageAuthCopy.boardColumnsOpenButton}
+            </button>
+            <button
+              className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              type="button"
               onClick={() => resetSession()}
             >
               {homepageAuthCopy.logoutResetSessionButton}
@@ -2002,6 +2229,110 @@ export default function Home() {
                 ))}
               </ul>
             )}
+          </aside>
+        </div>
+      ) : null}
+
+      {boardColumnsOpen ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30">
+          <aside className="h-full w-full max-w-xl overflow-y-auto bg-white p-4 shadow-xl">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">{homepageAuthCopy.boardColumnsTitle}</h2>
+              <button
+                className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                type="button"
+                onClick={() => setBoardColumnsOpen(false)}
+              >
+                {homepageAuthCopy.boardColumnsCloseButton}
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {boardColumnsDraft.map((column, index) => (
+                <div key={column.key} className="rounded border bg-slate-50 p-3">
+                  <label className="flex flex-col gap-1 text-sm">
+                    {homepageAuthCopy.boardColumnsNameLabel}
+                    <input
+                      className="rounded border bg-white px-2 py-1"
+                      value={column.name}
+                      onChange={(event) => {
+                        const nextName = event.target.value;
+                        setBoardColumnsDraft((currentColumns) =>
+                          currentColumns.map((currentColumn) =>
+                            currentColumn.key === column.key
+                              ? { ...currentColumn, name: nextName }
+                              : currentColumn,
+                          ),
+                        );
+                      }}
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => onReorderBoardColumn(index, -1)}
+                    >
+                      {homepageAuthCopy.boardColumnsMoveUpButton}
+                    </button>
+                    <button
+                      className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                      type="button"
+                      disabled={index === boardColumnsDraft.length - 1}
+                      onClick={() => onReorderBoardColumn(index, 1)}
+                    >
+                      {homepageAuthCopy.boardColumnsMoveDownButton}
+                    </button>
+                    <button
+                      className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                      type="button"
+                      onClick={() => {
+                        setBoardColumnsDraft((currentColumns) =>
+                          currentColumns.map((currentColumn) =>
+                            currentColumn.key === column.key
+                              ? { ...currentColumn, hidden: true }
+                              : currentColumn,
+                          ),
+                        );
+                      }}
+                    >
+                      {homepageAuthCopy.boardColumnsHideButton}
+                    </button>
+                    <button
+                      className="rounded border border-rose-300 bg-white px-3 py-2 text-sm text-rose-700"
+                      type="button"
+                      onClick={() => {
+                        setBoardColumnsDraft((currentColumns) =>
+                          currentColumns
+                            .filter((currentColumn) => currentColumn.key !== column.key)
+                            .map((currentColumn, order) => ({ ...currentColumn, order })),
+                        );
+                      }}
+                    >
+                      {homepageAuthCopy.boardColumnsRemoveButton}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                type="button"
+                onClick={onAddBoardColumn}
+              >
+                {homepageAuthCopy.boardColumnsAddButton}
+              </button>
+              {boardColumnsError ? <p className="text-sm text-rose-700">{boardColumnsError}</p> : null}
+              <button
+                className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+                type="button"
+                disabled={boardColumnsSaving}
+                onClick={() => void onSaveBoardColumns()}
+              >
+                {boardColumnsSaving
+                  ? homepageAuthCopy.boardColumnsSavingButton
+                  : homepageAuthCopy.boardColumnsSaveButton}
+              </button>
+            </div>
           </aside>
         </div>
       ) : null}
@@ -2243,7 +2574,7 @@ export default function Home() {
               >
                 {availableBucketFilters.map((bucket) => (
                   <option key={bucket} value={bucket}>
-                    {bucket === 'ALL' ? homepageAuthCopy.commonAllOption : bucket}
+                    {bucket === 'ALL' ? homepageAuthCopy.commonAllOption : getLocalizedBucketOptionLabel(bucket)}
                   </option>
                 ))}
               </select>
@@ -2306,11 +2637,11 @@ export default function Home() {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {operationBuckets.map((bucket) => (
                   <BoardBucket
-                    key={bucket.label}
-                    bucketLabel={bucket.label}
-                    ariaLabel={getLocalizedBucketLabel(bucket.label)}
+                    key={bucket.key}
+                    bucketLabel={bucket.key}
+                    ariaLabel={bucket.label}
                     count={bucket.operations.length}
-                    title={getLocalizedBucketLabel(bucket.label)}
+                    title={bucket.label}
                   >
                     <SortableContext
                       items={bucket.operations.map((operation) => `operation:${operation.id}`)}
@@ -2346,7 +2677,7 @@ export default function Home() {
                             <SortableOperationItem
                               key={operation.id}
                               operationId={operation.id}
-                              bucketLabel={bucket.label}
+                              bucketLabel={bucket.key}
                             >
                               {({ dragHandleAttributes, dragHandleListeners }) => (
                                 <>

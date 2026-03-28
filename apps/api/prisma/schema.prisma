@@ -62,17 +62,18 @@ model BoardAuditEvent {
 model Tenant {
   id        String   @id @default(cuid())
   name      String
+  boardColumnConfig Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users      User[]
-  customers  Customer[]
-  orders     Order[]
-  operations Operation[]
-  invoices   Invoice[]
-  cashflows  CashflowItem[]
+  users                  User[]
+  customers              Customer[]
+  orders                 Order[]
+  operations             Operation[]
+  invoices               Invoice[]
+  cashflows              CashflowItem[]
   recurringCashflowRules RecurringCashflowRule[]
-  boardAuditEvents BoardAuditEvent[]
+  boardAuditEvents       BoardAuditEvent[]
 
   @@schema("app")
 }

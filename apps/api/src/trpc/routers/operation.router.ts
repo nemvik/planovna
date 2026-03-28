@@ -4,9 +4,11 @@ import {
   CreateOperationDependencySchema,
   CreateOperationSchema,
   RemoveOperationDependencySchema,
+  SaveBoardColumnConfigSchema,
   UpdateOperationSchema,
 } from '../../modules/operation/dto/operation.dto';
 import {
+  BoardColumnConfigValidationError,
   OperationDependencyValidationError,
 } from '../../modules/operation/operation.service';
 import { throwTrpcVersionConflict } from '../errors/version-conflict';
@@ -33,6 +35,20 @@ const throwDependencyError = (error: unknown): never => {
   throw error;
 };
 
+const throwBoardColumnError = (error: unknown): never => {
+  if (error instanceof BoardColumnConfigValidationError) {
+    throw new TRPCError({
+      code: error.code === 'BOARD_COLUMN_NON_EMPTY_DELETE' ? 'CONFLICT' : 'BAD_REQUEST',
+      message: error.message,
+      cause: {
+        code: error.code,
+      },
+    });
+  }
+
+  throw error;
+};
+
 export const createOperationRouter = (operationService: OperationService) =>
   router({
     list: protectedProcedure.query(({ ctx }) => {
@@ -41,6 +57,18 @@ export const createOperationRouter = (operationService: OperationService) =>
     auditLog: protectedProcedure.query(({ ctx }) => {
       return operationService.listAudit(ctx.auth.tenantId);
     }),
+    listBoardColumns: protectedProcedure.query(({ ctx }) => {
+      return operationService.listBoardColumns(ctx.auth.tenantId);
+    }),
+    saveBoardColumns: protectedProcedure
+      .input(SaveBoardColumnConfigSchema)
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await operationService.saveBoardColumns(ctx.auth.tenantId, input);
+        } catch (error) {
+          throwBoardColumnError(error);
+        }
+      }),
     create: protectedProcedure
       .input(CreateOperationSchema)
       .mutation(({ ctx, input }) => {

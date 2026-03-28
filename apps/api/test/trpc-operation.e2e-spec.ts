@@ -737,4 +737,98 @@ describe('tRPC operation contracts (e2e)', () => {
       prerequisiteOverflowCount: 0,
     });
   });
+
+  it('saves and lists tenant-shared board columns with validation', async () => {
+    const publicClient = createClient();
+    const registered = await publicClient.auth.register.mutate({
+      email: `columns-${uniqueSuffix()}@tenant.test`,
+      password: 'tenant-a-pass',
+      companyName: `Columns tenant ${uniqueSuffix()}`,
+    });
+    const tenantClient = createClient(registered.accessToken);
+
+    await expect(
+      tenantClient.operation.saveBoardColumns.mutate({
+        columns: [
+          { key: 'Backlog', name: '  ', order: 0, hidden: false },
+        ],
+      }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+
+    await expect(
+      tenantClient.operation.saveBoardColumns.mutate({
+        columns: [
+          { key: 'Backlog', name: 'Queue', order: 0, hidden: false },
+          { key: 'custom:1', name: 'queue', order: 1, hidden: false },
+        ],
+      }),
+    ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+
+    const saved = await tenantClient.operation.saveBoardColumns.mutate({
+      columns: [
+        { key: 'Backlog', name: 'Queue', order: 0, hidden: false },
+        { key: 'custom:review', name: 'Review later', order: 1, hidden: false },
+      ],
+    });
+
+    expect(saved).toEqual([
+      { key: 'Backlog', name: 'Queue', order: 0, hidden: false },
+      { key: 'custom:review', name: 'Review later', order: 1, hidden: false },
+    ]);
+
+    await expect(tenantClient.operation.listBoardColumns.query()).resolves.toEqual(saved);
+  });
+
+  it('blocks hiding or removing non-empty board columns and allows saving unused columns', async () => {
+    const publicClient = createClient();
+    const email = `columns-ops-${uniqueSuffix()}@tenant.test`;
+    const registered = await publicClient.auth.register.mutate({
+      email,
+      password: 'tenant-a-pass',
+      companyName: `Columns ops tenant ${uniqueSuffix()}`,
+    });
+    const tenantClient = createClient(registered.accessToken);
+    const tenantUser = await prismaService.user.findFirstOrThrow({
+      where: { email },
+      select: { tenantId: true },
+    });
+    const order = await createOperationOrder(tenantClient, tenantUser.tenantId);
+
+    await tenantClient.operation.create.mutate({
+      tenantId: tenantUser.tenantId,
+      orderId: order.id,
+      code: `OP-A-COL-${uniqueSuffix()}`,
+      title: 'Backlog operation',
+      status: 'READY',
+      sortIndex: 1,
+    });
+
+    await expect(
+      tenantClient.operation.saveBoardColumns.mutate({
+        columns: [
+          { key: 'Backlog', name: 'Queue', order: 0, hidden: true },
+        ],
+      }),
+    ).rejects.toMatchObject({ data: { code: 'CONFLICT' } });
+
+    await expect(
+      tenantClient.operation.saveBoardColumns.mutate({
+        columns: [
+          { key: 'custom:unused', name: 'Unused', order: 0, hidden: true },
+        ],
+      }),
+    ).rejects.toMatchObject({ data: { code: 'CONFLICT' } });
+
+    await expect(
+      tenantClient.operation.saveBoardColumns.mutate({
+        columns: [
+          { key: 'Backlog', name: 'Queue', order: 0, hidden: false },
+          { key: 'custom:unused', name: 'Unused', order: 1, hidden: true },
+        ],
+      }),
+    ).resolves.toEqual([
+      { key: 'Backlog', name: 'Queue', order: 0, hidden: false },
+      { key: 'custom:unused', name: 'Unused', order: 1, hidden: true },
+    ]);
+  });
 });

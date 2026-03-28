@@ -31,7 +31,20 @@ export const RemoveOperationDependencySchema = z.object({
   dependsOnId: z.string().min(1),
 });
 
+export const BoardColumnConfigItemSchema = z.object({
+  key: z.string().min(1),
+  name: z.string().trim().min(1),
+  order: z.number().int().min(0),
+  hidden: z.boolean().default(false),
+});
+
+export const SaveBoardColumnConfigSchema = z.object({
+  columns: z.array(BoardColumnConfigItemSchema),
+});
+
 export type CreateOperationDto = z.infer<typeof CreateOperationSchema>;
 export type UpdateOperationDto = z.infer<typeof UpdateOperationSchema>;
 export type CreateOperationDependencyDto = z.infer<typeof CreateOperationDependencySchema>;
 export type RemoveOperationDependencyDto = z.infer<typeof RemoveOperationDependencySchema>;
+export type BoardColumnConfigItemDto = z.infer<typeof BoardColumnConfigItemSchema>;
+export type SaveBoardColumnConfigDto = z.infer<typeof SaveBoardColumnConfigSchema>;

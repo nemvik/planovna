@@ -3,9 +3,11 @@ import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BoardAuditService } from './board-audit.service';
 import {
+  BoardColumnConfigItemDto,
   CreateOperationDependencyDto,
   CreateOperationDto,
   RemoveOperationDependencyDto,
+  SaveBoardColumnConfigDto,
   UpdateOperationDto,
 } from './dto/operation.dto';
 
@@ -17,6 +19,19 @@ export class OperationDependencyValidationError extends Error {
       | 'DEPENDENCY_CYCLE'
       | 'DEPENDENCY_INVALID_TARGET'
       | 'DEPENDENCY_NOT_FOUND',
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export class BoardColumnConfigValidationError extends Error {
+  constructor(
+    readonly code:
+      | 'BOARD_COLUMN_NAME_REQUIRED'
+      | 'BOARD_COLUMN_NAME_DUPLICATE'
+      | 'BOARD_COLUMN_KEY_DUPLICATE'
+      | 'BOARD_COLUMN_NON_EMPTY_DELETE',
     message: string,
   ) {
     super(message);
@@ -53,6 +68,13 @@ type PrismaOperationRow = {
       code: string;
     };
   }>;
+};
+
+type BoardColumnConfigRecord = {
+  key: string;
+  name: string;
+  order: number;
+  hidden: boolean;
 };
 
 @Injectable()
@@ -102,6 +124,39 @@ export class OperationService {
 
   async listAudit(tenantId: string) {
     return this.boardAuditService.list(tenantId);
+  }
+
+  async listBoardColumns(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { boardColumnConfig: true },
+    });
+
+    return this.normalizeBoardColumnConfig(tenant?.boardColumnConfig);
+  }
+
+  async saveBoardColumns(tenantId: string, input: SaveBoardColumnConfigDto) {
+    const normalizedColumns = this.validateBoardColumnConfig(input.columns);
+    const nonEmptyColumns = await this.getNonEmptyBoardColumnKeys(tenantId);
+
+    for (const key of nonEmptyColumns) {
+      const nextColumn = normalizedColumns.find((column) => column.key === key);
+      if (!nextColumn || nextColumn.hidden) {
+        throw new BoardColumnConfigValidationError(
+          'BOARD_COLUMN_NON_EMPTY_DELETE',
+          'Non-empty columns cannot be hidden or removed.',
+        );
+      }
+    }
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        boardColumnConfig: normalizedColumns,
+      },
+    });
+
+    return normalizedColumns;
   }
 
   async update(input: UpdateOperationDto & { actorUserId?: string }) {
@@ -391,6 +446,75 @@ export class OperationService {
     }
 
     return false;
+  }
+
+  private normalizeBoardColumnConfig(value: unknown): BoardColumnConfigRecord[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .filter((item): item is Partial<BoardColumnConfigRecord> => !!item && typeof item === 'object')
+      .map((item, index) => ({
+        key: typeof item.key === 'string' ? item.key : '',
+        name: typeof item.name === 'string' ? item.name.trim() : '',
+        order: typeof item.order === 'number' && Number.isInteger(item.order) ? item.order : index,
+        hidden: typeof item.hidden === 'boolean' ? item.hidden : false,
+      }))
+      .filter((item) => item.key.length > 0 && item.name.length > 0)
+      .sort((left, right) => left.order - right.order || left.key.localeCompare(right.key))
+      .map((item, index) => ({ ...item, order: index }));
+  }
+
+  private validateBoardColumnConfig(columns: BoardColumnConfigItemDto[]): BoardColumnConfigRecord[] {
+    const seenKeys = new Set<string>();
+    const seenNames = new Set<string>();
+
+    return columns
+      .map((column, index) => ({
+        key: column.key.trim(),
+        name: column.name.trim(),
+        order: index,
+        hidden: column.hidden,
+      }))
+      .map((column) => {
+        if (!column.name) {
+          throw new BoardColumnConfigValidationError(
+            'BOARD_COLUMN_NAME_REQUIRED',
+            'Column names are required.',
+          );
+        }
+
+        const normalizedName = column.name.toLocaleLowerCase('en-US');
+        if (seenNames.has(normalizedName)) {
+          throw new BoardColumnConfigValidationError(
+            'BOARD_COLUMN_NAME_DUPLICATE',
+            'Column names must be unique.',
+          );
+        }
+        seenNames.add(normalizedName);
+
+        if (!column.key || seenKeys.has(column.key)) {
+          throw new BoardColumnConfigValidationError(
+            'BOARD_COLUMN_KEY_DUPLICATE',
+            'Board column keys must be unique.',
+          );
+        }
+        seenKeys.add(column.key);
+
+        return column;
+      });
+  }
+
+  private async getNonEmptyBoardColumnKeys(tenantId: string) {
+    const operations = await this.prisma.operation.findMany({
+      where: { tenantId },
+      select: { startDate: true },
+    });
+
+    return new Set(
+      operations.map((operation) => operation.startDate?.toISOString().slice(0, 10) ?? 'Backlog'),
+    );
   }
 
   private operationSelect(tenantId: string) {
