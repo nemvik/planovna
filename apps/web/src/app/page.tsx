@@ -272,6 +272,7 @@ type HomepageAuthLocaleStrings = {
   operationDependencyRemoveButton: string;
   operationDependencyNone: string;
   operationDependencyUpdateFailed: string;
+  operationMoveSuccess: string;
   operationMoveFailed: string;
   operationUpdateStatusFailed: string;
   operationUpdateBlockedReasonFailed: string;
@@ -403,6 +404,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationDependencyRemoveButton: 'Odebrat',
     operationDependencyNone: 'Bez závislostí',
     operationDependencyUpdateFailed: 'Uložení závislosti se nepodařilo.',
+    operationMoveSuccess: 'Přesun operace byl uložen.',
     operationMoveFailed: 'Přesun operace se nepodařil.',
     operationUpdateStatusFailed: 'Nepodařilo se aktualizovat stav operace.',
     operationUpdateBlockedReasonFailed: 'Nepodařilo se aktualizovat důvod blokace.',
@@ -532,6 +534,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationDependencyRemoveButton: 'Remove',
     operationDependencyNone: 'No dependencies',
     operationDependencyUpdateFailed: 'Failed to update dependencies.',
+    operationMoveSuccess: 'Operation move saved.',
     operationMoveFailed: 'Failed to move operation.',
     operationUpdateStatusFailed: 'Failed to update operation status.',
     operationUpdateBlockedReasonFailed: 'Failed to update blocked reason.',
@@ -661,6 +664,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationDependencyRemoveButton: 'Entfernen',
     operationDependencyNone: 'Keine Abhängigkeiten',
     operationDependencyUpdateFailed: 'Abhängigkeiten konnten nicht gespeichert werden.',
+    operationMoveSuccess: 'Vorgangsverschiebung wurde gespeichert.',
     operationMoveFailed: 'Vorgang konnte nicht verschoben werden.',
     operationUpdateStatusFailed: 'Vorgangsstatus konnte nicht aktualisiert werden.',
     operationUpdateBlockedReasonFailed: 'Sperrgrund konnte nicht aktualisiert werden.',
@@ -1302,9 +1306,9 @@ export default function Home() {
     operation: Operation,
     updates: OperationUpdate,
     failureMessage: string,
-  ) => {
+  ): Promise<boolean> => {
     if (mutatingOperationIdRef.current !== null) {
-      return;
+      return false;
     }
 
     setBoardMessage('');
@@ -1321,7 +1325,7 @@ export default function Home() {
       })) as Operation;
 
       if (mutationSession !== operationLoadSessionRef.current) {
-        return;
+        return false;
       }
 
       setOperations((currentOperations) =>
@@ -1353,9 +1357,10 @@ export default function Home() {
         ...currentSortIndexDrafts,
         [updatedOperation.id]: String(updatedOperation.sortIndex),
       }));
+      return true;
     } catch (error) {
       if (mutationSession !== operationLoadSessionRef.current) {
-        return;
+        return false;
       }
 
       if (hasForbiddenCode(error)) {
@@ -1365,13 +1370,13 @@ export default function Home() {
           await loadOperations();
 
           if (mutationSession !== operationLoadSessionRef.current) {
-            return;
+            return false;
           }
 
           setBoardMessage(homepageAuthCopy.boardConflictReloaded);
         } catch {
           if (mutationSession !== operationLoadSessionRef.current) {
-            return;
+            return false;
           }
 
           setBoardMessage(homepageAuthCopy.boardConflictReloadFailed);
@@ -1379,13 +1384,13 @@ export default function Home() {
       } else {
         setBoardMessage(failureMessage);
       }
-    } finally {
-      if (mutationSession !== operationLoadSessionRef.current) {
-        return;
-      }
 
-      mutatingOperationIdRef.current = null;
-      setMutatingOperationId(null);
+      return false;
+    } finally {
+      if (mutationSession === operationLoadSessionRef.current) {
+        mutatingOperationIdRef.current = null;
+        setMutatingOperationId(null);
+      }
     }
   };
 
@@ -1396,7 +1401,15 @@ export default function Home() {
       return;
     }
 
-    await onUpdateOperation(operation, { startDate: nextStartDate }, homepageAuthCopy.operationMoveFailed);
+    const result = await onUpdateOperation(
+      operation,
+      { startDate: nextStartDate },
+      homepageAuthCopy.operationMoveFailed,
+    );
+
+    if (result) {
+      setBoardMessage(homepageAuthCopy.operationMoveSuccess);
+    }
   };
 
   const onDragEnd = async (event: DragEndEvent) => {
@@ -1429,6 +1442,7 @@ export default function Home() {
       return;
     }
 
+    const previousOperations = operations;
     const nextOperations = dragPlan.nextOperations as Operation[];
     const operationUpdates = new Map(
       dragPlan.changedOperationIds.map((operationId) => {
@@ -1480,10 +1494,14 @@ export default function Home() {
       }
 
       syncOperationDrafts(latestOperations);
+      setBoardMessage(homepageAuthCopy.operationMoveSuccess);
     } catch (error) {
       if (mutationSession !== operationLoadSessionRef.current) {
         return;
       }
+
+      setOperations(previousOperations);
+      syncOperationDrafts(previousOperations);
 
       if (hasForbiddenCode(error)) {
         resetSession(homepageAuthCopy.sessionExpired);
@@ -2549,7 +2567,7 @@ export default function Home() {
                                             )
                                             .map((candidate) => (
                                               <option key={candidate.id} value={candidate.id}>
-                                                {candidate.code} — {candidate.title}
+                                                {candidate.code} ({candidate.title})
                                               </option>
                                             ))}
                                         </select>

@@ -43,8 +43,19 @@ const createClient = () => ({
       mutate: jest.fn(),
     },
   },
+  order: {
+    list: {
+      query: jest.fn().mockResolvedValue([]),
+    },
+    routingTemplates: {
+      query: jest.fn().mockResolvedValue([]),
+    },
+  },
   cashflow: {
     list: {
+      query: jest.fn().mockResolvedValue([]),
+    },
+    listRecurringRules: {
       query: jest.fn().mockResolvedValue([]),
     },
   },
@@ -2564,6 +2575,123 @@ describe('homepage operations board', () => {
     fireEvent.change(scheduleInput, { target: { value: '2026-03-08' } });
 
     expect(scheduleButton).toBeEnabled();
+  });
+
+  it('shows explicit success feedback for a direct column move and keeps a single rendered card in the target bucket', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Dated item',
+        status: 'READY',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'OP-100',
+      title: 'Backlog item',
+      status: 'READY',
+      startDate: '2026-03-06T00:00:00.000Z',
+      sortIndex: 0,
+      version: 2,
+    });
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket).getByText('OP-100 — Backlog item').closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    await user.selectOptions(within(operationCard as HTMLElement).getByLabelText('Move to bucket'), '2026-03-06');
+
+    expect(await screen.findByText('Operation move saved.')).toBeInTheDocument();
+    const targetBucket = screen.getByRole('region', { name: '2026-03-06' });
+    const movedCards = within(within(targetBucket).getByRole('list'))
+      .getAllByText('OP-100 — Backlog item')
+      .filter((node) => node.tagName !== 'OPTION');
+    expect(movedCards).toHaveLength(1);
+    const backlogRegionAfterMove = screen.queryByRole('region', { name: 'Backlog' });
+    if (backlogRegionAfterMove) {
+      const backlogCardsAfterMove = within(within(backlogRegionAfterMove).getByRole('list'))
+        .queryAllByText('OP-100 — Backlog item')
+        .filter((node) => node.tagName !== 'OPTION');
+      expect(backlogCardsAfterMove).toHaveLength(0);
+    } else {
+      expect(backlogRegionAfterMove).toBeNull();
+    }
+  });
+
+  it('shows explicit failure feedback and keeps a single rendered card after a direct column move fails', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-100',
+        title: 'Backlog item',
+        status: 'READY',
+        sortIndex: 0,
+        version: 1,
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'OP-200',
+        title: 'Dated item',
+        status: 'READY',
+        startDate: '2026-03-06T08:00:00.000Z',
+        sortIndex: 1,
+        version: 1,
+      },
+    ]);
+    client.operation.update.mutate.mockRejectedValue(new Error('save failed'));
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    const backlogBucket = await screen.findByRole('region', { name: 'Backlog' });
+    const operationCard = within(backlogBucket).getByText('OP-100 — Backlog item').closest('li');
+
+    expect(operationCard).not.toBeNull();
+
+    await user.selectOptions(within(operationCard as HTMLElement).getByLabelText('Move to bucket'), '2026-03-06');
+
+    expect(await screen.findByText('Failed to move operation.')).toBeInTheDocument();
+    const refreshedBacklogBucket = screen.getByRole('region', { name: 'Backlog' });
+    const backlogCardsAfterFailure = within(within(refreshedBacklogBucket).getByRole('list'))
+      .getAllByText('OP-100 — Backlog item')
+      .filter((node) => node.tagName !== 'OPTION');
+    expect(backlogCardsAfterFailure).toHaveLength(1);
+    const targetCardsAfterFailure = within(within(screen.getByRole('region', { name: '2026-03-06' })).getByRole('list'))
+      .queryAllByText('OP-100 — Backlog item')
+      .filter((node) => node.tagName !== 'OPTION');
+    expect(targetCardsAfterFailure).toHaveLength(0);
   });
 
   it('reloads operations exactly once and shows the resync message when a direct bucket move hits a version conflict', async () => {
