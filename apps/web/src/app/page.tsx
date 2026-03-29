@@ -279,6 +279,16 @@ type HomepageAuthLocaleStrings = {
   invoiceAdjustedNetLabel: string;
   invoiceAdjustedVatLabel: string;
   invoiceAdjustedGrossLabel: string;
+  invoicePaymentSummaryTitle: string;
+  invoicePaymentTotalLabel: string;
+  invoicePaymentPaidLabel: string;
+  invoicePaymentRemainingLabel: string;
+  invoicePaymentStateLabel: string;
+  invoicePaymentStatePaid: string;
+  invoicePaymentStateOpen: string;
+  invoicePaymentStatePartial: string;
+  invoicePaymentStateUnknown: string;
+  invoicePaymentFallback: string;
   invoiceRowNetLabel: string;
   invoiceRowVatLabel: string;
   invoiceRowGrossLabel: string;
@@ -453,6 +463,16 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceAdjustedNetLabel: 'Upravený základ bez DPH',
     invoiceAdjustedVatLabel: 'Upravené DPH',
     invoiceAdjustedGrossLabel: 'Upravená celková částka',
+    invoicePaymentSummaryTitle: 'Platební souhrn',
+    invoicePaymentTotalLabel: 'Celkem s DPH',
+    invoicePaymentPaidLabel: 'Uhrazeno',
+    invoicePaymentRemainingLabel: 'Zbývá',
+    invoicePaymentStateLabel: 'Platební stav',
+    invoicePaymentStatePaid: 'Uhrazeno',
+    invoicePaymentStateOpen: 'Neuhrazeno',
+    invoicePaymentStatePartial: 'Částečně uhrazeno',
+    invoicePaymentStateUnknown: 'Stav neznámý',
+    invoicePaymentFallback: 'Platební metadata nejsou spolehlivě dostupná.',
     invoiceRowNetLabel: 'Bez DPH',
     invoiceRowVatLabel: 'DPH',
     invoiceRowGrossLabel: 'S DPH',
@@ -625,6 +645,16 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceAdjustedNetLabel: 'Adjusted net subtotal',
     invoiceAdjustedVatLabel: 'Adjusted VAT total',
     invoiceAdjustedGrossLabel: 'Adjusted gross total',
+    invoicePaymentSummaryTitle: 'Payment summary',
+    invoicePaymentTotalLabel: 'Total incl. VAT',
+    invoicePaymentPaidLabel: 'Paid',
+    invoicePaymentRemainingLabel: 'Remaining',
+    invoicePaymentStateLabel: 'Payment state',
+    invoicePaymentStatePaid: 'Paid',
+    invoicePaymentStateOpen: 'Open',
+    invoicePaymentStatePartial: 'Partially paid',
+    invoicePaymentStateUnknown: 'Unknown',
+    invoicePaymentFallback: 'Payment metadata is not reliably available.',
     invoiceRowNetLabel: 'Net',
     invoiceRowVatLabel: 'VAT',
     invoiceRowGrossLabel: 'Gross',
@@ -797,6 +827,16 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceAdjustedNetLabel: 'Angepasste Nettosumme',
     invoiceAdjustedVatLabel: 'Angepasste MwSt.-Summe',
     invoiceAdjustedGrossLabel: 'Angepasste Bruttosumme',
+    invoicePaymentSummaryTitle: 'Zahlungsübersicht',
+    invoicePaymentTotalLabel: 'Gesamt inkl. MwSt.',
+    invoicePaymentPaidLabel: 'Bezahlt',
+    invoicePaymentRemainingLabel: 'Offen',
+    invoicePaymentStateLabel: 'Zahlungsstatus',
+    invoicePaymentStatePaid: 'Bezahlt',
+    invoicePaymentStateOpen: 'Offen',
+    invoicePaymentStatePartial: 'Teilweise bezahlt',
+    invoicePaymentStateUnknown: 'Unbekannt',
+    invoicePaymentFallback: 'Zahlungsmetadaten sind nicht zuverlässig verfügbar.',
     invoiceRowNetLabel: 'Netto',
     invoiceRowVatLabel: 'MwSt.',
     invoiceRowGrossLabel: 'Brutto',
@@ -1177,10 +1217,20 @@ export default function Home() {
     const actualIn = cashflowItems
       .filter((item) => item.kind === 'ACTUAL_IN')
       .reduce((sum, item) => sum + item.amount, 0);
+    const actualPaidByInvoiceId = cashflowItems
+      .filter((item) => item.kind === 'ACTUAL_IN')
+      .reduce<Record<string, number>>((totals, item) => {
+        if (!item.invoiceId) {
+          return totals;
+        }
+        totals[item.invoiceId] = (totals[item.invoiceId] ?? 0) + item.amount;
+        return totals;
+      }, {});
 
     return {
       plannedIn,
       actualIn,
+      actualPaidByInvoiceId,
       nextItems: [...cashflowItems]
         .sort((left, right) => left.date.localeCompare(right.date))
         .slice(0, 3),
@@ -1222,6 +1272,32 @@ export default function Home() {
     const adjustedNetSubtotal = Number((netSubtotal + appliedNetDelta).toFixed(2));
     const adjustedVatTotal = Number(((adjustedNetSubtotal * safeVatRatePercent) / 100).toFixed(2));
     const adjustedGrossTotal = Number((adjustedNetSubtotal + adjustedVatTotal).toFixed(2));
+    const paymentSummaries = invoiceSummaries.map((invoice) => {
+      const paidAmount = cashflowSummary.actualPaidByInvoiceId[invoice.id];
+      const hasTrustworthyPaymentMetadata = typeof paidAmount === 'number';
+      const normalizedPaidAmount = hasTrustworthyPaymentMetadata ? Number(paidAmount.toFixed(2)) : 0;
+      const remainingAmount = hasTrustworthyPaymentMetadata
+        ? Number(Math.max(invoice.amountGross - normalizedPaidAmount, 0).toFixed(2))
+        : 0;
+      const paymentState = !hasTrustworthyPaymentMetadata
+        ? homepageAuthCopy.invoicePaymentStateUnknown
+        : normalizedPaidAmount <= 0
+          ? homepageAuthCopy.invoicePaymentStateOpen
+          : remainingAmount <= 0 || invoice.status === 'PAID'
+            ? homepageAuthCopy.invoicePaymentStatePaid
+            : homepageAuthCopy.invoicePaymentStatePartial;
+
+      return {
+        invoiceId: invoice.id,
+        hasTrustworthyPaymentMetadata,
+        paidAmount: normalizedPaidAmount,
+        remainingAmount,
+        paymentState,
+      };
+    });
+    const paymentSummaryByInvoiceId = new Map(
+      paymentSummaries.map((summary) => [summary.invoiceId, summary]),
+    );
 
     return {
       totalCount: invoiceSummaries.length,
@@ -1238,8 +1314,9 @@ export default function Home() {
       adjustedNetSubtotal,
       adjustedVatTotal,
       adjustedGrossTotal,
+      paymentSummaryByInvoiceId,
     };
-  }, [homepageAuthCopy, invoiceAdjustmentAmount, invoiceAdjustmentType, invoiceSummaries]);
+  }, [cashflowSummary.actualPaidByInvoiceId, homepageAuthCopy, invoiceAdjustmentAmount, invoiceAdjustmentType, invoiceSummaries]);
   const showOperationBoard =
     operations.length > 0 && (operationLoadState === 'loaded' || operationLoadState === 'loading');
   const isFilteredEmptyState =
@@ -2787,6 +2864,31 @@ export default function Home() {
                         <span className="text-slate-500">{homepageAuthCopy.invoiceRowRateLabel}: </span>
                         {invoice.hasBreakdown ? `${invoice.vatRatePercent.toFixed(0)}%` : '—'}
                       </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePaymentSummaryTitle}</p>
+                      {invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.hasTrustworthyPaymentMetadata ? (
+                        <div className="mt-2 grid gap-2 md:grid-cols-4">
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoicePaymentTotalLabel}: </span>
+                            {formatMoney(invoice.amountGross, invoice.currency, homepageLocale)}
+                          </p>
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoicePaymentPaidLabel}: </span>
+                            {formatMoney(invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.paidAmount ?? 0, invoice.currency, homepageLocale)}
+                          </p>
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoicePaymentRemainingLabel}: </span>
+                            {formatMoney(invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.remainingAmount ?? 0, invoice.currency, homepageLocale)}
+                          </p>
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoicePaymentStateLabel}: </span>
+                            {invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.paymentState ?? homepageAuthCopy.invoicePaymentStateUnknown}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoicePaymentFallback}</p>
+                      )}
                     </div>
                     {!invoice.hasBreakdown ? (
                       <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoiceRowLegacyLabel}</p>
