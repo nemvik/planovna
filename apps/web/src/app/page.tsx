@@ -132,6 +132,7 @@ type InvoiceSummary = {
   periodLabel?: string;
   periodStartAt?: string;
   periodEndAt?: string;
+  businessContext?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -316,6 +317,9 @@ type HomepageAuthLocaleStrings = {
   invoicePeriodTitle: string;
   invoicePeriodLabel: string;
   invoicePeriodFallback: string;
+  invoiceContextTitle: string;
+  invoiceContextLabel: string;
+  invoiceContextFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -525,6 +529,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicePeriodTitle: 'Období plnění',
     invoicePeriodLabel: 'Fakturační období',
     invoicePeriodFallback: 'Období plnění není spolehlivě dostupné.',
+    invoiceContextTitle: 'Obchodní kontext',
+    invoiceContextLabel: 'Poznámka / reference',
+    invoiceContextFallback: 'Není k dispozici spolehlivá zákaznická poznámka ani reference.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -732,6 +739,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicePeriodTitle: 'Billing/service period',
     invoicePeriodLabel: 'Invoice period',
     invoicePeriodFallback: 'Billing/service period is not reliably available.',
+    invoiceContextTitle: 'Business context',
+    invoiceContextLabel: 'Note / reference',
+    invoiceContextFallback: 'No trustworthy customer-facing note or reference is available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -939,6 +949,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicePeriodTitle: 'Leistungszeitraum',
     invoicePeriodLabel: 'Rechnungszeitraum',
     invoicePeriodFallback: 'Leistungszeitraum ist nicht zuverlässig verfügbar.',
+    invoiceContextTitle: 'Geschäftskontext',
+    invoiceContextLabel: 'Notiz / Referenz',
+    invoiceContextFallback: 'Keine verlässliche kundenlesbare Notiz oder Referenz verfügbar.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -3047,6 +3060,15 @@ export default function Home() {
                       <p className="mt-2 text-sm text-slate-700">
                         <span className="text-slate-500">{homepageAuthCopy.invoicePeriodLabel}: </span>
                         {getInvoicePeriodDisplay(invoice, homepageLocale) || homepageAuthCopy.invoicePeriodFallback}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceContextTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceContextLabel}: </span>
+                        {invoice.businessContext && invoice.businessContext.trim().length > 0
+                          ? invoice.businessContext
+                          : homepageAuthCopy.invoiceContextFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
