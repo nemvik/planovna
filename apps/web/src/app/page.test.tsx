@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Home from './page';
 import { createTrpcClient } from '../lib/trpc/client';
@@ -263,6 +263,179 @@ describe('homepage operations board', () => {
     expect(window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY)).toBeNull();
     expect(client.auth.login.mutate).not.toHaveBeenCalled();
     expect(client.operation.list.query).not.toHaveBeenCalled();
+  });
+
+  it('recomputes adjusted invoice totals for a safe single-rate discount and surcharge', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'PAID',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-03-10T00:00:00.000Z',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const user = userEvent.setup();
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+
+    expect(cashflowSummary).toHaveTextContent('Adjusted net subtotal');
+    expect(cashflowSummary).toHaveTextContent('CZK 150,000.00');
+    expect(cashflowSummary).toHaveTextContent('Adjusted VAT total');
+    expect(cashflowSummary).toHaveTextContent('CZK 31,500.00');
+    expect(cashflowSummary).toHaveTextContent('Adjusted gross total');
+    expect(cashflowSummary).toHaveTextContent('CZK 181,500.00');
+
+    await user.clear(screen.getByLabelText('Adjustment amount net'));
+    await user.type(screen.getByLabelText('Adjustment amount net'), '10000');
+
+    expect(cashflowSummary).toHaveTextContent('CZK 140,000.00');
+    expect(cashflowSummary).toHaveTextContent('CZK 29,400.00');
+    expect(cashflowSummary).toHaveTextContent('CZK 169,400.00');
+
+    await user.selectOptions(screen.getByLabelText('Adjustment type'), 'surcharge');
+
+    expect(cashflowSummary).toHaveTextContent('CZK 160,000.00');
+    expect(cashflowSummary).toHaveTextContent('CZK 33,600.00');
+    expect(cashflowSummary).toHaveTextContent('CZK 193,600.00');
+  });
+
+  it('disables invoice adjustment for legacy fallback rows', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'PAID',
+        amountNet: 50000,
+        amountVat: 0,
+        amountGross: 50000,
+        vatRatePercent: 0,
+        hasBreakdown: false,
+        currency: 'CZK',
+        dueAt: '2026-03-10T00:00:00.000Z',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    expect(screen.getByText('Adjustment is disabled for legacy invoices without an exact breakdown.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Adjustment type')).toBeDisabled();
+    expect(screen.getByLabelText('Adjustment amount net')).toBeDisabled();
+  });
+
+  it('disables invoice adjustment for mixed VAT rates', async () => {
+    const mixedVatClient = createClient();
+    mixedVatClient.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    mixedVatClient.cashflow.list.query.mockResolvedValue([]);
+    mixedVatClient.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-3',
+        number: '2026-0003',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-3/pdf',
+      },
+      {
+        id: 'inv-4',
+        number: '2026-0004',
+        status: 'PAID',
+        amountNet: 50000,
+        amountVat: 6000,
+        amountGross: 56000,
+        vatRatePercent: 12,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-03-10T00:00:00.000Z',
+        pdfPath: '/invoices/inv-4/pdf',
+      },
+    ]);
+
+    renderWithClient(mixedVatClient);
+    await loginAndWaitForAutoLoad(mixedVatClient);
+
+    expect(screen.getByText('Adjustment is disabled because mixed VAT rates cannot be allocated safely.')).toBeInTheDocument();
+  });
+
+  it('validates that discount does not exceed the current net subtotal', async () => {
+    const safeClient = createClient();
+    safeClient.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    safeClient.cashflow.list.query.mockResolvedValue([]);
+    safeClient.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-5',
+        number: '2026-0005',
+        status: 'ISSUED',
+        amountNet: 1000,
+        amountVat: 210,
+        amountGross: 1210,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-5/pdf',
+      },
+    ]);
+
+    renderWithClient(safeClient);
+    await loginAndWaitForAutoLoad(safeClient);
+
+    const user = userEvent.setup();
+    await user.clear(screen.getByLabelText('Adjustment amount net'));
+    await user.type(screen.getByLabelText('Adjustment amount net'), '2000');
+
+    expect(screen.getByText('Discount cannot exceed the current net subtotal.')).toBeInTheDocument();
+    expect(screen.getByText('Adjusted net subtotal').parentElement).toHaveTextContent('CZK 1,000.00');
+    expect(screen.getByText('Adjusted VAT total').parentElement).toHaveTextContent('CZK 210.00');
+    expect(screen.getByText('Adjusted gross total').parentElement).toHaveTextContent('CZK 1,210.00');
   });
 
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {

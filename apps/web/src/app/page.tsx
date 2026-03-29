@@ -266,6 +266,19 @@ type HomepageAuthLocaleStrings = {
   invoiceNetSubtotalLabel: string;
   invoiceVatTotalLabel: string;
   invoiceGrossTotalLabel: string;
+  invoiceAdjustmentTitle: string;
+  invoiceAdjustmentTypeLabel: string;
+  invoiceAdjustmentAmountLabel: string;
+  invoiceAdjustmentDiscountOption: string;
+  invoiceAdjustmentSurchargeOption: string;
+  invoiceAdjustmentDisabledNoInvoices: string;
+  invoiceAdjustmentDisabledMixedVat: string;
+  invoiceAdjustmentDisabledLegacy: string;
+  invoiceAdjustmentValidationInvalidAmount: string;
+  invoiceAdjustmentValidationDiscountTooLarge: string;
+  invoiceAdjustedNetLabel: string;
+  invoiceAdjustedVatLabel: string;
+  invoiceAdjustedGrossLabel: string;
   invoiceRowNetLabel: string;
   invoiceRowVatLabel: string;
   invoiceRowGrossLabel: string;
@@ -427,6 +440,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceNetSubtotalLabel: 'Mezisoučet bez DPH',
     invoiceVatTotalLabel: 'DPH celkem',
     invoiceGrossTotalLabel: 'Celkem s DPH',
+    invoiceAdjustmentTitle: 'Úprava fakturace',
+    invoiceAdjustmentTypeLabel: 'Typ úpravy',
+    invoiceAdjustmentAmountLabel: 'Částka úpravy bez DPH',
+    invoiceAdjustmentDiscountOption: 'Sleva',
+    invoiceAdjustmentSurchargeOption: 'Příplatek',
+    invoiceAdjustmentDisabledNoInvoices: 'Úprava je dostupná až po načtení faktur.',
+    invoiceAdjustmentDisabledMixedVat: 'Úpravu nelze bezpečně rozpočítat přes více sazeb DPH.',
+    invoiceAdjustmentDisabledLegacy: 'Úprava je vypnutá pro legacy faktury bez přesného rozpadu.',
+    invoiceAdjustmentValidationInvalidAmount: 'Zadejte nezápornou částku úpravy.',
+    invoiceAdjustmentValidationDiscountTooLarge: 'Sleva nesmí být vyšší než mezisoučet bez DPH.',
+    invoiceAdjustedNetLabel: 'Upravený základ bez DPH',
+    invoiceAdjustedVatLabel: 'Upravené DPH',
+    invoiceAdjustedGrossLabel: 'Upravená celková částka',
     invoiceRowNetLabel: 'Bez DPH',
     invoiceRowVatLabel: 'DPH',
     invoiceRowGrossLabel: 'S DPH',
@@ -586,6 +612,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceNetSubtotalLabel: 'Net subtotal',
     invoiceVatTotalLabel: 'VAT total',
     invoiceGrossTotalLabel: 'Gross total',
+    invoiceAdjustmentTitle: 'Invoice-level adjustment',
+    invoiceAdjustmentTypeLabel: 'Adjustment type',
+    invoiceAdjustmentAmountLabel: 'Adjustment amount net',
+    invoiceAdjustmentDiscountOption: 'Discount',
+    invoiceAdjustmentSurchargeOption: 'Surcharge',
+    invoiceAdjustmentDisabledNoInvoices: 'Adjustment is available after invoices are loaded.',
+    invoiceAdjustmentDisabledMixedVat: 'Adjustment is disabled because mixed VAT rates cannot be allocated safely.',
+    invoiceAdjustmentDisabledLegacy: 'Adjustment is disabled for legacy invoices without an exact breakdown.',
+    invoiceAdjustmentValidationInvalidAmount: 'Enter a non-negative adjustment amount.',
+    invoiceAdjustmentValidationDiscountTooLarge: 'Discount cannot exceed the current net subtotal.',
+    invoiceAdjustedNetLabel: 'Adjusted net subtotal',
+    invoiceAdjustedVatLabel: 'Adjusted VAT total',
+    invoiceAdjustedGrossLabel: 'Adjusted gross total',
     invoiceRowNetLabel: 'Net',
     invoiceRowVatLabel: 'VAT',
     invoiceRowGrossLabel: 'Gross',
@@ -745,6 +784,19 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceNetSubtotalLabel: 'Nettosumme',
     invoiceVatTotalLabel: 'MwSt. gesamt',
     invoiceGrossTotalLabel: 'Bruttosumme',
+    invoiceAdjustmentTitle: 'Anpassung auf Rechnungsebene',
+    invoiceAdjustmentTypeLabel: 'Anpassungstyp',
+    invoiceAdjustmentAmountLabel: 'Anpassungsbetrag netto',
+    invoiceAdjustmentDiscountOption: 'Rabatt',
+    invoiceAdjustmentSurchargeOption: 'Aufschlag',
+    invoiceAdjustmentDisabledNoInvoices: 'Die Anpassung ist verfügbar, sobald Rechnungen geladen sind.',
+    invoiceAdjustmentDisabledMixedVat: 'Die Anpassung ist deaktiviert, weil gemischte MwSt.-Sätze nicht sicher verteilt werden können.',
+    invoiceAdjustmentDisabledLegacy: 'Die Anpassung ist für Legacy-Rechnungen ohne exakte Aufschlüsselung deaktiviert.',
+    invoiceAdjustmentValidationInvalidAmount: 'Geben Sie einen nicht-negativen Anpassungsbetrag ein.',
+    invoiceAdjustmentValidationDiscountTooLarge: 'Der Rabatt darf die aktuelle Nettosumme nicht überschreiten.',
+    invoiceAdjustedNetLabel: 'Angepasste Nettosumme',
+    invoiceAdjustedVatLabel: 'Angepasste MwSt.-Summe',
+    invoiceAdjustedGrossLabel: 'Angepasste Bruttosumme',
     invoiceRowNetLabel: 'Netto',
     invoiceRowVatLabel: 'MwSt.',
     invoiceRowGrossLabel: 'Brutto',
@@ -1055,6 +1107,8 @@ export default function Home() {
   const [recurringNote, setRecurringNote] = useState('');
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
   const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
+  const [invoiceAdjustmentType, setInvoiceAdjustmentType] = useState<'discount' | 'surcharge'>('discount');
+  const [invoiceAdjustmentAmount, setInvoiceAdjustmentAmount] = useState('0');
   const [authMessage, setAuthMessage] = useState('');
   const [boardMessage, setBoardMessage] = useState('');
   const [boardColumns, setBoardColumns] = useState<BoardColumnConfig[]>([]);
@@ -1139,6 +1193,35 @@ export default function Home() {
     const netSubtotal = invoiceSummaries.reduce((sum, invoice) => sum + invoice.amountNet, 0);
     const vatTotal = invoiceSummaries.reduce((sum, invoice) => sum + invoice.amountVat, 0);
     const grossTotal = invoiceSummaries.reduce((sum, invoice) => sum + invoice.amountGross, 0);
+    const vatRates = Array.from(
+      new Set(invoiceSummaries.filter((invoice) => invoice.hasBreakdown).map((invoice) => invoice.vatRatePercent)),
+    );
+    const hasLegacyRows = invoiceSummaries.some((invoice) => !invoice.hasBreakdown);
+    const hasMixedVatRates = vatRates.length > 1;
+    const canApplyAdjustment = invoiceSummaries.length > 0 && !hasLegacyRows && !hasMixedVatRates;
+    const disabledReason = invoiceSummaries.length === 0
+      ? homepageAuthCopy.invoiceAdjustmentDisabledNoInvoices
+      : hasLegacyRows
+        ? homepageAuthCopy.invoiceAdjustmentDisabledLegacy
+        : hasMixedVatRates
+          ? homepageAuthCopy.invoiceAdjustmentDisabledMixedVat
+          : '';
+    const parsedAdjustmentAmount = Number(invoiceAdjustmentAmount);
+    const sanitizedAdjustmentAmount = Number.isFinite(parsedAdjustmentAmount) ? parsedAdjustmentAmount : NaN;
+    const adjustmentValidation = Number.isNaN(sanitizedAdjustmentAmount) || sanitizedAdjustmentAmount < 0
+      ? homepageAuthCopy.invoiceAdjustmentValidationInvalidAmount
+      : invoiceAdjustmentType === 'discount' && sanitizedAdjustmentAmount > netSubtotal
+        ? homepageAuthCopy.invoiceAdjustmentValidationDiscountTooLarge
+        : '';
+    const safeVatRatePercent = vatRates[0] ?? 0;
+    const appliedNetDelta = !canApplyAdjustment || adjustmentValidation
+      ? 0
+      : invoiceAdjustmentType === 'discount'
+        ? -sanitizedAdjustmentAmount
+        : sanitizedAdjustmentAmount;
+    const adjustedNetSubtotal = Number((netSubtotal + appliedNetDelta).toFixed(2));
+    const adjustedVatTotal = Number(((adjustedNetSubtotal * safeVatRatePercent) / 100).toFixed(2));
+    const adjustedGrossTotal = Number((adjustedNetSubtotal + adjustedVatTotal).toFixed(2));
 
     return {
       totalCount: invoiceSummaries.length,
@@ -1148,8 +1231,15 @@ export default function Home() {
       netSubtotal,
       vatTotal,
       grossTotal,
+      canApplyAdjustment,
+      disabledReason,
+      adjustmentValidation,
+      safeVatRatePercent,
+      adjustedNetSubtotal,
+      adjustedVatTotal,
+      adjustedGrossTotal,
     };
-  }, [invoiceSummaries]);
+  }, [homepageAuthCopy, invoiceAdjustmentAmount, invoiceAdjustmentType, invoiceSummaries]);
   const showOperationBoard =
     operations.length > 0 && (operationLoadState === 'loaded' || operationLoadState === 'loading');
   const isFilteredEmptyState =
@@ -1311,6 +1401,8 @@ export default function Home() {
     setRecurringNote('');
     setCashflowItems([]);
     setInvoiceSummaries([]);
+    setInvoiceAdjustmentType('discount');
+    setInvoiceAdjustmentAmount('0');
     setBoardMessage('');
     setBoardColumns([]);
     setBoardColumnsDraft([]);
@@ -2606,6 +2698,60 @@ export default function Home() {
               <div className="rounded border bg-slate-50 p-3">
                 <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceGrossTotalLabel}</p>
                 <p className="text-base font-semibold">{formatMoney(invoiceSummary.grossTotal, 'CZK', homepageLocale)}</p>
+              </div>
+            </div>
+            <div className="mt-3 rounded border bg-slate-50 p-3">
+              <h4 className="text-sm font-semibold text-slate-800">{homepageAuthCopy.invoiceAdjustmentTitle}</h4>
+              <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                <label className="flex flex-col gap-1 text-sm">
+                  {homepageAuthCopy.invoiceAdjustmentTypeLabel}
+                  <select
+                    className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900"
+                    value={invoiceAdjustmentType}
+                    disabled={!invoiceSummary.canApplyAdjustment}
+                    onChange={(event) =>
+                      setInvoiceAdjustmentType(event.target.value as 'discount' | 'surcharge')
+                    }
+                  >
+                    <option value="discount">{homepageAuthCopy.invoiceAdjustmentDiscountOption}</option>
+                    <option value="surcharge">{homepageAuthCopy.invoiceAdjustmentSurchargeOption}</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  {homepageAuthCopy.invoiceAdjustmentAmountLabel}
+                  <input
+                    className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={invoiceAdjustmentAmount}
+                    disabled={!invoiceSummary.canApplyAdjustment}
+                    onChange={(event) => setInvoiceAdjustmentAmount(event.target.value)}
+                  />
+                </label>
+                <div className="rounded border bg-white p-3 text-xs text-slate-600">
+                  VAT {invoiceSummary.safeVatRatePercent.toFixed(0)}%
+                </div>
+              </div>
+              {!invoiceSummary.canApplyAdjustment ? (
+                <p className="mt-2 text-sm text-amber-700">{invoiceSummary.disabledReason}</p>
+              ) : null}
+              {invoiceSummary.canApplyAdjustment && invoiceSummary.adjustmentValidation ? (
+                <p className="mt-2 text-sm text-rose-700">{invoiceSummary.adjustmentValidation}</p>
+              ) : null}
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <div className="rounded border bg-white p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceAdjustedNetLabel}</p>
+                  <p className="text-base font-semibold">{formatMoney(invoiceSummary.adjustedNetSubtotal, 'CZK', homepageLocale)}</p>
+                </div>
+                <div className="rounded border bg-white p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceAdjustedVatLabel}</p>
+                  <p className="text-base font-semibold">{formatMoney(invoiceSummary.adjustedVatTotal, 'CZK', homepageLocale)}</p>
+                </div>
+                <div className="rounded border bg-white p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceAdjustedGrossLabel}</p>
+                  <p className="text-base font-semibold">{formatMoney(invoiceSummary.adjustedGrossTotal, 'CZK', homepageLocale)}</p>
+                </div>
               </div>
             </div>
             {invoiceSummaries.length === 0 ? null : (
