@@ -493,6 +493,91 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('Payment metadata is not reliably available.');
   });
 
+  it('shows due summary when due date and payment metadata are trustworthy and falls back otherwise', async () => {
+    const realNow = Date.now;
+    Date.now = () => new Date('2026-03-29T10:00:00.000Z').getTime();
+
+    try {
+      const client = createClient();
+      client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+      client.cashflow.list.query.mockResolvedValue([
+        {
+          id: 'cf-actual-1',
+          tenantId: 'tenant-a',
+          invoiceId: 'inv-1',
+          kind: 'ACTUAL_IN',
+          amount: 60000,
+          currency: 'CZK',
+          date: '2026-03-12T00:00:00.000Z',
+        },
+        {
+          id: 'cf-actual-2',
+          tenantId: 'tenant-a',
+          invoiceId: 'inv-3',
+          kind: 'ACTUAL_IN',
+          amount: 50000,
+          currency: 'CZK',
+          date: '2026-03-08T00:00:00.000Z',
+        },
+      ]);
+      client.invoice.list.query.mockResolvedValue([
+        {
+          id: 'inv-1',
+          number: '2026-0001',
+          status: 'ISSUED',
+          amountNet: 100000,
+          amountVat: 21000,
+          amountGross: 121000,
+          vatRatePercent: 21,
+          hasBreakdown: true,
+          currency: 'CZK',
+          dueAt: '2026-03-15T00:00:00.000Z',
+          pdfPath: '/invoices/inv-1/pdf',
+        },
+        {
+          id: 'inv-2',
+          number: '2026-0002',
+          status: 'ISSUED',
+          amountNet: 50000,
+          amountVat: 10500,
+          amountGross: 60500,
+          vatRatePercent: 21,
+          hasBreakdown: true,
+          currency: 'CZK',
+          dueAt: '2026-03-20T00:00:00.000Z',
+          pdfPath: '/invoices/inv-2/pdf',
+        },
+        {
+          id: 'inv-3',
+          number: '2026-0003',
+          status: 'PAID',
+          amountNet: 41322.31,
+          amountVat: 8677.69,
+          amountGross: 50000,
+          vatRatePercent: 21,
+          hasBreakdown: true,
+          currency: 'CZK',
+          dueAt: '2026-03-10T00:00:00.000Z',
+          pdfPath: '/invoices/inv-3/pdf',
+        },
+      ]);
+
+      renderWithClient(client);
+      await loginAndWaitForAutoLoad(client);
+
+      const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+      expect(cashflowSummary).toHaveTextContent('Due summary');
+      expect(cashflowSummary).toHaveTextContent('Due date: 03/15/2026');
+      expect(cashflowSummary).toHaveTextContent('Due state: Overdue');
+      expect(cashflowSummary).toHaveTextContent('Days overdue: 14');
+      expect(cashflowSummary).toHaveTextContent('Due date: 03/10/2026');
+      expect(cashflowSummary).toHaveTextContent('Due state: Paid / closed');
+      expect(cashflowSummary).toHaveTextContent('Due status is not reliably available.');
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

@@ -289,6 +289,14 @@ type HomepageAuthLocaleStrings = {
   invoicePaymentStatePartial: string;
   invoicePaymentStateUnknown: string;
   invoicePaymentFallback: string;
+  invoiceDueSummaryTitle: string;
+  invoiceDueDateLabel: string;
+  invoiceDueStateLabel: string;
+  invoiceDueDaysLabel: string;
+  invoiceDueStatePaid: string;
+  invoiceDueStateDue: string;
+  invoiceDueStateOverdue: string;
+  invoiceDueFallback: string;
   invoiceRowNetLabel: string;
   invoiceRowVatLabel: string;
   invoiceRowGrossLabel: string;
@@ -473,6 +481,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicePaymentStatePartial: 'Částečně uhrazeno',
     invoicePaymentStateUnknown: 'Stav neznámý',
     invoicePaymentFallback: 'Platební metadata nejsou spolehlivě dostupná.',
+    invoiceDueSummaryTitle: 'Splatnost',
+    invoiceDueDateLabel: 'Datum splatnosti',
+    invoiceDueStateLabel: 'Stav splatnosti',
+    invoiceDueDaysLabel: 'Dnů po splatnosti',
+    invoiceDueStatePaid: 'Uhrazena včas / uzavřena',
+    invoiceDueStateDue: 'Po splatnosti ještě není',
+    invoiceDueStateOverdue: 'Po splatnosti',
+    invoiceDueFallback: 'Splatnost nelze spolehlivě vyhodnotit.',
     invoiceRowNetLabel: 'Bez DPH',
     invoiceRowVatLabel: 'DPH',
     invoiceRowGrossLabel: 'S DPH',
@@ -655,6 +671,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicePaymentStatePartial: 'Partially paid',
     invoicePaymentStateUnknown: 'Unknown',
     invoicePaymentFallback: 'Payment metadata is not reliably available.',
+    invoiceDueSummaryTitle: 'Due summary',
+    invoiceDueDateLabel: 'Due date',
+    invoiceDueStateLabel: 'Due state',
+    invoiceDueDaysLabel: 'Days overdue',
+    invoiceDueStatePaid: 'Paid / closed',
+    invoiceDueStateDue: 'Not overdue yet',
+    invoiceDueStateOverdue: 'Overdue',
+    invoiceDueFallback: 'Due status is not reliably available.',
     invoiceRowNetLabel: 'Net',
     invoiceRowVatLabel: 'VAT',
     invoiceRowGrossLabel: 'Gross',
@@ -837,6 +861,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicePaymentStatePartial: 'Teilweise bezahlt',
     invoicePaymentStateUnknown: 'Unbekannt',
     invoicePaymentFallback: 'Zahlungsmetadaten sind nicht zuverlässig verfügbar.',
+    invoiceDueSummaryTitle: 'Fälligkeit',
+    invoiceDueDateLabel: 'Fällig am',
+    invoiceDueStateLabel: 'Fälligkeitsstatus',
+    invoiceDueDaysLabel: 'Tage überfällig',
+    invoiceDueStatePaid: 'Bezahlt / abgeschlossen',
+    invoiceDueStateDue: 'Noch nicht überfällig',
+    invoiceDueStateOverdue: 'Überfällig',
+    invoiceDueFallback: 'Fälligkeitsstatus ist nicht zuverlässig verfügbar.',
     invoiceRowNetLabel: 'Netto',
     invoiceRowVatLabel: 'MwSt.',
     invoiceRowGrossLabel: 'Brutto',
@@ -1286,6 +1318,27 @@ export default function Home() {
           : remainingAmount <= 0 || invoice.status === 'PAID'
             ? homepageAuthCopy.invoicePaymentStatePaid
             : homepageAuthCopy.invoicePaymentStatePartial;
+      const dueDate = invoice.dueAt ? new Date(invoice.dueAt) : null;
+      const hasTrustworthyDueDate = !!dueDate && !Number.isNaN(dueDate.getTime());
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const dueDateStart = hasTrustworthyDueDate ? new Date(dueDate) : null;
+      if (dueDateStart) {
+        dueDateStart.setHours(0, 0, 0, 0);
+      }
+      const isFullyPaid = hasTrustworthyPaymentMetadata && (remainingAmount <= 0 || invoice.status === 'PAID');
+      const hasTrustworthyDueSummary = hasTrustworthyPaymentMetadata && hasTrustworthyDueDate;
+      const isOverdue = hasTrustworthyDueSummary && !isFullyPaid && !!dueDateStart && dueDateStart.getTime() < startOfToday.getTime();
+      const daysOverdue = isOverdue && dueDateStart
+        ? Math.floor((startOfToday.getTime() - dueDateStart.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const dueState = !hasTrustworthyDueSummary
+        ? homepageAuthCopy.invoicePaymentStateUnknown
+        : isFullyPaid
+          ? homepageAuthCopy.invoiceDueStatePaid
+          : isOverdue
+            ? homepageAuthCopy.invoiceDueStateOverdue
+            : homepageAuthCopy.invoiceDueStateDue;
 
       return {
         invoiceId: invoice.id,
@@ -1293,6 +1346,10 @@ export default function Home() {
         paidAmount: normalizedPaidAmount,
         remainingAmount,
         paymentState,
+        hasTrustworthyDueSummary,
+        dueDateIso: hasTrustworthyDueDate ? dueDate!.toISOString() : null,
+        dueState,
+        daysOverdue,
       };
     });
     const paymentSummaryByInvoiceId = new Map(
@@ -2888,6 +2945,30 @@ export default function Home() {
                         </div>
                       ) : (
                         <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoicePaymentFallback}</p>
+                      )}
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceDueSummaryTitle}</p>
+                      {invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.hasTrustworthyDueSummary ? (
+                        <div className="mt-2 grid gap-2 md:grid-cols-3">
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoiceDueDateLabel}: </span>
+                            {formatDateForDisplay(
+                              invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.dueDateIso ?? '',
+                              homepageLocale,
+                            )}
+                          </p>
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoiceDueStateLabel}: </span>
+                            {invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.dueState ?? homepageAuthCopy.invoicePaymentStateUnknown}
+                          </p>
+                          <p>
+                            <span className="text-slate-500">{homepageAuthCopy.invoiceDueDaysLabel}: </span>
+                            {invoiceSummary.paymentSummaryByInvoiceId.get(invoice.id)?.daysOverdue ?? 0}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoiceDueFallback}</p>
                       )}
                     </div>
                     {!invoice.hasBreakdown ? (
