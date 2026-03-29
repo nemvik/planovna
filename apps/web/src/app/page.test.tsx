@@ -768,6 +768,65 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('Gross: €121,000.00');
   });
 
+  it('shows invoice period only from trustworthy invoice-level metadata and falls back otherwise', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'EUR',
+        periodLabel: 'Service period March 2026',
+        issuedAt: '2026-03-05T00:00:00.000Z',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'DRAFT',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        periodStartAt: '2026-03-01T00:00:00.000Z',
+        periodEndAt: '2026-03-31T00:00:00.000Z',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+      {
+        id: 'inv-3',
+        number: '2026-0003',
+        status: 'ISSUED',
+        amountNet: 8000,
+        amountVat: 1680,
+        amountGross: 9680,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        periodStartAt: '2026-03-01T00:00:00.000Z',
+        pdfPath: '/invoices/inv-3/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Billing/service period');
+    expect(cashflowSummary).toHaveTextContent('Invoice period: Service period March 2026');
+    expect(cashflowSummary).toHaveTextContent('Invoice period: 03/01/2026 – 03/31/2026');
+    expect(cashflowSummary).toHaveTextContent('Billing/service period is not reliably available.');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

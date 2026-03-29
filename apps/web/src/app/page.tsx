@@ -129,6 +129,9 @@ type InvoiceSummary = {
   currency: 'CZK' | 'EUR';
   buyerDisplayName?: string;
   supplierDisplayName?: string;
+  periodLabel?: string;
+  periodStartAt?: string;
+  periodEndAt?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -310,6 +313,9 @@ type HomepageAuthLocaleStrings = {
   invoiceIdentityStatusLabel: string;
   invoiceIdentityCurrencyLabel: string;
   invoiceIdentityCurrencyFallback: string;
+  invoicePeriodTitle: string;
+  invoicePeriodLabel: string;
+  invoicePeriodFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -516,6 +522,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityStatusLabel: 'Stav',
     invoiceIdentityCurrencyLabel: 'Měna faktury',
     invoiceIdentityCurrencyFallback: 'Měna faktury není spolehlivě dostupná.',
+    invoicePeriodTitle: 'Období plnění',
+    invoicePeriodLabel: 'Fakturační období',
+    invoicePeriodFallback: 'Období plnění není spolehlivě dostupné.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -720,6 +729,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityStatusLabel: 'Status',
     invoiceIdentityCurrencyLabel: 'Invoice currency',
     invoiceIdentityCurrencyFallback: 'Invoice currency is not reliably available.',
+    invoicePeriodTitle: 'Billing/service period',
+    invoicePeriodLabel: 'Invoice period',
+    invoicePeriodFallback: 'Billing/service period is not reliably available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -924,6 +936,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityStatusLabel: 'Status',
     invoiceIdentityCurrencyLabel: 'Rechnungswährung',
     invoiceIdentityCurrencyFallback: 'Rechnungswährung ist nicht zuverlässig verfügbar.',
+    invoicePeriodTitle: 'Leistungszeitraum',
+    invoicePeriodLabel: 'Rechnungszeitraum',
+    invoicePeriodFallback: 'Leistungszeitraum ist nicht zuverlässig verfügbar.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -1209,6 +1224,28 @@ const formatDateForDisplay = (value: string, locale: SupportedLocale = 'en') => 
     day: '2-digit',
     timeZone: 'UTC',
   }).format(date);
+};
+
+const getInvoicePeriodDisplay = (
+  invoice: Pick<InvoiceSummary, 'periodLabel' | 'periodStartAt' | 'periodEndAt'>,
+  locale: SupportedLocale = 'en',
+) => {
+  const safeLabel = invoice.periodLabel?.trim();
+  if (safeLabel) {
+    return safeLabel;
+  }
+
+  const hasStart = !!invoice.periodStartAt && !Number.isNaN(new Date(invoice.periodStartAt).getTime());
+  const hasEnd = !!invoice.periodEndAt && !Number.isNaN(new Date(invoice.periodEndAt).getTime());
+
+  if (hasStart && hasEnd) {
+    return `${formatDateForDisplay(invoice.periodStartAt!, locale)} – ${formatDateForDisplay(
+      invoice.periodEndAt!,
+      locale,
+    )}`;
+  }
+
+  return '';
 };
 
 export default function Home() {
@@ -3004,6 +3041,13 @@ export default function Home() {
                       <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
                         PDF
                       </Link>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePeriodTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoicePeriodLabel}: </span>
+                        {getInvoicePeriodDisplay(invoice, homepageLocale) || homepageAuthCopy.invoicePeriodFallback}
+                      </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
                       <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePartySummaryTitle}</p>
