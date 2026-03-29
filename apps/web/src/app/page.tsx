@@ -127,6 +127,7 @@ type InvoiceSummary = {
   vatRatePercent: number;
   hasBreakdown: boolean;
   currency: 'CZK' | 'EUR';
+  issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
 };
@@ -297,6 +298,10 @@ type HomepageAuthLocaleStrings = {
   invoiceDueStateDue: string;
   invoiceDueStateOverdue: string;
   invoiceDueFallback: string;
+  invoiceTimelineTitle: string;
+  invoiceTimelineIssuedLabel: string;
+  invoiceTimelineDueLabel: string;
+  invoiceTimelineFallback: string;
   invoiceRowNetLabel: string;
   invoiceRowVatLabel: string;
   invoiceRowGrossLabel: string;
@@ -489,6 +494,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceDueStateDue: 'Po splatnosti ještě není',
     invoiceDueStateOverdue: 'Po splatnosti',
     invoiceDueFallback: 'Splatnost nelze spolehlivě vyhodnotit.',
+    invoiceTimelineTitle: 'Milníky faktury',
+    invoiceTimelineIssuedLabel: 'Vystaveno',
+    invoiceTimelineDueLabel: 'Splatnost',
+    invoiceTimelineFallback: 'Žádná spolehlivá časová metadata nejsou dostupná.',
     invoiceRowNetLabel: 'Bez DPH',
     invoiceRowVatLabel: 'DPH',
     invoiceRowGrossLabel: 'S DPH',
@@ -679,6 +688,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceDueStateDue: 'Not overdue yet',
     invoiceDueStateOverdue: 'Overdue',
     invoiceDueFallback: 'Due status is not reliably available.',
+    invoiceTimelineTitle: 'Invoice timeline',
+    invoiceTimelineIssuedLabel: 'Issued',
+    invoiceTimelineDueLabel: 'Due',
+    invoiceTimelineFallback: 'No trustworthy timeline metadata is available.',
     invoiceRowNetLabel: 'Net',
     invoiceRowVatLabel: 'VAT',
     invoiceRowGrossLabel: 'Gross',
@@ -869,6 +882,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceDueStateDue: 'Noch nicht überfällig',
     invoiceDueStateOverdue: 'Überfällig',
     invoiceDueFallback: 'Fälligkeitsstatus ist nicht zuverlässig verfügbar.',
+    invoiceTimelineTitle: 'Rechnungsmeilensteine',
+    invoiceTimelineIssuedLabel: 'Ausgestellt',
+    invoiceTimelineDueLabel: 'Fällig',
+    invoiceTimelineFallback: 'Keine zuverlässigen Zeitmetadaten verfügbar.',
     invoiceRowNetLabel: 'Netto',
     invoiceRowVatLabel: 'MwSt.',
     invoiceRowGrossLabel: 'Brutto',
@@ -1355,6 +1372,35 @@ export default function Home() {
     const paymentSummaryByInvoiceId = new Map(
       paymentSummaries.map((summary) => [summary.invoiceId, summary]),
     );
+    const timelineByInvoiceId = new Map(
+      invoiceSummaries.map((invoice) => {
+        const milestones = [
+          invoice.issuedAt
+            ? {
+                key: 'issued',
+                label: homepageAuthCopy.invoiceTimelineIssuedLabel,
+                iso: invoice.issuedAt,
+                time: new Date(invoice.issuedAt).getTime(),
+              }
+            : null,
+          invoice.dueAt
+            ? {
+                key: 'due',
+                label: homepageAuthCopy.invoiceTimelineDueLabel,
+                iso: invoice.dueAt,
+                time: new Date(invoice.dueAt).getTime(),
+              }
+            : null,
+        ]
+          .filter(
+            (milestone): milestone is { key: string; label: string; iso: string; time: number } =>
+              !!milestone && !Number.isNaN(milestone.time),
+          )
+          .sort((left, right) => left.time - right.time || left.label.localeCompare(right.label));
+
+        return [invoice.id, milestones] as const;
+      }),
+    );
 
     return {
       totalCount: invoiceSummaries.length,
@@ -1372,6 +1418,7 @@ export default function Home() {
       adjustedVatTotal,
       adjustedGrossTotal,
       paymentSummaryByInvoiceId,
+      timelineByInvoiceId,
     };
   }, [cashflowSummary.actualPaidByInvoiceId, homepageAuthCopy, invoiceAdjustmentAmount, invoiceAdjustmentType, invoiceSummaries]);
   const showOperationBoard =
@@ -2969,6 +3016,20 @@ export default function Home() {
                         </div>
                       ) : (
                         <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoiceDueFallback}</p>
+                      )}
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceTimelineTitle}</p>
+                      {(invoiceSummary.timelineByInvoiceId.get(invoice.id)?.length ?? 0) > 0 ? (
+                        <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                          {invoiceSummary.timelineByInvoiceId.get(invoice.id)?.map((milestone) => (
+                            <li key={`${invoice.id}-${milestone.key}`}>
+                              {milestone.label}: {formatDateForDisplay(milestone.iso, homepageLocale)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoiceTimelineFallback}</p>
                       )}
                     </div>
                     {!invoice.hasBreakdown ? (

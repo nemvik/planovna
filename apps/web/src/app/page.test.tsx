@@ -578,6 +578,59 @@ describe('homepage operations board', () => {
     }
   });
 
+  it('shows a compact invoice timeline from trustworthy milestones in chronological order and falls back when absent', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([
+      {
+        id: 'cf-actual-1',
+        tenantId: 'tenant-a',
+        invoiceId: 'inv-1',
+        kind: 'ACTUAL_IN',
+        amount: 60000,
+        currency: 'CZK',
+        date: '2026-03-12T00:00:00.000Z',
+      },
+    ]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        issuedAt: '2026-03-05T00:00:00.000Z',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'ISSUED',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Invoice timeline');
+    expect(cashflowSummary).toHaveTextContent('Issued: 03/05/2026');
+    expect(cashflowSummary).toHaveTextContent('Due: 03/15/2026');
+    expect(cashflowSummary).toHaveTextContent('No trustworthy timeline metadata is available.');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
