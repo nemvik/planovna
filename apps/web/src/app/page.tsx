@@ -262,6 +262,15 @@ type HomepageAuthLocaleStrings = {
   invoicesLoadedSuffix: string;
   invoiceBreakdownLabel: string;
   invoiceBreakdownLegacySuffix: string;
+  invoiceRowsTitle: string;
+  invoiceNetSubtotalLabel: string;
+  invoiceVatTotalLabel: string;
+  invoiceGrossTotalLabel: string;
+  invoiceRowNetLabel: string;
+  invoiceRowVatLabel: string;
+  invoiceRowGrossLabel: string;
+  invoiceRowRateLabel: string;
+  invoiceRowLegacyLabel: string;
   boardFilterQueryLabel: string;
   boardFilterStatusLabel: string;
   boardFilterBucketLabel: string;
@@ -414,6 +423,15 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicesLoadedSuffix: 'faktur načteno',
     invoiceBreakdownLabel: 'Rozpad faktury',
     invoiceBreakdownLegacySuffix: 'legacy fallback z hrubé částky',
+    invoiceRowsTitle: 'Souhrn faktur',
+    invoiceNetSubtotalLabel: 'Mezisoučet bez DPH',
+    invoiceVatTotalLabel: 'DPH celkem',
+    invoiceGrossTotalLabel: 'Celkem s DPH',
+    invoiceRowNetLabel: 'Bez DPH',
+    invoiceRowVatLabel: 'DPH',
+    invoiceRowGrossLabel: 'S DPH',
+    invoiceRowRateLabel: 'Sazba DPH',
+    invoiceRowLegacyLabel: 'Legacy fallback bez přesného rozpadu',
     boardFilterQueryLabel: 'Kód nebo název',
     boardFilterStatusLabel: 'Stav',
     boardFilterBucketLabel: 'Koš podle data',
@@ -564,6 +582,15 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicesLoadedSuffix: 'invoices loaded',
     invoiceBreakdownLabel: 'Invoice breakdown',
     invoiceBreakdownLegacySuffix: 'legacy gross-only fallback',
+    invoiceRowsTitle: 'Invoice totals and rows',
+    invoiceNetSubtotalLabel: 'Net subtotal',
+    invoiceVatTotalLabel: 'VAT total',
+    invoiceGrossTotalLabel: 'Gross total',
+    invoiceRowNetLabel: 'Net',
+    invoiceRowVatLabel: 'VAT',
+    invoiceRowGrossLabel: 'Gross',
+    invoiceRowRateLabel: 'VAT rate',
+    invoiceRowLegacyLabel: 'Legacy fallback without exact breakdown',
     boardFilterQueryLabel: 'Code or title',
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Date bucket',
@@ -714,6 +741,15 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoicesLoadedSuffix: 'Rechnungen geladen',
     invoiceBreakdownLabel: 'Rechnungsaufschlüsselung',
     invoiceBreakdownLegacySuffix: 'Legacy-Fallback aus Bruttobetrag',
+    invoiceRowsTitle: 'Rechnungssummen und Positionen',
+    invoiceNetSubtotalLabel: 'Nettosumme',
+    invoiceVatTotalLabel: 'MwSt. gesamt',
+    invoiceGrossTotalLabel: 'Bruttosumme',
+    invoiceRowNetLabel: 'Netto',
+    invoiceRowVatLabel: 'MwSt.',
+    invoiceRowGrossLabel: 'Brutto',
+    invoiceRowRateLabel: 'MwSt.-Satz',
+    invoiceRowLegacyLabel: 'Legacy-Fallback ohne exakte Aufschlüsselung',
     boardFilterQueryLabel: 'Code oder Titel',
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Datums-Bucket',
@@ -1100,12 +1136,18 @@ export default function Home() {
     const issuedCount = invoiceSummaries.filter((invoice) => invoice.status === 'ISSUED').length;
     const paidCount = invoiceSummaries.filter((invoice) => invoice.status === 'PAID').length;
     const byId = new Map(invoiceSummaries.map((invoice) => [invoice.id, invoice]));
+    const netSubtotal = invoiceSummaries.reduce((sum, invoice) => sum + invoice.amountNet, 0);
+    const vatTotal = invoiceSummaries.reduce((sum, invoice) => sum + invoice.amountVat, 0);
+    const grossTotal = invoiceSummaries.reduce((sum, invoice) => sum + invoice.amountGross, 0);
 
     return {
       totalCount: invoiceSummaries.length,
       issuedCount,
       paidCount,
       byId,
+      netSubtotal,
+      vatTotal,
+      grossTotal,
     };
   }, [invoiceSummaries]);
   const showOperationBoard =
@@ -2542,6 +2584,69 @@ export default function Home() {
                     </li>
                   );
                 })}
+              </ul>
+            )}
+          </div>
+          <div className="mt-4 rounded border bg-white p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-slate-800">{homepageAuthCopy.invoiceRowsTitle}</h3>
+              <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
+                {homepageAuthCopy.openInvoicesPageLink}
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <div className="rounded border bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceNetSubtotalLabel}</p>
+                <p className="text-base font-semibold">{formatMoney(invoiceSummary.netSubtotal, 'CZK', homepageLocale)}</p>
+              </div>
+              <div className="rounded border bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceVatTotalLabel}</p>
+                <p className="text-base font-semibold">{formatMoney(invoiceSummary.vatTotal, 'CZK', homepageLocale)}</p>
+              </div>
+              <div className="rounded border bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceGrossTotalLabel}</p>
+                <p className="text-base font-semibold">{formatMoney(invoiceSummary.grossTotal, 'CZK', homepageLocale)}</p>
+              </div>
+            </div>
+            {invoiceSummaries.length === 0 ? null : (
+              <ul className="mt-3 space-y-2">
+                {invoiceSummaries.map((invoice) => (
+                  <li key={invoice.id} className="rounded border bg-slate-50 p-3 text-sm text-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium text-slate-900">
+                        {invoice.number} · {invoice.status}
+                      </p>
+                      <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
+                        PDF
+                      </Link>
+                    </div>
+                    <div className="mt-2 grid gap-2 md:grid-cols-4">
+                      <p>
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceRowNetLabel}: </span>
+                        {invoice.hasBreakdown
+                          ? formatMoney(invoice.amountNet, invoice.currency, homepageLocale)
+                          : '—'}
+                      </p>
+                      <p>
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceRowVatLabel}: </span>
+                        {invoice.hasBreakdown
+                          ? formatMoney(invoice.amountVat, invoice.currency, homepageLocale)
+                          : '—'}
+                      </p>
+                      <p>
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceRowGrossLabel}: </span>
+                        {formatMoney(invoice.amountGross, invoice.currency, homepageLocale)}
+                      </p>
+                      <p>
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceRowRateLabel}: </span>
+                        {invoice.hasBreakdown ? `${invoice.vatRatePercent.toFixed(0)}%` : '—'}
+                      </p>
+                    </div>
+                    {!invoice.hasBreakdown ? (
+                      <p className="mt-2 text-xs text-slate-500">{homepageAuthCopy.invoiceRowLegacyLabel}</p>
+                    ) : null}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
