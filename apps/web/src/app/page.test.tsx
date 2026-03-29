@@ -723,6 +723,51 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).not.toHaveTextContent('inv-2');
   });
 
+  it('shows explicit invoice currency in the identity area and falls back when unavailable', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'EUR',
+        buyerDisplayName: 'Acme Interiors s.r.o.',
+        supplierDisplayName: 'Planovna Studio s.r.o.',
+        issuedAt: '2026-03-05T00:00:00.000Z',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'DRAFT',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'USD',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Invoice currency');
+    expect(cashflowSummary).toHaveTextContent('Invoice currency: EUR');
+    expect(cashflowSummary).toHaveTextContent('Invoice currency is not reliably available.');
+    expect(cashflowSummary).toHaveTextContent('Gross: €121,000.00');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

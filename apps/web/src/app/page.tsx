@@ -308,6 +308,8 @@ type HomepageAuthLocaleStrings = {
   invoiceIdentityNumberLabel: string;
   invoiceIdentityNumberFallback: string;
   invoiceIdentityStatusLabel: string;
+  invoiceIdentityCurrencyLabel: string;
+  invoiceIdentityCurrencyFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -512,6 +514,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Číslo faktury',
     invoiceIdentityNumberFallback: 'Číslo faktury ještě není přiřazeno.',
     invoiceIdentityStatusLabel: 'Stav',
+    invoiceIdentityCurrencyLabel: 'Měna faktury',
+    invoiceIdentityCurrencyFallback: 'Měna faktury není spolehlivě dostupná.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -714,6 +718,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Invoice number',
     invoiceIdentityNumberFallback: 'Invoice number not assigned yet.',
     invoiceIdentityStatusLabel: 'Status',
+    invoiceIdentityCurrencyLabel: 'Invoice currency',
+    invoiceIdentityCurrencyFallback: 'Invoice currency is not reliably available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -916,6 +922,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Rechnungsnummer',
     invoiceIdentityNumberFallback: 'Rechnungsnummer noch nicht vergeben.',
     invoiceIdentityStatusLabel: 'Status',
+    invoiceIdentityCurrencyLabel: 'Rechnungswährung',
+    invoiceIdentityCurrencyFallback: 'Rechnungswährung ist nicht zuverlässig verfügbar.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -2985,6 +2993,12 @@ export default function Home() {
                         <p className="mt-1 text-xs text-slate-600">
                           <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityStatusLabel}: </span>
                           {invoice.status}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityCurrencyLabel}: </span>
+                          {invoice.currency === 'CZK' || invoice.currency === 'EUR'
+                            ? invoice.currency
+                            : homepageAuthCopy.invoiceIdentityCurrencyFallback}
                         </p>
                       </div>
                       <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
