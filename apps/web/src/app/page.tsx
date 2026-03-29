@@ -302,6 +302,10 @@ type HomepageAuthLocaleStrings = {
   invoiceTimelineIssuedLabel: string;
   invoiceTimelineDueLabel: string;
   invoiceTimelineFallback: string;
+  invoiceIdentityTitle: string;
+  invoiceIdentityNumberLabel: string;
+  invoiceIdentityNumberFallback: string;
+  invoiceIdentityStatusLabel: string;
   invoiceRowNetLabel: string;
   invoiceRowVatLabel: string;
   invoiceRowGrossLabel: string;
@@ -498,6 +502,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceTimelineIssuedLabel: 'Vystaveno',
     invoiceTimelineDueLabel: 'Splatnost',
     invoiceTimelineFallback: 'Žádná spolehlivá časová metadata nejsou dostupná.',
+    invoiceIdentityTitle: 'Identita faktury',
+    invoiceIdentityNumberLabel: 'Číslo faktury',
+    invoiceIdentityNumberFallback: 'Číslo faktury ještě není přiřazeno.',
+    invoiceIdentityStatusLabel: 'Stav',
     invoiceRowNetLabel: 'Bez DPH',
     invoiceRowVatLabel: 'DPH',
     invoiceRowGrossLabel: 'S DPH',
@@ -692,6 +700,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceTimelineIssuedLabel: 'Issued',
     invoiceTimelineDueLabel: 'Due',
     invoiceTimelineFallback: 'No trustworthy timeline metadata is available.',
+    invoiceIdentityTitle: 'Invoice identity',
+    invoiceIdentityNumberLabel: 'Invoice number',
+    invoiceIdentityNumberFallback: 'Invoice number not assigned yet.',
+    invoiceIdentityStatusLabel: 'Status',
     invoiceRowNetLabel: 'Net',
     invoiceRowVatLabel: 'VAT',
     invoiceRowGrossLabel: 'Gross',
@@ -886,6 +898,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceTimelineIssuedLabel: 'Ausgestellt',
     invoiceTimelineDueLabel: 'Fällig',
     invoiceTimelineFallback: 'Keine zuverlässigen Zeitmetadaten verfügbar.',
+    invoiceIdentityTitle: 'Rechnungsidentität',
+    invoiceIdentityNumberLabel: 'Rechnungsnummer',
+    invoiceIdentityNumberFallback: 'Rechnungsnummer noch nicht vergeben.',
+    invoiceIdentityStatusLabel: 'Status',
     invoiceRowNetLabel: 'Netto',
     invoiceRowVatLabel: 'MwSt.',
     invoiceRowGrossLabel: 'Brutto',
@@ -2939,10 +2955,20 @@ export default function Home() {
               <ul className="mt-3 space-y-2">
                 {invoiceSummaries.map((invoice) => (
                   <li key={invoice.id} className="rounded border bg-slate-50 p-3 text-sm text-slate-700">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-medium text-slate-900">
-                        {invoice.number} · {invoice.status}
-                      </p>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="rounded border bg-white p-3">
+                        <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceIdentityTitle}</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityNumberLabel}: </span>
+                          {invoice.number && invoice.number.trim().length > 0
+                            ? invoice.number
+                            : homepageAuthCopy.invoiceIdentityNumberFallback}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityStatusLabel}: </span>
+                          {invoice.status}
+                        </p>
+                      </div>
                       <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
                         PDF
                       </Link>

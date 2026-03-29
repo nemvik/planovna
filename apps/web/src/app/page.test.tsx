@@ -631,6 +631,51 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('No trustworthy timeline metadata is available.');
   });
 
+  it('shows invoice identity using the customer-facing number and falls back when it is unavailable', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        issuedAt: '2026-03-05T00:00:00.000Z',
+        dueAt: '2026-03-15T00:00:00.000Z',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '   ',
+        status: 'DRAFT',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Invoice identity');
+    expect(cashflowSummary).toHaveTextContent('Invoice number: 2026-0001');
+    expect(cashflowSummary).toHaveTextContent('Status: ISSUED');
+    expect(cashflowSummary).toHaveTextContent('Invoice number not assigned yet.');
+    expect(cashflowSummary).toHaveTextContent('Status: DRAFT');
+    expect(cashflowSummary).not.toHaveTextContent('inv-2');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
@@ -708,12 +753,14 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('Net subtotal');
     expect(cashflowSummary).toHaveTextContent('VAT total');
     expect(cashflowSummary).toHaveTextContent('Gross total');
-    expect(cashflowSummary).toHaveTextContent('2026-0001 · ISSUED');
+    expect(cashflowSummary).toHaveTextContent('Invoice number: 2026-0001');
+    expect(cashflowSummary).toHaveTextContent('Status: ISSUED');
     expect(cashflowSummary).toHaveTextContent('Net: CZK 100,000.00');
     expect(cashflowSummary).toHaveTextContent('VAT: CZK 21,000.00');
     expect(cashflowSummary).toHaveTextContent('Gross: CZK 121,000.00');
     expect(cashflowSummary).toHaveTextContent('VAT rate: 21%');
-    expect(cashflowSummary).toHaveTextContent('2026-0002 · PAID');
+    expect(cashflowSummary).toHaveTextContent('Invoice number: 2026-0002');
+    expect(cashflowSummary).toHaveTextContent('Status: PAID');
     expect(cashflowSummary).toHaveTextContent('Legacy fallback without exact breakdown');
     expect(cashflowSummary).toHaveTextContent('Gross: CZK 50,000.00');
     expect(screen.queryByText('Net: CZK 50,000.00')).not.toBeInTheDocument();
