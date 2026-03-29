@@ -127,6 +127,8 @@ type InvoiceSummary = {
   vatRatePercent: number;
   hasBreakdown: boolean;
   currency: 'CZK' | 'EUR';
+  buyerDisplayName?: string;
+  supplierDisplayName?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -306,6 +308,10 @@ type HomepageAuthLocaleStrings = {
   invoiceIdentityNumberLabel: string;
   invoiceIdentityNumberFallback: string;
   invoiceIdentityStatusLabel: string;
+  invoicePartySummaryTitle: string;
+  invoicePartyBuyerLabel: string;
+  invoicePartySupplierLabel: string;
+  invoicePartyFallback: string;
   invoiceRowNetLabel: string;
   invoiceRowVatLabel: string;
   invoiceRowGrossLabel: string;
@@ -506,6 +512,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Číslo faktury',
     invoiceIdentityNumberFallback: 'Číslo faktury ještě není přiřazeno.',
     invoiceIdentityStatusLabel: 'Stav',
+    invoicePartySummaryTitle: 'Smluvní strany',
+    invoicePartyBuyerLabel: 'Odběratel',
+    invoicePartySupplierLabel: 'Dodavatel',
+    invoicePartyFallback: 'Není k dispozici spolehlivý zákaznický název.',
     invoiceRowNetLabel: 'Bez DPH',
     invoiceRowVatLabel: 'DPH',
     invoiceRowGrossLabel: 'S DPH',
@@ -704,6 +714,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Invoice number',
     invoiceIdentityNumberFallback: 'Invoice number not assigned yet.',
     invoiceIdentityStatusLabel: 'Status',
+    invoicePartySummaryTitle: 'Party summary',
+    invoicePartyBuyerLabel: 'Buyer',
+    invoicePartySupplierLabel: 'Supplier',
+    invoicePartyFallback: 'No trustworthy customer-facing name is available.',
     invoiceRowNetLabel: 'Net',
     invoiceRowVatLabel: 'VAT',
     invoiceRowGrossLabel: 'Gross',
@@ -902,6 +916,10 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Rechnungsnummer',
     invoiceIdentityNumberFallback: 'Rechnungsnummer noch nicht vergeben.',
     invoiceIdentityStatusLabel: 'Status',
+    invoicePartySummaryTitle: 'Parteien',
+    invoicePartyBuyerLabel: 'Kunde',
+    invoicePartySupplierLabel: 'Lieferant',
+    invoicePartyFallback: 'Kein verlässlicher kundenlesbarer Name verfügbar.',
     invoiceRowNetLabel: 'Netto',
     invoiceRowVatLabel: 'MwSt.',
     invoiceRowGrossLabel: 'Brutto',
@@ -2972,6 +2990,23 @@ export default function Home() {
                       <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
                         PDF
                       </Link>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePartySummaryTitle}</p>
+                      <div className="mt-2 grid gap-2 md:grid-cols-2">
+                        <p>
+                          <span className="text-slate-500">{homepageAuthCopy.invoicePartyBuyerLabel}: </span>
+                          {invoice.buyerDisplayName && invoice.buyerDisplayName.trim().length > 0
+                            ? invoice.buyerDisplayName
+                            : homepageAuthCopy.invoicePartyFallback}
+                        </p>
+                        <p>
+                          <span className="text-slate-500">{homepageAuthCopy.invoicePartySupplierLabel}: </span>
+                          {invoice.supplierDisplayName && invoice.supplierDisplayName.trim().length > 0
+                            ? invoice.supplierDisplayName
+                            : homepageAuthCopy.invoicePartyFallback}
+                        </p>
+                      </div>
                     </div>
                     <div className="mt-2 grid gap-2 md:grid-cols-4">
                       <p>
