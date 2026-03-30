@@ -312,6 +312,8 @@ type HomepageAuthLocaleStrings = {
   invoiceIdentityNumberLabel: string;
   invoiceIdentityNumberFallback: string;
   invoiceIdentityStatusLabel: string;
+  invoiceIdentityDocumentStatusLabel: string;
+  invoiceIdentityDocumentStatusFallback: string;
   invoiceIdentityCurrencyLabel: string;
   invoiceIdentityCurrencyFallback: string;
   invoicePeriodTitle: string;
@@ -524,6 +526,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Číslo faktury',
     invoiceIdentityNumberFallback: 'Číslo faktury ještě není přiřazeno.',
     invoiceIdentityStatusLabel: 'Stav',
+    invoiceIdentityDocumentStatusLabel: 'Stav dokumentu',
+    invoiceIdentityDocumentStatusFallback: 'Stav dokumentu není spolehlivě dostupný.',
     invoiceIdentityCurrencyLabel: 'Měna faktury',
     invoiceIdentityCurrencyFallback: 'Měna faktury není spolehlivě dostupná.',
     invoicePeriodTitle: 'Období plnění',
@@ -734,6 +738,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Invoice number',
     invoiceIdentityNumberFallback: 'Invoice number not assigned yet.',
     invoiceIdentityStatusLabel: 'Status',
+    invoiceIdentityDocumentStatusLabel: 'Document status',
+    invoiceIdentityDocumentStatusFallback: 'Document status is not reliably available.',
     invoiceIdentityCurrencyLabel: 'Invoice currency',
     invoiceIdentityCurrencyFallback: 'Invoice currency is not reliably available.',
     invoicePeriodTitle: 'Billing/service period',
@@ -944,6 +950,8 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIdentityNumberLabel: 'Rechnungsnummer',
     invoiceIdentityNumberFallback: 'Rechnungsnummer noch nicht vergeben.',
     invoiceIdentityStatusLabel: 'Status',
+    invoiceIdentityDocumentStatusLabel: 'Dokumentenstatus',
+    invoiceIdentityDocumentStatusFallback: 'Dokumentenstatus ist nicht zuverlässig verfügbar.',
     invoiceIdentityCurrencyLabel: 'Rechnungswährung',
     invoiceIdentityCurrencyFallback: 'Rechnungswährung ist nicht zuverlässig verfügbar.',
     invoicePeriodTitle: 'Leistungszeitraum',
@@ -3043,6 +3051,12 @@ export default function Home() {
                         <p className="mt-1 text-xs text-slate-600">
                           <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityStatusLabel}: </span>
                           {invoice.status}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityDocumentStatusLabel}: </span>
+                          {invoice.status && invoice.status.trim().length > 0
+                            ? invoice.status
+                            : homepageAuthCopy.invoiceIdentityDocumentStatusFallback}
                         </p>
                         <p className="mt-1 text-xs text-slate-600">
                           <span className="text-slate-500">{homepageAuthCopy.invoiceIdentityCurrencyLabel}: </span>
