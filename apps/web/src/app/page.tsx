@@ -133,6 +133,7 @@ type InvoiceSummary = {
   periodStartAt?: string;
   periodEndAt?: string;
   businessContext?: string;
+  sourceType?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -322,6 +323,9 @@ type HomepageAuthLocaleStrings = {
   invoiceContextTitle: string;
   invoiceContextLabel: string;
   invoiceContextFallback: string;
+  invoiceSourceTitle: string;
+  invoiceSourceLabel: string;
+  invoiceSourceFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -536,6 +540,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceContextTitle: 'Obchodní kontext',
     invoiceContextLabel: 'Poznámka / reference',
     invoiceContextFallback: 'Není k dispozici spolehlivá zákaznická poznámka ani reference.',
+    invoiceSourceTitle: 'Původ faktury',
+    invoiceSourceLabel: 'Zdroj / typ',
+    invoiceSourceFallback: 'Původ faktury není spolehlivě dostupný.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -748,6 +755,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceContextTitle: 'Business context',
     invoiceContextLabel: 'Note / reference',
     invoiceContextFallback: 'No trustworthy customer-facing note or reference is available.',
+    invoiceSourceTitle: 'Invoice origin',
+    invoiceSourceLabel: 'Source / type',
+    invoiceSourceFallback: 'Invoice origin is not reliably available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -960,6 +970,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceContextTitle: 'Geschäftskontext',
     invoiceContextLabel: 'Notiz / Referenz',
     invoiceContextFallback: 'Keine verlässliche kundenlesbare Notiz oder Referenz verfügbar.',
+    invoiceSourceTitle: 'Rechnungsursprung',
+    invoiceSourceLabel: 'Quelle / Typ',
+    invoiceSourceFallback: 'Rechnungsursprung ist nicht zuverlässig verfügbar.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -1267,6 +1280,22 @@ const getInvoicePeriodDisplay = (
   }
 
   return '';
+};
+
+const getInvoiceSourceDisplay = (invoice: Pick<InvoiceSummary, 'sourceType'>) => {
+  const safeSource = invoice.sourceType?.trim();
+
+  if (!safeSource) {
+    return '';
+  }
+
+  const sourceLabels: Record<string, string> = {
+    MANUAL: 'Manual invoice',
+    IMPORTED: 'Imported invoice',
+    RECURRING: 'Recurring invoice',
+  };
+
+  return sourceLabels[safeSource] ?? '';
 };
 
 export default function Home() {
@@ -3083,6 +3112,13 @@ export default function Home() {
                         {invoice.businessContext && invoice.businessContext.trim().length > 0
                           ? invoice.businessContext
                           : homepageAuthCopy.invoiceContextFallback}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceSourceTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceSourceLabel}: </span>
+                        {getInvoiceSourceDisplay(invoice) || homepageAuthCopy.invoiceSourceFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
