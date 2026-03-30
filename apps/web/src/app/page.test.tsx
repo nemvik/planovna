@@ -955,6 +955,59 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).not.toHaveTextContent('UNKNOWN_CODE');
   });
 
+  it('shows invoice tax treatment only from trustworthy breakdown metadata and falls back otherwise', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'ISSUED',
+        amountNet: 50000,
+        amountVat: 0,
+        amountGross: 50000,
+        vatRatePercent: 0,
+        hasBreakdown: true,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+      {
+        id: 'inv-3',
+        number: '2026-0003',
+        status: 'ISSUED',
+        amountNet: 50000,
+        amountVat: 0,
+        amountGross: 50000,
+        vatRatePercent: 0,
+        hasBreakdown: false,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-3/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Tax treatment');
+    expect(cashflowSummary).toHaveTextContent('VAT treatment: Standard VAT');
+    expect(cashflowSummary).toHaveTextContent('VAT treatment: 0% VAT');
+    expect(cashflowSummary).toHaveTextContent('VAT treatment is not reliably available.');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });

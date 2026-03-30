@@ -326,6 +326,11 @@ type HomepageAuthLocaleStrings = {
   invoiceSourceTitle: string;
   invoiceSourceLabel: string;
   invoiceSourceFallback: string;
+  invoiceTaxTreatmentTitle: string;
+  invoiceTaxTreatmentLabel: string;
+  invoiceTaxTreatmentStandardVat: string;
+  invoiceTaxTreatmentZeroVat: string;
+  invoiceTaxTreatmentFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -543,6 +548,11 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceSourceTitle: 'Původ faktury',
     invoiceSourceLabel: 'Zdroj / typ',
     invoiceSourceFallback: 'Původ faktury není spolehlivě dostupný.',
+    invoiceTaxTreatmentTitle: 'Daňový režim',
+    invoiceTaxTreatmentLabel: 'DPH režim',
+    invoiceTaxTreatmentStandardVat: 'Standard VAT',
+    invoiceTaxTreatmentZeroVat: '0% VAT',
+    invoiceTaxTreatmentFallback: 'DPH režim není spolehlivě dostupný.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -758,6 +768,11 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceSourceTitle: 'Invoice origin',
     invoiceSourceLabel: 'Source / type',
     invoiceSourceFallback: 'Invoice origin is not reliably available.',
+    invoiceTaxTreatmentTitle: 'Tax treatment',
+    invoiceTaxTreatmentLabel: 'VAT treatment',
+    invoiceTaxTreatmentStandardVat: 'Standard VAT',
+    invoiceTaxTreatmentZeroVat: '0% VAT',
+    invoiceTaxTreatmentFallback: 'VAT treatment is not reliably available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -973,6 +988,11 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceSourceTitle: 'Rechnungsursprung',
     invoiceSourceLabel: 'Quelle / Typ',
     invoiceSourceFallback: 'Rechnungsursprung ist nicht zuverlässig verfügbar.',
+    invoiceTaxTreatmentTitle: 'Steuerbehandlung',
+    invoiceTaxTreatmentLabel: 'MwSt.-Regelung',
+    invoiceTaxTreatmentStandardVat: 'Standard VAT',
+    invoiceTaxTreatmentZeroVat: '0% VAT',
+    invoiceTaxTreatmentFallback: 'MwSt.-Regelung ist nicht zuverlässig verfügbar.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -1296,6 +1316,28 @@ const getInvoiceSourceDisplay = (invoice: Pick<InvoiceSummary, 'sourceType'>) =>
   };
 
   return sourceLabels[safeSource] ?? '';
+};
+
+const getInvoiceTaxTreatmentDisplay = (
+  invoice: Pick<InvoiceSummary, 'hasBreakdown' | 'vatRatePercent'>,
+  copy: Pick<
+    HomepageAuthCopy,
+    'invoiceTaxTreatmentStandardVat' | 'invoiceTaxTreatmentZeroVat'
+  >,
+) => {
+  if (!invoice.hasBreakdown) {
+    return '';
+  }
+
+  if (invoice.vatRatePercent === 0) {
+    return copy.invoiceTaxTreatmentZeroVat;
+  }
+
+  if (invoice.vatRatePercent > 0) {
+    return copy.invoiceTaxTreatmentStandardVat;
+  }
+
+  return '';
 };
 
 export default function Home() {
@@ -3119,6 +3161,14 @@ export default function Home() {
                       <p className="mt-2 text-sm text-slate-700">
                         <span className="text-slate-500">{homepageAuthCopy.invoiceSourceLabel}: </span>
                         {getInvoiceSourceDisplay(invoice) || homepageAuthCopy.invoiceSourceFallback}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceTaxTreatmentTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceTaxTreatmentLabel}: </span>
+                        {getInvoiceTaxTreatmentDisplay(invoice, homepageAuthCopy) ||
+                          homepageAuthCopy.invoiceTaxTreatmentFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
