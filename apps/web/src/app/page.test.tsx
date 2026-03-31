@@ -1051,7 +1051,7 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).not.toHaveTextContent('fr-FR');
   });
 
-  it('shows explicit payment-method fallback when trustworthy invoice-level metadata is unavailable', async () => {
+  it('shows explicit issuer-contact fallback when trustworthy invoice-level metadata is unavailable', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
     client.cashflow.list.query.mockResolvedValue([]);
@@ -1074,8 +1074,8 @@ describe('homepage operations board', () => {
     await loginAndWaitForAutoLoad(client);
 
     const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
-    expect(cashflowSummary).toHaveTextContent('Payment method');
-    expect(cashflowSummary).toHaveTextContent('Payment method: Payment method for this invoice is not available.');
+    expect(cashflowSummary).toHaveTextContent('Contact');
+    expect(cashflowSummary).toHaveTextContent('Contact: Contact for this invoice is not available.');
   });
 
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {

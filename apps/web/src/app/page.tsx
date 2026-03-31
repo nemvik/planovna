@@ -335,9 +335,9 @@ type HomepageAuthLocaleStrings = {
   invoiceLanguageTitle: string;
   invoiceLanguageLabel: string;
   invoiceLanguageFallback: string;
-  invoicePaymentMethodTitle: string;
-  invoicePaymentMethodLabel: string;
-  invoicePaymentMethodFallback: string;
+  invoiceIssuerContactTitle: string;
+  invoiceIssuerContactLabel: string;
+  invoiceIssuerContactFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -563,9 +563,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceLanguageTitle: 'Jazyk faktury',
     invoiceLanguageLabel: 'Jazyk / lokalizace',
     invoiceLanguageFallback: 'Jazyk faktury není spolehlivě dostupný.',
-    invoicePaymentMethodTitle: 'Platební metoda',
-    invoicePaymentMethodLabel: 'Platební metoda',
-    invoicePaymentMethodFallback: 'Platební metoda této faktury není dostupná.',
+    invoiceIssuerContactTitle: 'Kontakt',
+    invoiceIssuerContactLabel: 'Kontakt',
+    invoiceIssuerContactFallback: 'Contact for this invoice is not available.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -789,9 +789,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceLanguageTitle: 'Invoice language',
     invoiceLanguageLabel: 'Language / localization',
     invoiceLanguageFallback: 'Invoice language is not reliably available.',
-    invoicePaymentMethodTitle: 'Payment method',
-    invoicePaymentMethodLabel: 'Payment method',
-    invoicePaymentMethodFallback: 'Payment method for this invoice is not available.',
+    invoiceIssuerContactTitle: 'Contact',
+    invoiceIssuerContactLabel: 'Contact',
+    invoiceIssuerContactFallback: 'Contact for this invoice is not available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -1015,9 +1015,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceLanguageTitle: 'Rechnungssprache',
     invoiceLanguageLabel: 'Sprache / Lokalisierung',
     invoiceLanguageFallback: 'Rechnungssprache ist nicht zuverlässig verfügbar.',
-    invoicePaymentMethodTitle: 'Zahlungsmethode',
-    invoicePaymentMethodLabel: 'Zahlungsmethode',
-    invoicePaymentMethodFallback: 'Die Zahlungsmethode dieser Rechnung ist nicht verfügbar.',
+    invoiceIssuerContactTitle: 'Kontakt',
+    invoiceIssuerContactLabel: 'Kontakt',
+    invoiceIssuerContactFallback: 'Contact for this invoice is not available.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -3223,10 +3223,10 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
-                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePaymentMethodTitle}</p>
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceIssuerContactTitle}</p>
                       <p className="mt-2 text-sm text-slate-700">
-                        <span className="text-slate-500">{homepageAuthCopy.invoicePaymentMethodLabel}: </span>
-                        {homepageAuthCopy.invoicePaymentMethodFallback}
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceIssuerContactLabel}: </span>
+                        {homepageAuthCopy.invoiceIssuerContactFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
