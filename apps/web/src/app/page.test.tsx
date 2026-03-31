@@ -1051,6 +1051,33 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).not.toHaveTextContent('fr-FR');
   });
 
+  it('shows explicit payment-method fallback when trustworthy invoice-level metadata is unavailable', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Payment method');
+    expect(cashflowSummary).toHaveTextContent('Payment method: Payment method for this invoice is not available.');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
