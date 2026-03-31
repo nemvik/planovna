@@ -134,6 +134,7 @@ type InvoiceSummary = {
   periodEndAt?: string;
   businessContext?: string;
   sourceType?: string;
+  documentLocale?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -331,6 +332,9 @@ type HomepageAuthLocaleStrings = {
   invoiceTaxTreatmentStandardVat: string;
   invoiceTaxTreatmentZeroVat: string;
   invoiceTaxTreatmentFallback: string;
+  invoiceLanguageTitle: string;
+  invoiceLanguageLabel: string;
+  invoiceLanguageFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -553,6 +557,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceTaxTreatmentStandardVat: 'Standard VAT',
     invoiceTaxTreatmentZeroVat: '0% VAT',
     invoiceTaxTreatmentFallback: 'DPH režim není spolehlivě dostupný.',
+    invoiceLanguageTitle: 'Jazyk faktury',
+    invoiceLanguageLabel: 'Jazyk / lokalizace',
+    invoiceLanguageFallback: 'Jazyk faktury není spolehlivě dostupný.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -773,6 +780,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceTaxTreatmentStandardVat: 'Standard VAT',
     invoiceTaxTreatmentZeroVat: '0% VAT',
     invoiceTaxTreatmentFallback: 'VAT treatment is not reliably available.',
+    invoiceLanguageTitle: 'Invoice language',
+    invoiceLanguageLabel: 'Language / localization',
+    invoiceLanguageFallback: 'Invoice language is not reliably available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -993,6 +1003,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceTaxTreatmentStandardVat: 'Standard VAT',
     invoiceTaxTreatmentZeroVat: '0% VAT',
     invoiceTaxTreatmentFallback: 'MwSt.-Regelung ist nicht zuverlässig verfügbar.',
+    invoiceLanguageTitle: 'Rechnungssprache',
+    invoiceLanguageLabel: 'Sprache / Lokalisierung',
+    invoiceLanguageFallback: 'Rechnungssprache ist nicht zuverlässig verfügbar.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -1340,6 +1353,25 @@ const getInvoiceTaxTreatmentDisplay = (
   return '';
 };
 
+const getInvoiceLanguageDisplay = (invoice: Pick<InvoiceSummary, 'documentLocale'>) => {
+  const safeLocale = invoice.documentLocale?.trim();
+
+  if (!safeLocale) {
+    return '';
+  }
+
+  const localeLabels: Record<string, string> = {
+    cs: 'Czech',
+    en: 'English',
+    de: 'German',
+    'cs-CZ': 'Czech',
+    'en-US': 'English',
+    'de-DE': 'German',
+  };
+
+  return localeLabels[safeLocale] ?? '';
+};
+
 export default function Home() {
   const [email, setEmail] = useState('owner@tenant-a.local');
   const [password, setPassword] = useState('tenant-a-pass');
@@ -1508,7 +1540,7 @@ export default function Home() {
             : homepageAuthCopy.invoicePaymentStatePartial;
       const dueDate = invoice.dueAt ? new Date(invoice.dueAt) : null;
       const hasTrustworthyDueDate = !!dueDate && !Number.isNaN(dueDate.getTime());
-      const startOfToday = new Date();
+      const startOfToday = new Date(Date.now());
       startOfToday.setHours(0, 0, 0, 0);
       const dueDateStart = hasTrustworthyDueDate ? new Date(dueDate) : null;
       if (dueDateStart) {
@@ -3169,6 +3201,13 @@ export default function Home() {
                         <span className="text-slate-500">{homepageAuthCopy.invoiceTaxTreatmentLabel}: </span>
                         {getInvoiceTaxTreatmentDisplay(invoice, homepageAuthCopy) ||
                           homepageAuthCopy.invoiceTaxTreatmentFallback}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceLanguageTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceLanguageLabel}: </span>
+                        {getInvoiceLanguageDisplay(invoice) || homepageAuthCopy.invoiceLanguageFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
