@@ -135,6 +135,7 @@ type InvoiceSummary = {
   businessContext?: string;
   sourceType?: string;
   documentLocale?: string;
+  billingAddressLines?: string[];
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -338,6 +339,9 @@ type HomepageAuthLocaleStrings = {
   invoiceIssuerContactTitle: string;
   invoiceIssuerContactLabel: string;
   invoiceIssuerContactFallback: string;
+  invoiceBillingAddressTitle: string;
+  invoiceBillingAddressLabel: string;
+  invoiceBillingAddressFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -566,6 +570,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuerContactTitle: 'Kontakt',
     invoiceIssuerContactLabel: 'Kontakt',
     invoiceIssuerContactFallback: 'Contact for this invoice is not available.',
+    invoiceBillingAddressTitle: 'Fakturační adresa',
+    invoiceBillingAddressLabel: 'Fakturační adresa',
+    invoiceBillingAddressFallback: 'Billing address for this invoice is not available.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -792,6 +799,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuerContactTitle: 'Contact',
     invoiceIssuerContactLabel: 'Contact',
     invoiceIssuerContactFallback: 'Contact for this invoice is not available.',
+    invoiceBillingAddressTitle: 'Billing address',
+    invoiceBillingAddressLabel: 'Billing address',
+    invoiceBillingAddressFallback: 'Billing address for this invoice is not available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -1018,6 +1028,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssuerContactTitle: 'Kontakt',
     invoiceIssuerContactLabel: 'Kontakt',
     invoiceIssuerContactFallback: 'Contact for this invoice is not available.',
+    invoiceBillingAddressTitle: 'Rechnungsadresse',
+    invoiceBillingAddressLabel: 'Rechnungsadresse',
+    invoiceBillingAddressFallback: 'Billing address for this invoice is not available.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -1382,6 +1395,14 @@ const getInvoiceLanguageDisplay = (invoice: Pick<InvoiceSummary, 'documentLocale
   };
 
   return localeLabels[safeLocale] ?? '';
+};
+
+const getInvoiceBillingAddressLines = (invoice: Pick<InvoiceSummary, 'billingAddressLines'>) => {
+  const safeLines = (invoice.billingAddressLines ?? [])
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  return safeLines.length >= 2 ? safeLines : [];
 };
 
 export default function Home() {
@@ -3228,6 +3249,24 @@ export default function Home() {
                         <span className="text-slate-500">{homepageAuthCopy.invoiceIssuerContactLabel}: </span>
                         {homepageAuthCopy.invoiceIssuerContactFallback}
                       </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceBillingAddressTitle}</p>
+                      {getInvoiceBillingAddressLines(invoice).length > 0 ? (
+                        <div className="mt-2 text-sm text-slate-700">
+                          <p className="text-slate-500">{homepageAuthCopy.invoiceBillingAddressLabel}:</p>
+                          <ul className="mt-1 space-y-1">
+                            {getInvoiceBillingAddressLines(invoice).map((line, index) => (
+                              <li key={`${invoice.id}-billing-${index}`}>{line}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-700">
+                          <span className="text-slate-500">{homepageAuthCopy.invoiceBillingAddressLabel}: </span>
+                          {homepageAuthCopy.invoiceBillingAddressFallback}
+                        </p>
+                      )}
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
                       <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePartySummaryTitle}</p>

@@ -1078,6 +1078,51 @@ describe('homepage operations board', () => {
     expect(cashflowSummary).toHaveTextContent('Contact: Contact for this invoice is not available.');
   });
 
+  it('shows billing address only from trustworthy invoice-level snapshot lines and falls back otherwise', async () => {
+    const client = createClient();
+    client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0001',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        billingAddressLines: ['Acme Interiors s.r.o.', 'Masarykova 12', '602 00 Brno'],
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+      {
+        id: 'inv-2',
+        number: '2026-0002',
+        status: 'DRAFT',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        billingAddressLines: ['Single line only'],
+        pdfPath: '/invoices/inv-2/pdf',
+      },
+    ]);
+
+    renderWithClient(client);
+    await loginAndWaitForAutoLoad(client);
+
+    const cashflowSummary = await screen.findByRole('region', { name: 'Cashflow summary' });
+    expect(cashflowSummary).toHaveTextContent('Billing address');
+    expect(cashflowSummary).toHaveTextContent('Acme Interiors s.r.o.');
+    expect(cashflowSummary).toHaveTextContent('Masarykova 12');
+    expect(cashflowSummary).toHaveTextContent('602 00 Brno');
+    expect(cashflowSummary).toHaveTextContent('Billing address for this invoice is not available.');
+    expect(cashflowSummary).not.toHaveTextContent('Single line only');
+  });
+
   it('shows a minimal cashflow snapshot after login using the shipped cashflow contract', async () => {
     const client = createClient();
     client.auth.login.mutate.mockResolvedValue({ accessToken: 'token-owner' });
