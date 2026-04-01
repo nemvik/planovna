@@ -137,6 +137,7 @@ type InvoiceSummary = {
   documentLocale?: string;
   billingAddressLines?: string[];
   supplierTaxId?: string;
+  customerTaxId?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -346,6 +347,9 @@ type HomepageAuthLocaleStrings = {
   invoiceSupplierTaxIdTitle: string;
   invoiceSupplierTaxIdLabel: string;
   invoiceSupplierTaxIdFallback: string;
+  invoiceCustomerTaxIdTitle: string;
+  invoiceCustomerTaxIdLabel: string;
+  invoiceCustomerTaxIdFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -580,6 +584,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceSupplierTaxIdTitle: 'DIČ dodavatele',
     invoiceSupplierTaxIdLabel: 'DIČ dodavatele',
     invoiceSupplierTaxIdFallback: 'Tax ID for this invoice is not available.',
+    invoiceCustomerTaxIdTitle: 'DIČ odběratele',
+    invoiceCustomerTaxIdLabel: 'DIČ odběratele',
+    invoiceCustomerTaxIdFallback: 'Customer tax ID for this invoice is not available.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -812,6 +819,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceSupplierTaxIdTitle: 'Supplier tax ID',
     invoiceSupplierTaxIdLabel: 'Supplier tax ID',
     invoiceSupplierTaxIdFallback: 'Tax ID for this invoice is not available.',
+    invoiceCustomerTaxIdTitle: 'Customer tax ID',
+    invoiceCustomerTaxIdLabel: 'Customer tax ID',
+    invoiceCustomerTaxIdFallback: 'Customer tax ID for this invoice is not available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -1044,6 +1054,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceSupplierTaxIdTitle: 'Steuer-ID des Lieferanten',
     invoiceSupplierTaxIdLabel: 'Steuer-ID des Lieferanten',
     invoiceSupplierTaxIdFallback: 'Tax ID for this invoice is not available.',
+    invoiceCustomerTaxIdTitle: 'Steuer-ID des Kunden',
+    invoiceCustomerTaxIdLabel: 'Steuer-ID des Kunden',
+    invoiceCustomerTaxIdFallback: 'Customer tax ID for this invoice is not available.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -3288,6 +3301,15 @@ export default function Home() {
                         {invoice.supplierTaxId && invoice.supplierTaxId.trim().length > 0
                           ? invoice.supplierTaxId
                           : homepageAuthCopy.invoiceSupplierTaxIdFallback}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceCustomerTaxIdTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceCustomerTaxIdLabel}: </span>
+                        {invoice.customerTaxId && invoice.customerTaxId.trim().length > 0
+                          ? invoice.customerTaxId
+                          : homepageAuthCopy.invoiceCustomerTaxIdFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
