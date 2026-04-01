@@ -136,6 +136,7 @@ type InvoiceSummary = {
   sourceType?: string;
   documentLocale?: string;
   billingAddressLines?: string[];
+  supplierTaxId?: string;
   issuedAt?: string;
   dueAt?: string;
   pdfPath: string;
@@ -342,6 +343,9 @@ type HomepageAuthLocaleStrings = {
   invoiceBillingAddressTitle: string;
   invoiceBillingAddressLabel: string;
   invoiceBillingAddressFallback: string;
+  invoiceSupplierTaxIdTitle: string;
+  invoiceSupplierTaxIdLabel: string;
+  invoiceSupplierTaxIdFallback: string;
   invoicePartySummaryTitle: string;
   invoicePartyBuyerLabel: string;
   invoicePartySupplierLabel: string;
@@ -573,6 +577,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceBillingAddressTitle: 'Fakturační adresa',
     invoiceBillingAddressLabel: 'Fakturační adresa',
     invoiceBillingAddressFallback: 'Billing address for this invoice is not available.',
+    invoiceSupplierTaxIdTitle: 'DIČ dodavatele',
+    invoiceSupplierTaxIdLabel: 'DIČ dodavatele',
+    invoiceSupplierTaxIdFallback: 'Tax ID for this invoice is not available.',
     invoicePartySummaryTitle: 'Smluvní strany',
     invoicePartyBuyerLabel: 'Odběratel',
     invoicePartySupplierLabel: 'Dodavatel',
@@ -802,6 +809,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceBillingAddressTitle: 'Billing address',
     invoiceBillingAddressLabel: 'Billing address',
     invoiceBillingAddressFallback: 'Billing address for this invoice is not available.',
+    invoiceSupplierTaxIdTitle: 'Supplier tax ID',
+    invoiceSupplierTaxIdLabel: 'Supplier tax ID',
+    invoiceSupplierTaxIdFallback: 'Tax ID for this invoice is not available.',
     invoicePartySummaryTitle: 'Party summary',
     invoicePartyBuyerLabel: 'Buyer',
     invoicePartySupplierLabel: 'Supplier',
@@ -1031,6 +1041,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceBillingAddressTitle: 'Rechnungsadresse',
     invoiceBillingAddressLabel: 'Rechnungsadresse',
     invoiceBillingAddressFallback: 'Billing address for this invoice is not available.',
+    invoiceSupplierTaxIdTitle: 'Steuer-ID des Lieferanten',
+    invoiceSupplierTaxIdLabel: 'Steuer-ID des Lieferanten',
+    invoiceSupplierTaxIdFallback: 'Tax ID for this invoice is not available.',
     invoicePartySummaryTitle: 'Parteien',
     invoicePartyBuyerLabel: 'Kunde',
     invoicePartySupplierLabel: 'Lieferant',
@@ -3267,6 +3280,15 @@ export default function Home() {
                           {homepageAuthCopy.invoiceBillingAddressFallback}
                         </p>
                       )}
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceSupplierTaxIdTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceSupplierTaxIdLabel}: </span>
+                        {invoice.supplierTaxId && invoice.supplierTaxId.trim().length > 0
+                          ? invoice.supplierTaxId
+                          : homepageAuthCopy.invoiceSupplierTaxIdFallback}
+                      </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
                       <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoicePartySummaryTitle}</p>
