@@ -120,6 +120,46 @@ describe('extracted shared workspace harness', () => {
     expect(screen.queryByText('Single line only')).not.toBeInTheDocument();
   });
 
+  it('renders supplier company-id only from the invoice snapshot and otherwise falls back explicitly', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-company-present',
+        number: '2026-0042',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        supplierCompanyId: '27888998',
+        supplierTaxId: 'CZ27888998',
+        pdfPath: '/invoices/inv-company-present/pdf',
+      },
+      {
+        id: 'inv-company-missing',
+        number: '2026-0043',
+        status: 'DRAFT',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        supplierTaxId: 'CZ11111111',
+        pdfPath: '/invoices/inv-company-missing/pdf',
+      },
+    ]);
+
+    await loginAndLoadWorkspace(client);
+
+    expect(screen.getAllByText('Supplier company ID')).toHaveLength(2);
+    expect(screen.getByText('27888998')).toBeInTheDocument();
+    expect(screen.getByText('Company ID for this invoice is not available.')).toBeInTheDocument();
+    expect(screen.getAllByText('Supplier tax ID')).toHaveLength(2);
+  });
+
   it('does not substitute indirect customer data into the billing-address block when the snapshot is missing', async () => {
     const client = createClient();
     client.order.list.query.mockResolvedValue([
