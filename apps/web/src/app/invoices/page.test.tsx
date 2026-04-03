@@ -1,106 +1,190 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import InvoicesPage from './page';
 import { createTrpcClient } from '../../lib/trpc/client';
+import { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from '../home-workspace';
 
 jest.mock('../../lib/trpc/client', () => ({
   createTrpcClient: jest.fn(),
 }));
 
-jest.mock('../page', () => ({
-  __esModule: true,
-  default: function MockHome() {
-    return <div data-testid="homepage-shell">homepage shell</div>;
+const createClient = () => ({
+  invoice: {
+    list: { query: jest.fn() },
   },
-}));
+});
 
-describe('invoices page', () => {
+describe('invoices workspace v1', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    (createTrpcClient as jest.Mock).mockReset();
+    jest.clearAllMocks();
   });
 
-  it('exposes a dedicated invoice view entrypoint', async () => {
-    window.localStorage.setItem('planovna.homepage.accessToken', 'token-owner');
-    (createTrpcClient as jest.Mock).mockReturnValue({
-      invoice: {
-        list: {
-          query: jest.fn().mockResolvedValue([
-            {
-              id: 'inv-1',
-              number: '2026-0001',
-              status: 'ISSUED',
-              amountGross: 121000,
-              currency: 'CZK',
-              dueAt: '2026-03-15T00:00:00.000Z',
-              pdfPath: '/invoices/inv-1/pdf',
-            },
-            {
-              id: 'inv-2',
-              number: '2026-0002',
-              status: 'PAID',
-              amountGross: 50000,
-              currency: 'CZK',
-              dueAt: '2026-03-10T00:00:00.000Z',
-              pdfPath: '/invoices/inv-2/pdf',
-            },
-          ]),
-        },
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('shows the login workspace before authentication', () => {
+    render(<InvoicesPage />);
+
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Invoices' })).not.toBeInTheDocument();
+  });
+
+  it('renders the invoices workspace with metrics, filters, and detail links after loading', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-overdue',
+        number: '2026-1001',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Acme Interiors',
+        dueAt: '2026-03-20T00:00:00.000Z',
+        pdfPath: '/invoices/inv-overdue/pdf',
       },
-    });
+      {
+        id: 'inv-paid',
+        number: '2026-1002',
+        status: 'PAID',
+        amountGross: 60500,
+        currency: 'CZK',
+        buyerDisplayName: 'Beta Studio',
+        dueAt: '2026-03-25T00:00:00.000Z',
+        paidAt: '2026-03-24T00:00:00.000Z',
+        pdfPath: '/invoices/inv-paid/pdf',
+      },
+      {
+        id: 'inv-draft',
+        number: '2026-1003',
+        status: 'DRAFT',
+        amountGross: 50000,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-draft/pdf',
+      },
+    ]);
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-03-24T10:00:00.000Z').getTime());
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
 
     render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
 
     expect(screen.getByRole('heading', { name: 'Invoices' })).toBeInTheDocument();
-    expect(
-      screen.getByText('Dedicated invoice view built on the same shipped homepage finance and export contract.'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Invoice export actions' })).toHaveTextContent(
-      '/invoices/<invoiceId>/pdf',
-    );
-    expect(screen.getByRole('link', { name: 'Open homepage finance workspace' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Open cashflow page' })).toHaveAttribute('href', '/cashflow');
-    expect(await screen.findByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Total invoices');
-    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('2');
-    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Issued');
-    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('1');
-    expect(screen.getByRole('region', { name: 'Invoice status summary' })).toHaveTextContent('Paid');
-    expect(await screen.findByRole('region', { name: 'Invoice list' })).toHaveTextContent('2026-0001');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('121');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('03/15/2026');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('Issued');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).toHaveTextContent('Paid');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('ISSUED');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('PAID');
-    expect(screen.getByRole('link', { name: 'Export PDF for 2026-0001' })).toHaveAttribute(
-      'href',
-      '/invoices/inv-1/pdf',
-    );
-    expect(screen.getByTestId('homepage-shell')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'New invoice' })).toHaveAttribute('href', '/board');
+    expect(screen.getByText('All invoices')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
+    expect(screen.getByText('Acme Interiors')).toBeInTheDocument();
+    expect(screen.getByText('2026-1001')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Open detail' })[0]).toHaveAttribute('href', '/invoices/inv-overdue/pdf');
   });
 
-  it('shows localized invalid due date fallback instead of raw token', async () => {
-    window.localStorage.setItem('planovna.homepage.accessToken', 'token-owner');
-    (createTrpcClient as jest.Mock).mockReturnValue({
-      invoice: {
-        list: {
-          query: jest.fn().mockResolvedValue([
-            {
-              id: 'inv-3',
-              number: '2026-0003',
-              status: 'DRAFT',
-              amountGross: 1000,
-              currency: 'CZK',
-              dueAt: 'not-a-date',
-              pdfPath: '/invoices/inv-3/pdf',
-            },
-          ]),
-        },
+  it('filters the loaded list down to matching invoices only', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-a',
+        number: '2026-2001',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Acme Interiors',
+        dueAt: '2026-03-20T00:00:00.000Z',
+        pdfPath: '/invoices/inv-a/pdf',
       },
-    });
+      {
+        id: 'inv-b',
+        number: '2026-2002',
+        status: 'PAID',
+        amountGross: 60500,
+        currency: 'CZK',
+        buyerDisplayName: 'Beta Studio',
+        paidAt: '2026-03-21T00:00:00.000Z',
+        pdfPath: '/invoices/inv-b/pdf',
+      },
+    ]);
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
 
     render(<InvoicesPage />);
 
-    expect(await screen.findByRole('region', { name: 'Invoice list' })).toHaveTextContent('Invalid due date');
-    expect(screen.getByRole('region', { name: 'Invoice list' })).not.toHaveTextContent('not-a-date');
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Search invoices'), 'Beta');
+
+    expect(screen.queryByText('2026-2001')).not.toBeInTheDocument();
+    expect(screen.getByText('2026-2002')).toBeInTheDocument();
+  });
+
+  it('shows a no-results state when filters exclude every invoice', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-a',
+        number: '2026-3001',
+        status: 'PAID',
+        amountGross: 60500,
+        currency: 'CZK',
+        buyerDisplayName: 'Beta Studio',
+        paidAt: '2026-03-21T00:00:00.000Z',
+        pdfPath: '/invoices/inv-a/pdf',
+      },
+    ]);
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText('Filter'), 'DRAFT');
+
+    expect(screen.getByText('No invoices match the current filters.')).toBeInTheDocument();
+  });
+
+  it('shows explicit empty and error states from the current route data load', async () => {
+    const emptyClient = createClient();
+    emptyClient.invoice.list.query.mockResolvedValue([]);
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    createTrpcClientMock.mockImplementationOnce(() => emptyClient as never);
+    const { unmount } = render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(emptyClient.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText('No invoices are available yet.')).toBeInTheDocument();
+
+    unmount();
+
+    const errorClient = createClient();
+    errorClient.invoice.list.query.mockRejectedValue(new Error('load failed'));
+    createTrpcClientMock.mockImplementationOnce(() => errorClient as never);
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(errorClient.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText('Invoices could not be loaded right now.')).toBeInTheDocument();
   });
 });

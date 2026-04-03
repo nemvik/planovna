@@ -1,12 +1,18 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from './page';
 import BoardPage from './board/page';
 import CashflowPage from './cashflow/page';
 import InvoicesPage from './invoices/page';
+import { createTrpcClient } from '../lib/trpc/client';
+
+jest.mock('../lib/trpc/client', () => ({
+  createTrpcClient: jest.fn(),
+}));
 
 describe('homepage IA split and module pages', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    jest.clearAllMocks();
   });
 
   it('shows the lightweight dashboard after login', () => {
@@ -19,9 +25,20 @@ describe('homepage IA split and module pages', () => {
     expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
   });
 
-  it('keeps dedicated page titles for the module routes', () => {
+  it('keeps dedicated page titles for the module routes', async () => {
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    const client = {
+      invoice: {
+        list: { query: jest.fn().mockResolvedValue([]) },
+      },
+    };
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
     render(<InvoicesPage />);
-    expect(screen.getByRole('heading', { name: 'Invoices' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Invoices' })).toBeInTheDocument();
+    });
 
     render(<CashflowPage />);
     expect(screen.getByRole('heading', { name: 'Cashflow' })).toBeInTheDocument();
