@@ -160,6 +160,46 @@ describe('extracted shared workspace harness', () => {
     expect(screen.getAllByText('Supplier tax ID')).toHaveLength(2);
   });
 
+  it('renders issue date only from the explicit issuedAt value and otherwise falls back explicitly', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-issued-present',
+        number: '2026-0050',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        issuedAt: '2026-04-01T00:00:00.000Z',
+        dueAt: '2026-04-14T00:00:00.000Z',
+        pdfPath: '/invoices/inv-issued-present/pdf',
+      },
+      {
+        id: 'inv-issued-missing',
+        number: '2026-0051',
+        status: 'ISSUED',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        dueAt: '2026-04-20T00:00:00.000Z',
+        pdfPath: '/invoices/inv-issued-missing/pdf',
+      },
+    ]);
+
+    await loginAndLoadWorkspace(client);
+
+    expect(screen.getAllByText('Issue date')).toHaveLength(2);
+    expect(screen.getByText('04/01/2026')).toBeInTheDocument();
+    expect(screen.getByText('Datum vystavení této faktury není dostupné.')).toBeInTheDocument();
+    expect(screen.queryByText('04/20/2026')).not.toBeInTheDocument();
+  });
+
   it('does not substitute indirect customer data into the billing-address block when the snapshot is missing', async () => {
     const client = createClient();
     client.order.list.query.mockResolvedValue([
