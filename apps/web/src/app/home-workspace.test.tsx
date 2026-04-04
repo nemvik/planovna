@@ -197,7 +197,46 @@ describe('extracted shared workspace harness', () => {
     expect(screen.getAllByText('Issue date')).toHaveLength(2);
     expect(screen.getByText('04/01/2026')).toBeInTheDocument();
     expect(screen.getByText('Datum vystavení této faktury není dostupné.')).toBeInTheDocument();
-    expect(screen.queryByText('04/20/2026')).not.toBeInTheDocument();
+    expect(screen.getByText('04/20/2026')).toBeInTheDocument();
+  });
+
+  it('renders due date only from the explicit dueAt value and otherwise falls back explicitly', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-due-present',
+        number: '2026-0060',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        issuedAt: '2026-04-01T00:00:00.000Z',
+        dueAt: '2026-04-14T00:00:00.000Z',
+        pdfPath: '/invoices/inv-due-present/pdf',
+      },
+      {
+        id: 'inv-due-missing',
+        number: '2026-0061',
+        status: 'ISSUED',
+        amountNet: 50000,
+        amountVat: 10500,
+        amountGross: 60500,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        issuedAt: '2026-04-05T00:00:00.000Z',
+        pdfPath: '/invoices/inv-due-missing/pdf',
+      },
+    ]);
+
+    await loginAndLoadWorkspace(client);
+
+    expect(screen.getAllByText('Due date')).toHaveLength(2);
+    expect(screen.getByText('04/14/2026')).toBeInTheDocument();
+    expect(screen.getByText('Datum splatnosti této faktury není dostupné.')).toBeInTheDocument();
   });
 
   it('does not substitute indirect customer data into the billing-address block when the snapshot is missing', async () => {

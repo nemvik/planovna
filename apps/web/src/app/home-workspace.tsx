@@ -355,6 +355,9 @@ type HomepageAuthLocaleStrings = {
   invoiceIssueDateTitle: string;
   invoiceIssueDateLabel: string;
   invoiceIssueDateFallback: string;
+  invoiceDueDateSummaryTitle: string;
+  invoiceDueDateSummaryLabel: string;
+  invoiceDueDateSummaryFallback: string;
   invoiceCustomerTaxIdTitle: string;
   invoiceCustomerTaxIdLabel: string;
   invoiceCustomerTaxIdFallback: string;
@@ -601,6 +604,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssueDateTitle: 'Datum vystavení',
     invoiceIssueDateLabel: 'Datum vystavení',
     invoiceIssueDateFallback: 'Datum vystavení této faktury není dostupné.',
+    invoiceDueDateSummaryTitle: 'Datum splatnosti',
+    invoiceDueDateSummaryLabel: 'Datum splatnosti',
+    invoiceDueDateSummaryFallback: 'Datum splatnosti této faktury není dostupné.',
     invoiceCustomerTaxIdTitle: 'DIČ odběratele',
     invoiceCustomerTaxIdLabel: 'DIČ odběratele',
     invoiceCustomerTaxIdFallback: 'Customer tax ID for this invoice is not available.',
@@ -845,6 +851,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssueDateTitle: 'Issue date',
     invoiceIssueDateLabel: 'Issue date',
     invoiceIssueDateFallback: 'Datum vystavení této faktury není dostupné.',
+    invoiceDueDateSummaryTitle: 'Due date',
+    invoiceDueDateSummaryLabel: 'Due date',
+    invoiceDueDateSummaryFallback: 'Datum splatnosti této faktury není dostupné.',
     invoiceCustomerTaxIdTitle: 'Customer tax ID',
     invoiceCustomerTaxIdLabel: 'Customer tax ID',
     invoiceCustomerTaxIdFallback: 'Customer tax ID for this invoice is not available.',
@@ -1089,6 +1098,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     invoiceIssueDateTitle: 'Ausstellungsdatum',
     invoiceIssueDateLabel: 'Ausstellungsdatum',
     invoiceIssueDateFallback: 'Datum vystavení této faktury není dostupné.',
+    invoiceDueDateSummaryTitle: 'Fälligkeitsdatum',
+    invoiceDueDateSummaryLabel: 'Fälligkeitsdatum',
+    invoiceDueDateSummaryFallback: 'Datum splatnosti této faktury není dostupné.',
     invoiceCustomerTaxIdTitle: 'Steuer-ID des Kunden',
     invoiceCustomerTaxIdLabel: 'Steuer-ID des Kunden',
     invoiceCustomerTaxIdFallback: 'Customer tax ID for this invoice is not available.',
@@ -3394,6 +3406,15 @@ export default function Home() {
                         {invoice.issuedAt
                           ? formatDateForDisplay(invoice.issuedAt, homepageLocale)
                           : homepageAuthCopy.invoiceIssueDateFallback}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <p className="text-xs font-medium text-slate-500">{homepageAuthCopy.invoiceDueDateSummaryTitle}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">{homepageAuthCopy.invoiceDueDateSummaryLabel}: </span>
+                        {invoice.dueAt
+                          ? formatDateForDisplay(invoice.dueAt, homepageLocale)
+                          : homepageAuthCopy.invoiceDueDateSummaryFallback}
                       </p>
                     </div>
                     <div className="mt-3 rounded border bg-white p-3">
