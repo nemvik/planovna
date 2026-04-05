@@ -31,6 +31,9 @@ describe('homepage IA split and module pages', () => {
       invoice: {
         list: { query: jest.fn().mockResolvedValue([]) },
       },
+      cashflow: {
+        list: { query: jest.fn().mockResolvedValue([]) },
+      },
     };
     const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
     createTrpcClientMock.mockImplementation(() => client as never);
@@ -41,7 +44,9 @@ describe('homepage IA split and module pages', () => {
     });
 
     render(<CashflowPage />);
-    expect(screen.getByRole('heading', { name: 'Cashflow' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Cashflow' })).toBeInTheDocument();
+    });
   });
 
   it('mounts the board route as the full shared workspace entry', () => {
