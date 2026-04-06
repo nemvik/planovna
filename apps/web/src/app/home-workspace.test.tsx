@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Home from './home-workspace';
+import Home, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from './home-workspace';
 import { createTrpcClient } from '../lib/trpc/client';
 
 jest.mock('../lib/trpc/client', () => ({
@@ -58,6 +58,14 @@ const loginAndLoadWorkspace = async (client: ReturnType<typeof createClient>) =>
   });
 };
 
+const loadAuthenticatedWorkspace = async (client: ReturnType<typeof createClient>) => {
+  window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+  renderWithClient(client);
+  await waitFor(() => {
+    expect(client.operation.list.query).toHaveBeenCalledTimes(1);
+  });
+};
+
 describe('extracted shared workspace harness', () => {
   it('mounts the shared workspace contract instead of the dashboard shell', () => {
     const client = createClient();
@@ -88,7 +96,7 @@ describe('extracted shared workspace harness', () => {
       },
     ]);
 
-    await loginAndLoadWorkspace(client);
+    await loadAuthenticatedWorkspace(client);
 
     expect(screen.getByText('Customer billing address')).toBeInTheDocument();
     expect(screen.getByText('Acme Interiors s.r.o.')).toBeInTheDocument();
@@ -114,7 +122,7 @@ describe('extracted shared workspace harness', () => {
       },
     ]);
 
-    await loginAndLoadWorkspace(client);
+    await loadAuthenticatedWorkspace(client);
 
     expect(screen.getByText('Billing address for this customer on the invoice is not available.')).toBeInTheDocument();
     expect(screen.queryByText('Single line only')).not.toBeInTheDocument();
@@ -152,7 +160,7 @@ describe('extracted shared workspace harness', () => {
       },
     ]);
 
-    await loginAndLoadWorkspace(client);
+    await loadAuthenticatedWorkspace(client);
 
     expect(screen.getAllByText('Supplier company ID')).toHaveLength(2);
     expect(screen.getByText('27888998')).toBeInTheDocument();
@@ -192,7 +200,7 @@ describe('extracted shared workspace harness', () => {
       },
     ]);
 
-    await loginAndLoadWorkspace(client);
+    await loadAuthenticatedWorkspace(client);
 
     expect(screen.getAllByText('Issue date')).toHaveLength(2);
     expect(screen.getByText('04/01/2026')).toBeInTheDocument();
@@ -232,11 +240,105 @@ describe('extracted shared workspace harness', () => {
       },
     ]);
 
-    await loginAndLoadWorkspace(client);
+    await loadAuthenticatedWorkspace(client);
 
     expect(screen.getAllByText('Due date')).toHaveLength(2);
     expect(screen.getByText('04/14/2026')).toBeInTheDocument();
     expect(screen.getByText('Datum splatnosti této faktury není dostupné.')).toBeInTheDocument();
+  });
+
+  it('shows shortcut discovery with only existing safe board actions', async () => {
+    const client = createClient();
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'CUT-01',
+        title: 'Cut panels',
+        status: 'READY',
+        startDate: undefined,
+        endDate: undefined,
+        sortIndex: 1,
+        version: 3,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+    ]);
+
+    await loadAuthenticatedWorkspace(client);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Shortcuts' }));
+
+    expect(screen.getByRole('region', { name: 'Board shortcuts' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Load operations' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Open audit log' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Edit board columns' }).length).toBeGreaterThan(0);
+    expect(screen.getByText('Use “Move to bucket” on a card as the explicit non-drag-and-drop fallback.')).toBeInTheDocument();
+  });
+
+  it('uses the existing move action as a quick non-dnd fallback from the card', async () => {
+    const client = createClient();
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-04-06T10:00:00.000Z').getTime());
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'CUT-01',
+        title: 'Cut panels',
+        status: 'READY',
+        startDate: '2026-04-06T00:00:00.000Z',
+        endDate: undefined,
+        sortIndex: 1,
+        version: 3,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'EDGE-02',
+        title: 'Edge banding',
+        status: 'READY',
+        startDate: '2026-04-07T00:00:00.000Z',
+        endDate: undefined,
+        sortIndex: 2,
+        version: 1,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+    ]);
+    client.operation.update.mutate.mockResolvedValue({
+      id: 'op-1',
+      tenantId: 'tenant-a',
+      orderId: 'ord-1',
+      code: 'CUT-01',
+      title: 'Cut panels',
+      status: 'READY',
+      startDate: '2026-04-07T00:00:00.000Z',
+      endDate: undefined,
+      sortIndex: 1,
+      version: 4,
+      dependencyCount: 0,
+      prerequisiteCodes: [],
+    });
+
+    await loadAuthenticatedWorkspace(client);
+
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getAllByLabelText('Move to bucket')[0], '2026-04-07');
+
+    await waitFor(() => {
+      expect(client.operation.update.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'op-1',
+          startDate: '2026-04-07T00:00:00.000Z',
+        }),
+      );
+    });
   });
 
   it('does not substitute indirect customer data into the billing-address block when the snapshot is missing', async () => {
@@ -265,7 +367,7 @@ describe('extracted shared workspace harness', () => {
       },
     ]);
 
-    await loginAndLoadWorkspace(client);
+    await loadAuthenticatedWorkspace(client);
 
     expect(screen.getByText('Billing address for this customer on the invoice is not available.')).toBeInTheDocument();
     expect(screen.queryByText('Indirect CRM Customer')).not.toBeInTheDocument();

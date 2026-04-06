@@ -396,6 +396,14 @@ type HomepageAuthLocaleStrings = {
   operationClearReasonButton: string;
   operationBlockedReasonLabel: string;
   operationSaveReasonButton: string;
+  boardShortcutsButton: string;
+  boardShortcutsTitle: string;
+  boardShortcutsHint: string;
+  boardShortcutsLoadOperations: string;
+  boardShortcutsAuditLog: string;
+  boardShortcutsBoardColumns: string;
+  boardShortcutsMoveHint: string;
+  operationQuickActionsTitle: string;
   operationMoveToBucketLabel: string;
   operationScheduleToDateLabel: string;
   operationScheduleButton: string;
@@ -645,6 +653,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationClearReasonButton: 'Vymazat důvod',
     operationBlockedReasonLabel: 'Důvod blokace',
     operationSaveReasonButton: 'Uložit důvod',
+    boardShortcutsButton: 'Zkratky',
+    boardShortcutsTitle: 'Zkratky nástěnky',
+    boardShortcutsHint: 'Rychlý přehled bezpečně dostupných akcí na této nástěnce.',
+    boardShortcutsLoadOperations: 'Načíst operace',
+    boardShortcutsAuditLog: 'Otevřít audit log',
+    boardShortcutsBoardColumns: 'Upravit sloupce nástěnky',
+    boardShortcutsMoveHint: 'Použijte „Přesunout do koše“ na kartě jako rychlou alternativu k drag and drop.',
+    operationQuickActionsTitle: 'Rychlé akce',
     operationMoveToBucketLabel: 'Přesunout do koše',
     operationScheduleToDateLabel: 'Naplánovat na datum',
     operationScheduleButton: 'Naplánovat',
@@ -892,6 +908,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationClearReasonButton: 'Clear reason',
     operationBlockedReasonLabel: 'Blocked reason',
     operationSaveReasonButton: 'Save reason',
+    boardShortcutsButton: 'Shortcuts',
+    boardShortcutsTitle: 'Board shortcuts',
+    boardShortcutsHint: 'A quick guide to the safe actions already available on this board.',
+    boardShortcutsLoadOperations: 'Load operations',
+    boardShortcutsAuditLog: 'Open audit log',
+    boardShortcutsBoardColumns: 'Edit board columns',
+    boardShortcutsMoveHint: 'Use “Move to bucket” on a card as the explicit non-drag-and-drop fallback.',
+    operationQuickActionsTitle: 'Quick actions',
     operationMoveToBucketLabel: 'Move to bucket',
     operationScheduleToDateLabel: 'Schedule to date',
     operationScheduleButton: 'Schedule',
@@ -1139,6 +1163,14 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationClearReasonButton: 'Grund löschen',
     operationBlockedReasonLabel: 'Sperrgrund',
     operationSaveReasonButton: 'Grund speichern',
+    boardShortcutsButton: 'Kurzbefehle',
+    boardShortcutsTitle: 'Board-Kurzbefehle',
+    boardShortcutsHint: 'Schnellübersicht über die sicher verfügbaren Aktionen auf diesem Board.',
+    boardShortcutsLoadOperations: 'Vorgänge laden',
+    boardShortcutsAuditLog: 'Audit-Log öffnen',
+    boardShortcutsBoardColumns: 'Board-Spalten bearbeiten',
+    boardShortcutsMoveHint: 'Verwenden Sie „In Bucket verschieben“ auf einer Karte als explizite Alternative zu Drag-and-drop.',
+    operationQuickActionsTitle: 'Schnellaktionen',
     operationMoveToBucketLabel: 'In Bucket verschieben',
     operationScheduleToDateLabel: 'Für Datum planen',
     operationScheduleButton: 'Planen',
@@ -1525,6 +1557,7 @@ export default function Home() {
   const [boardColumns, setBoardColumns] = useState<BoardColumnConfig[]>([]);
   const [boardColumnsDraft, setBoardColumnsDraft] = useState<BoardColumnConfig[]>([]);
   const [boardColumnsOpen, setBoardColumnsOpen] = useState(false);
+  const [boardShortcutsOpen, setBoardShortcutsOpen] = useState(false);
   const [boardColumnsSaving, setBoardColumnsSaving] = useState(false);
   const [boardColumnsError, setBoardColumnsError] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
@@ -2800,6 +2833,13 @@ export default function Home() {
             <button
               className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               type="button"
+              onClick={() => setBoardShortcutsOpen((current) => !current)}
+            >
+              {homepageAuthCopy.boardShortcutsButton}
+            </button>
+            <button
+              className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              type="button"
               onClick={() => {
                 setAuditLogOpen(true);
                 if (!auditLogLoadedOnce && !auditLogLoading) {
@@ -2834,6 +2874,48 @@ export default function Home() {
 
       {authMessage ? <p>{authMessage}</p> : null}
       {boardMessage ? <p>{boardMessage}</p> : null}
+
+      {boardShortcutsOpen ? (
+        <section className="rounded border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-sm" aria-label={homepageAuthCopy.boardShortcutsTitle}>
+          <p className="font-medium">{homepageAuthCopy.boardShortcutsTitle}</p>
+          <p className="mt-1 text-sm text-sky-900/80">{homepageAuthCopy.boardShortcutsHint}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className="rounded border border-sky-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-950 transition-colors hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 disabled:opacity-50"
+              type="button"
+              disabled={loadOperationsDisabled}
+              onClick={onLoadOperations}
+            >
+              {homepageAuthCopy.boardShortcutsLoadOperations}
+            </button>
+            <button
+              className="rounded border border-sky-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-950 transition-colors hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+              type="button"
+              onClick={() => {
+                setAuditLogOpen(true);
+                if (!auditLogLoadedOnce && !auditLogLoading) {
+                  void loadAuditLog();
+                }
+              }}
+            >
+              {homepageAuthCopy.boardShortcutsAuditLog}
+            </button>
+            <button
+              className="rounded border border-sky-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-950 transition-colors hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+              type="button"
+              onClick={() => {
+                const mergedColumns = mergeBoardColumns(operations, boardColumns);
+                setBoardColumnsDraft(mergedColumns);
+                setBoardColumnsError('');
+                setBoardColumnsOpen(true);
+              }}
+            >
+              {homepageAuthCopy.boardShortcutsBoardColumns}
+            </button>
+          </div>
+          <p className="mt-3 text-sm text-sky-900/80">{homepageAuthCopy.boardShortcutsMoveHint}</p>
+        </section>
+      ) : null}
 
       {auditLogOpen ? (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30">
@@ -3962,44 +4044,49 @@ export default function Home() {
                                       </button>
                                     </div>
                                   </div>
-                                  <div className="mt-3.5 grid gap-2 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2 sm:grid-cols-2">
-                                    <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                                      {homepageAuthCopy.operationCardStatusLabel}
-                                      <select
-                                        className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        value={operation.status}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          void onStatusChange(operation, event.target.value as Operation['status'])
-                                        }
-                                      >
-                                        {BOARD_STATUS_VALUES.map((status) => (
-                                          <option key={status} value={status}>
-                                            {getLocalizedOperationStatusLabel(status)}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                    <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                                      {homepageAuthCopy.operationMoveToBucketLabel}
-                                      <select
-                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        value={getOperationBucketLabel(operation.startDate)}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          void onMoveOperation(
-                                            operation,
-                                            event.target.value as Exclude<BucketFilter, 'ALL'>,
-                                          )
-                                        }
-                                      >
-                                        {moveBucketOptions.map((moveBucket) => (
-                                          <option key={moveBucket} value={moveBucket}>
-                                            {getLocalizedBucketOptionLabel(moveBucket)}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
+                                  <div className="mt-3.5 rounded-lg border border-sky-200/80 bg-sky-50/60 p-2.5">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-sky-900/80">
+                                      {homepageAuthCopy.operationQuickActionsTitle}
+                                    </p>
+                                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                      <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                        {homepageAuthCopy.operationMoveToBucketLabel}
+                                        <select
+                                          className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                          value={getOperationBucketLabel(operation.startDate)}
+                                          disabled={isOperationLocked}
+                                          onChange={(event) =>
+                                            void onMoveOperation(
+                                              operation,
+                                              event.target.value as Exclude<BucketFilter, 'ALL'>,
+                                            )
+                                          }
+                                        >
+                                          {moveBucketOptions.map((moveBucket) => (
+                                            <option key={moveBucket} value={moveBucket}>
+                                              {getLocalizedBucketOptionLabel(moveBucket)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                      <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                        {homepageAuthCopy.operationCardStatusLabel}
+                                        <select
+                                          className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                          value={operation.status}
+                                          disabled={isOperationLocked}
+                                          onChange={(event) =>
+                                            void onStatusChange(operation, event.target.value as Operation['status'])
+                                          }
+                                        >
+                                          {BOARD_STATUS_VALUES.map((status) => (
+                                            <option key={status} value={status}>
+                                              {getLocalizedOperationStatusLabel(status)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                    </div>
                                   </div>
                                   <form
                                     className="mt-3 flex items-end gap-2.5 sm:gap-3 rounded-lg border border-slate-200/50 bg-slate-50/40 p-2 sm:p-2.5"
