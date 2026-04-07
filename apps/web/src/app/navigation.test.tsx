@@ -3,6 +3,7 @@ import Dashboard, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from './page';
 import BoardPage from './board/page';
 import CashflowPage from './cashflow/page';
 import InvoicesPage from './invoices/page';
+import OrdersPage from './orders/page';
 import { createTrpcClient } from '../lib/trpc/client';
 
 jest.mock('../lib/trpc/client', () => ({
@@ -34,6 +35,9 @@ describe('homepage IA split and module pages', () => {
       cashflow: {
         list: { query: jest.fn().mockResolvedValue([]) },
       },
+      order: {
+        list: { query: jest.fn().mockResolvedValue([]) },
+      },
     };
     const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
     createTrpcClientMock.mockImplementation(() => client as never);
@@ -46,6 +50,11 @@ describe('homepage IA split and module pages', () => {
     render(<CashflowPage />);
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Cashflow' })).toBeInTheDocument();
+    });
+
+    render(<OrdersPage />);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Orders' })).toBeInTheDocument();
     });
   });
 
