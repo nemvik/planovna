@@ -377,7 +377,21 @@ type HomepageAuthLocaleStrings = {
   boardFilterStatusLabel: string;
   boardFilterBucketLabel: string;
   boardFilterResetButton: string;
+  boardClearFiltersButton: string;
   boardSummaryShowingTemplate: string;
+  boardCurrentViewLabel: string;
+  boardCurrentViewAll: string;
+  boardCurrentViewBlocked: string;
+  boardCurrentViewReadyNow: string;
+  boardCurrentViewCustom: string;
+  boardPresetViewsLabel: string;
+  boardPresetAllWork: string;
+  boardPresetBlocked: string;
+  boardPresetReadyNow: string;
+  boardShellHint: string;
+  boardEmptyTitle: string;
+  boardLoadingTitle: string;
+  boardErrorTitle: string;
   boardFilterBadgeStatusLabel: string;
   boardFilterBadgeBucketLabel: string;
   boardFilterBadgeQueryLabel: string;
@@ -634,7 +648,21 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Stav',
     boardFilterBucketLabel: 'Koš podle data',
     boardFilterResetButton: 'Resetovat filtry',
+    boardClearFiltersButton: 'Vymazat filtry',
     boardSummaryShowingTemplate: 'Zobrazeno {filtered} z {total} operací.',
+    boardCurrentViewLabel: 'Aktuální pohled',
+    boardCurrentViewAll: 'Všechna práce',
+    boardCurrentViewBlocked: 'Blokováno',
+    boardCurrentViewReadyNow: 'Připraveno teď',
+    boardCurrentViewCustom: 'Vlastní filtry',
+    boardPresetViewsLabel: 'Rychlé pohledy',
+    boardPresetAllWork: 'Všechna práce',
+    boardPresetBlocked: 'Blokováno',
+    boardPresetReadyNow: 'Připraveno teď',
+    boardShellHint: 'Přepínejte mezi bezpečnými pohledy složenými z aktuálních filtrů nástěnky.',
+    boardEmptyTitle: 'Nástěnka je zatím prázdná.',
+    boardLoadingTitle: 'Načítání nástěnky…',
+    boardErrorTitle: 'Nástěnku se nepodařilo načíst.',
     boardFilterBadgeStatusLabel: 'Stav',
     boardFilterBadgeBucketLabel: 'Koš podle data',
     boardFilterBadgeQueryLabel: 'Hledání',
@@ -889,7 +917,21 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Date bucket',
     boardFilterResetButton: 'Reset filters',
+    boardClearFiltersButton: 'Clear filters',
     boardSummaryShowingTemplate: 'Showing {filtered} of {total} operations.',
+    boardCurrentViewLabel: 'Current view',
+    boardCurrentViewAll: 'All work',
+    boardCurrentViewBlocked: 'Blocked',
+    boardCurrentViewReadyNow: 'Ready now',
+    boardCurrentViewCustom: 'Custom filters',
+    boardPresetViewsLabel: 'Quick views',
+    boardPresetAllWork: 'All work',
+    boardPresetBlocked: 'Blocked',
+    boardPresetReadyNow: 'Ready now',
+    boardShellHint: 'Switch between safe board views built only from the current shipped filters.',
+    boardEmptyTitle: 'The board is empty right now.',
+    boardLoadingTitle: 'Loading board…',
+    boardErrorTitle: 'The board could not be loaded.',
     boardFilterBadgeStatusLabel: 'Status',
     boardFilterBadgeBucketLabel: 'Bucket',
     boardFilterBadgeQueryLabel: 'Search',
@@ -1144,7 +1186,21 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     boardFilterStatusLabel: 'Status',
     boardFilterBucketLabel: 'Datums-Bucket',
     boardFilterResetButton: 'Filter zurücksetzen',
+    boardClearFiltersButton: 'Filter löschen',
     boardSummaryShowingTemplate: '{filtered} von {total} Vorgängen werden angezeigt.',
+    boardCurrentViewLabel: 'Aktuelle Ansicht',
+    boardCurrentViewAll: 'Alle Arbeit',
+    boardCurrentViewBlocked: 'Blockiert',
+    boardCurrentViewReadyNow: 'Jetzt bereit',
+    boardCurrentViewCustom: 'Benutzerdefinierte Filter',
+    boardPresetViewsLabel: 'Schnellansichten',
+    boardPresetAllWork: 'Alle Arbeit',
+    boardPresetBlocked: 'Blockiert',
+    boardPresetReadyNow: 'Jetzt bereit',
+    boardShellHint: 'Wechseln Sie zwischen sicheren Board-Ansichten, die nur aus den aktuellen Filtern aufgebaut sind.',
+    boardEmptyTitle: 'Das Board ist derzeit leer.',
+    boardLoadingTitle: 'Board wird geladen…',
+    boardErrorTitle: 'Das Board konnte nicht geladen werden.',
     boardFilterBadgeStatusLabel: 'Status',
     boardFilterBadgeBucketLabel: 'Datums-Bucket',
     boardFilterBadgeQueryLabel: 'Suche',
@@ -1851,6 +1907,34 @@ export default function Home() {
   };
   const getActiveFilterChipText = (label: string, value: string) =>
     homepageLocale === 'en' ? `${label} — ${value}` : `${label}: ${value}`;
+  const getBoardPreset = (currentFilters: BoardFilters) => {
+    if (
+      currentFilters.query === DEFAULT_BOARD_FILTERS.query &&
+      currentFilters.status === DEFAULT_BOARD_FILTERS.status &&
+      currentFilters.bucket === DEFAULT_BOARD_FILTERS.bucket
+    ) {
+      return 'ALL_WORK' as const;
+    }
+
+    if (currentFilters.query === '' && currentFilters.status === 'BLOCKED' && currentFilters.bucket === 'ALL') {
+      return 'BLOCKED' as const;
+    }
+
+    if (currentFilters.query === '' && currentFilters.status === 'READY' && currentFilters.bucket === 'ALL') {
+      return 'READY_NOW' as const;
+    }
+
+    return 'CUSTOM' as const;
+  };
+  const activeBoardPreset = getBoardPreset(filters);
+  const boardCurrentViewLabel =
+    activeBoardPreset === 'ALL_WORK'
+      ? homepageAuthCopy.boardCurrentViewAll
+      : activeBoardPreset === 'BLOCKED'
+        ? homepageAuthCopy.boardCurrentViewBlocked
+        : activeBoardPreset === 'READY_NOW'
+          ? homepageAuthCopy.boardCurrentViewReadyNow
+          : homepageAuthCopy.boardCurrentViewCustom;
 
   useEffect(() => {
     if (
@@ -3612,78 +3696,135 @@ export default function Home() {
         </section>
       ) : null}
 
-      {operationLoadState === 'loading' ? <p>{homepageAuthCopy.loadingOperationsButton}</p> : null}
-      {operationLoadState === 'empty' ? <p>{homepageAuthCopy.boardEmpty}</p> : null}
+      {operationLoadState === 'loading' ? (
+        <div className="rounded border border-slate-200 bg-white p-4">
+          <p className="font-medium">{homepageAuthCopy.boardLoadingTitle}</p>
+          <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.loadingOperationsButton}</p>
+        </div>
+      ) : null}
+      {operationLoadState === 'empty' ? (
+        <div className="rounded border border-dashed border-slate-300 bg-white p-4">
+          <p className="font-medium">{homepageAuthCopy.boardEmptyTitle}</p>
+          <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.boardEmpty}</p>
+        </div>
+      ) : null}
       {operationLoadState === 'forbidden' ? <p>{homepageAuthCopy.boardForbidden}</p> : null}
-      {operationLoadState === 'error' ? <p>{homepageAuthCopy.boardLoadFailed}</p> : null}
+      {operationLoadState === 'error' ? (
+        <div className="rounded border border-rose-200 bg-rose-50 p-4">
+          <p className="font-medium text-rose-900">{homepageAuthCopy.boardErrorTitle}</p>
+          <p className="mt-1 text-sm text-rose-700">{homepageAuthCopy.boardLoadFailed}</p>
+        </div>
+      ) : null}
 
       {showOperationBoard ? (
         <>
-          <div className="flex flex-wrap items-end gap-3 rounded border bg-slate-50 p-4 md:gap-4 md:p-5">
-            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-              {homepageAuthCopy.boardFilterQueryLabel}
-              <input
-                className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
-                type="search"
-                value={filters.query}
-                onChange={(event) =>
-                  setFilters((currentFilters) => ({
-                    ...currentFilters,
-                    query: event.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-              {homepageAuthCopy.boardFilterStatusLabel}
-              <select
-                className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
-                value={filters.status}
-                onChange={(event) =>
-                  setFilters((currentFilters) => ({
-                    ...currentFilters,
-                    status: event.target.value as BoardFilters['status'],
-                  }))
-                }
+          <section className="rounded border bg-slate-50 p-4 md:p-5" aria-label="Board workspace shell">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{homepageAuthCopy.boardCurrentViewLabel}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">{boardCurrentViewLabel}</p>
+                <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.boardShellHint}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="rounded border bg-white px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  type="button"
+                  onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
+                >
+                  {homepageAuthCopy.boardClearFiltersButton}
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{homepageAuthCopy.boardPresetViewsLabel}</p>
+              <button
+                className="rounded-full border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                type="button"
+                onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
               >
-                <option value="ALL">{homepageAuthCopy.commonAllOption}</option>
-                {BOARD_STATUS_VALUES.map((status) => (
-                  <option key={status} value={status}>
-                    {getLocalizedOperationStatusLabel(status)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-              {homepageAuthCopy.boardFilterBucketLabel}
-              <select
-                className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
-                value={filters.bucket}
-                onChange={(event) =>
-                  setFilters((currentFilters) => ({
-                    ...currentFilters,
-                    bucket: event.target.value as BoardFilters['bucket'],
-                  }))
-                }
+                {homepageAuthCopy.boardPresetAllWork}
+              </button>
+              <button
+                className="rounded-full border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                type="button"
+                onClick={() => setFilters({ ...DEFAULT_BOARD_FILTERS, status: 'BLOCKED' })}
               >
-                {availableBucketFilters.map((bucket) => (
-                  <option key={bucket} value={bucket}>
-                    {bucket === 'ALL' ? homepageAuthCopy.commonAllOption : getLocalizedBucketOptionLabel(bucket)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {homepageAuthCopy.boardPresetBlocked}
+              </button>
+              <button
+                className="rounded-full border bg-white px-3 py-1.5 text-sm transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                type="button"
+                onClick={() => setFilters({ ...DEFAULT_BOARD_FILTERS, status: 'READY' })}
+              >
+                {homepageAuthCopy.boardPresetReadyNow}
+              </button>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end gap-3 md:gap-4">
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+                {homepageAuthCopy.boardFilterQueryLabel}
+                <input
+                  className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
+                  type="search"
+                  value={filters.query}
+                  onChange={(event) =>
+                    setFilters((currentFilters) => ({
+                      ...currentFilters,
+                      query: event.target.value,
+                    }))
+                  }
+                />
+              </label>
 
-            <button
-              className="rounded border bg-white px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 md:ml-auto"
-              type="button"
-              onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
-            >
-              {homepageAuthCopy.boardFilterResetButton}
-            </button>
-          </div>
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+                {homepageAuthCopy.boardFilterStatusLabel}
+                <select
+                  className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
+                  value={filters.status}
+                  onChange={(event) =>
+                    setFilters((currentFilters) => ({
+                      ...currentFilters,
+                      status: event.target.value as BoardFilters['status'],
+                    }))
+                  }
+                >
+                  <option value="ALL">{homepageAuthCopy.commonAllOption}</option>
+                  {BOARD_STATUS_VALUES.map((status) => (
+                    <option key={status} value={status}>
+                      {getLocalizedOperationStatusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+                {homepageAuthCopy.boardFilterBucketLabel}
+                <select
+                  className="rounded border bg-white px-2.5 py-1.5 text-sm text-slate-900"
+                  value={filters.bucket}
+                  onChange={(event) =>
+                    setFilters((currentFilters) => ({
+                      ...currentFilters,
+                      bucket: event.target.value as BoardFilters['bucket'],
+                    }))
+                  }
+                >
+                  {availableBucketFilters.map((bucket) => (
+                    <option key={bucket} value={bucket}>
+                      {bucket === 'ALL' ? homepageAuthCopy.commonAllOption : getLocalizedBucketOptionLabel(bucket)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className="rounded border bg-white px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 md:ml-auto"
+                type="button"
+                onClick={() => setFilters(DEFAULT_BOARD_FILTERS)}
+              >
+                {homepageAuthCopy.boardFilterResetButton}
+              </button>
+            </div>
+          </section>
 
           {showActiveFilterSummary ? (
             <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm">

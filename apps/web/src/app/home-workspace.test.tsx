@@ -341,6 +341,59 @@ describe('extracted shared workspace harness', () => {
     });
   });
 
+  it('shows current view presets and applies the blocked quick view using existing filters only', async () => {
+    const client = createClient();
+    client.operation.list.query.mockResolvedValue([
+      {
+        id: 'op-ready',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'CUT-01',
+        title: 'Cut panels',
+        status: 'READY',
+        sortIndex: 1,
+        version: 1,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+      {
+        id: 'op-blocked',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'EDGE-02',
+        title: 'Edge banding',
+        status: 'BLOCKED',
+        blockedReason: 'Waiting for material',
+        sortIndex: 2,
+        version: 1,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+    ]);
+
+    await loadAuthenticatedWorkspace(client);
+
+    expect(screen.getByText('Current view')).toBeInTheDocument();
+    expect(screen.getAllByText('All work').length).toBeGreaterThan(0);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Blocked' }));
+
+    expect(screen.getByText('Status — Blocked')).toBeInTheDocument();
+    expect(screen.getByText('EDGE-02 — Edge banding')).toBeInTheDocument();
+    expect(screen.queryByText('CUT-01 — Cut panels')).not.toBeInTheDocument();
+  });
+
+  it('shows a clearer empty-board state when no operations exist at all', async () => {
+    const client = createClient();
+
+    await loadAuthenticatedWorkspace(client);
+
+    expect(screen.getByText('The board is empty right now.')).toBeInTheDocument();
+    expect(screen.getByText('No operations found.')).toBeInTheDocument();
+    expect(screen.queryByText('No operations match the current filters.')).not.toBeInTheDocument();
+  });
+
   it('does not substitute indirect customer data into the billing-address block when the snapshot is missing', async () => {
     const client = createClient();
     client.order.list.query.mockResolvedValue([
