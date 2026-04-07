@@ -22,6 +22,7 @@ describe('homepage dashboard IA split', () => {
     });
 
     expect(screen.getByRole('link', { name: 'Continue in Board' })).toHaveAttribute('href', '/board');
+    expect(screen.getByRole('link', { name: 'Open orders' })).toHaveAttribute('href', '/orders');
     expect(screen.getByRole('link', { name: 'Open Invoices' })).toHaveAttribute('href', '/invoices');
     expect(screen.getByRole('link', { name: 'Open Cashflow' })).toHaveAttribute('href', '/cashflow');
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();

@@ -12,6 +12,12 @@ const dashboardCards = [
     action: 'Open board',
   },
   {
+    href: '/orders',
+    title: 'Orders',
+    description: 'Start from orders, review the current queue, and continue into planning when needed.',
+    action: 'Open orders',
+  },
+  {
     href: '/invoices',
     title: 'Invoices',
     description: 'Open the invoice module with finance summaries and invoice-focused navigation.',
@@ -71,7 +77,7 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-3">
+      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {dashboardCards.map((card) => (
           <article key={card.href} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
