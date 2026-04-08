@@ -161,9 +161,10 @@ export default function CashflowPage() {
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
               Review upcoming and completed cashflow items in one focused, list-first workspace.
             </p>
+            <p className="mt-2 text-sm text-slate-500">Cashflow entry continues on Board.</p>
           </div>
-          <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/board">
-            Add cashflow item
+          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
+            Open Board
           </Link>
         </div>
       </header>

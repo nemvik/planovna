@@ -66,7 +66,7 @@ describe('cashflow workspace v1', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Cashflow' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Add cashflow item' })).toHaveAttribute('href', '/board');
+    expect(screen.getByRole('link', { name: 'Open Board' })).toHaveAttribute('href', '/board');
     expect(screen.getByText('All items')).toBeInTheDocument();
     expect(screen.getByText('Invoice inv-1')).toBeInTheDocument();
     expect(screen.getAllByText('Planned in').length).toBeGreaterThan(0);

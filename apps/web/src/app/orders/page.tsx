@@ -143,9 +143,10 @@ export default function OrdersPage() {
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
               Review active orders, scan delivery timing, and continue into the planning flow from one focused list.
             </p>
+            <p className="mt-2 text-sm text-slate-500">Order creation and planning continue on Board.</p>
           </div>
-          <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/board">
-            New order
+          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
+            Open Board
           </Link>
         </div>
       </header>

@@ -63,7 +63,7 @@ describe('orders workspace v1', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Orders' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'New order' })).toHaveAttribute('href', '/board');
+    expect(screen.getByRole('link', { name: 'Open Board' })).toHaveAttribute('href', '/board');
     expect(screen.getByText('All orders')).toBeInTheDocument();
     expect(screen.getByText('ORD-1001')).toBeInTheDocument();
     expect(screen.getByText('Kitchen production batch')).toBeInTheDocument();
