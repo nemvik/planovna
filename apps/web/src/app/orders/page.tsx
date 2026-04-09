@@ -141,9 +141,9 @@ export default function OrdersPage() {
             <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Operations module</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Orders</h1>
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Review active orders, scan delivery timing, and continue into the planning flow from one focused list.
+              Start from orders, review what is ready, and continue into Board planning when work needs to move forward.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Order creation and planning continue on Board.</p>
+            <p className="mt-2 text-sm text-slate-500">Use Board when you are ready to plan or schedule the next operational step.</p>
           </div>
           <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
             Open Board
@@ -207,7 +207,8 @@ export default function OrdersPage() {
 
         {loadState === 'empty' ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
-            No orders are available yet.
+            <p className="font-medium text-slate-900">No orders are available yet.</p>
+            <p className="mt-2">When a new order is ready to be planned, continue on Board.</p>
           </div>
         ) : null}
 
@@ -238,7 +239,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <Link className="text-sm font-medium text-sky-700 underline" href="/board">
-                    Continue in planning
+                    Continue planning on Board
                   </Link>
                 </div>
               </article>

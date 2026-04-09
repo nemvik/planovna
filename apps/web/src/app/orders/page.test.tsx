@@ -64,10 +64,11 @@ describe('orders workspace v1', () => {
 
     expect(screen.getByRole('heading', { name: 'Orders' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Board' })).toHaveAttribute('href', '/board');
+    expect(screen.getByText('Use Board when you are ready to plan or schedule the next operational step.')).toBeInTheDocument();
     expect(screen.getByText('All orders')).toBeInTheDocument();
     expect(screen.getByText('ORD-1001')).toBeInTheDocument();
     expect(screen.getByText('Kitchen production batch')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Continue in planning' })[0]).toHaveAttribute('href', '/board');
+    expect(screen.getAllByRole('link', { name: 'Continue planning on Board' })[0]).toHaveAttribute('href', '/board');
   });
 
   it('filters the loaded list by search and status', async () => {
@@ -131,6 +132,7 @@ describe('orders workspace v1', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No orders are available yet.')).toBeInTheDocument();
+    expect(screen.getByText('When a new order is ready to be planned, continue on Board.')).toBeInTheDocument();
     });
     unmount();
 
