@@ -341,6 +341,42 @@ describe('extracted shared workspace harness', () => {
     });
   });
 
+  it('keeps finance on lightweight handoffs so planning stays primary on the board', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-1',
+        number: '2026-0100',
+        status: 'ISSUED',
+        amountNet: 100000,
+        amountVat: 21000,
+        amountGross: 121000,
+        vatRatePercent: 21,
+        hasBreakdown: true,
+        currency: 'CZK',
+        pdfPath: '/invoices/inv-1/pdf',
+      },
+    ]);
+    client.cashflow.list.query.mockResolvedValue([
+      {
+        id: 'cf-1',
+        tenantId: 'tenant-a',
+        invoiceId: 'inv-1',
+        kind: 'PLANNED_IN',
+        amount: 121000,
+        currency: 'CZK',
+        date: '2026-04-20T00:00:00.000Z',
+      },
+    ]);
+
+    await loadAuthenticatedWorkspace(client);
+
+    expect(screen.getByText('Keep planning work on the board. Open the finance modules when you need deeper invoice or cashflow detail.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open invoices' })).toHaveAttribute('href', '/invoices');
+    expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
+    expect(screen.queryByText('Invoice rows')).not.toBeInTheDocument();
+  });
+
   it('shows current view presets and applies the blocked quick view using existing filters only', async () => {
     const client = createClient();
     client.operation.list.query.mockResolvedValue([

@@ -3273,8 +3273,11 @@ export default function Home() {
       ) : null}
 
       {accessToken ? (
-        <section aria-label={homepageAuthCopy.cashflowSummarySectionLabel} className="rounded border bg-slate-50 p-4">
+        <section aria-label={homepageAuthCopy.cashflowSummarySectionLabel} className="rounded border border-slate-200 bg-slate-50/70 p-4">
           <h2 className="text-lg font-medium">{homepageAuthCopy.cashflowSnapshotTitle}</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Keep planning work on the board. Open the finance modules when you need deeper invoice or cashflow detail.
+          </p>
           <div className="mt-3 grid gap-3 md:grid-cols-4">
             <div className="rounded border bg-white p-3">
               <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowPlannedIn}</p>
@@ -3348,7 +3351,54 @@ export default function Home() {
               </ul>
             )}
           </div>
-          <div className="mt-4 rounded border bg-white p-3">
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded border bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-slate-800">Invoices</h3>
+                <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
+                  Open invoices
+                </Link>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                Use the invoices module for detailed finance review. The board keeps only lightweight invoice cues for planning context.
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceStatusLabel}</p>
+                  <p className="text-base font-semibold">
+                    {invoiceSummary.issuedCount} {homepageAuthCopy.invoiceIssuedSuffix} / {invoiceSummary.paidCount}{' '}
+                    {homepageAuthCopy.invoicePaidSuffix}
+                  </p>
+                </div>
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceGrossTotalLabel}</p>
+                  <p className="text-base font-semibold">{formatMoney(invoiceSummary.grossTotal, 'CZK', homepageLocale)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded border bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-slate-800">Cashflow</h3>
+                <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
+                  Open cashflow
+                </Link>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                Use the cashflow module for timeline review and follow-up. The board keeps just the next planning-relevant cues.
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.cashflowPlannedIn}</p>
+                  <p className="text-base font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK', homepageLocale)}</p>
+                </div>
+                <div className="rounded border bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{homepageAuthCopy.cashflowActualIn}</p>
+                  <p className="text-base font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK', homepageLocale)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 hidden rounded border bg-white p-3" aria-hidden="true">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-slate-800">{homepageAuthCopy.invoiceRowsTitle}</h3>
               <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
