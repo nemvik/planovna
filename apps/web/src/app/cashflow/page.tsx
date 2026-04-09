@@ -161,10 +161,10 @@ export default function CashflowPage() {
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
               Review upcoming and completed cashflow items in one focused, list-first workspace.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Cashflow entry continues on Board.</p>
+            <p className="mt-2 text-sm text-slate-500">Use invoices when you need the source finance document behind a linked cashflow item.</p>
           </div>
-          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
-            Open Board
+          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
+            Open invoices
           </Link>
         </div>
       </header>
@@ -248,7 +248,12 @@ export default function CashflowPage() {
                         {getHorizonLabel(item, now)}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm font-medium text-slate-700">Invoice {item.invoiceId}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+                        Invoice-linked
+                      </span>
+                      <p className="text-sm font-medium text-slate-700">Reference {item.invoiceId}</p>
+                    </div>
                     <p className="mt-1 text-sm text-slate-500">Date {formatDate(item.date)}</p>
                   </div>
                   <div className="text-right">

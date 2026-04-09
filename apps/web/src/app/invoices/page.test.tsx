@@ -77,7 +77,8 @@ describe('invoices workspace v1', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Invoices' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Board' })).toHaveAttribute('href', '/board');
+    expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
+    expect(screen.getByText('Use cashflow when you need the next finance follow-up after invoice review.')).toBeInTheDocument();
     expect(screen.getByText('All invoices')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);

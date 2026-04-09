@@ -239,13 +239,13 @@ export default function InvoicesPage() {
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
               Track invoice status, urgency, and customer-facing totals from one focused workspace.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Invoice creation continues on Board.</p>
+            <p className="mt-2 text-sm text-slate-500">Use cashflow when you need the next finance follow-up after invoice review.</p>
           </div>
           <Link
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900"
-            href="/board"
+            href="/cashflow"
           >
-            Open Board
+            Open cashflow
           </Link>
         </div>
       </header>
