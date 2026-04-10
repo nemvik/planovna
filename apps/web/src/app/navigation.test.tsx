@@ -4,10 +4,16 @@ import BoardPage from './board/page';
 import CashflowPage from './cashflow/page';
 import InvoicesPage from './invoices/page';
 import OrdersPage from './orders/page';
+import AppNav from './app-nav';
 import { createTrpcClient } from '../lib/trpc/client';
+import { usePathname } from 'next/navigation';
 
 jest.mock('../lib/trpc/client', () => ({
   createTrpcClient: jest.fn(),
+}));
+
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(),
 }));
 
 describe('homepage IA split and module pages', () => {
@@ -21,9 +27,10 @@ describe('homepage IA split and module pages', () => {
     render(<Dashboard />);
 
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Continue in Board' })).toHaveAttribute('href', '/board');
-    expect(screen.getByRole('link', { name: 'Open invoices' })).toHaveAttribute('href', '/invoices');
-    expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
+    expect(screen.getAllByRole('link', { name: 'Open orders' })[0]).toHaveAttribute('href', '/orders');
+    expect(screen.getAllByRole('link', { name: 'Open board' })[0]).toHaveAttribute('href', '/board');
+    expect(screen.getAllByRole('link', { name: 'Open invoices' })[0]).toHaveAttribute('href', '/invoices');
+    expect(screen.getAllByRole('link', { name: 'Open cashflow' })[0]).toHaveAttribute('href', '/cashflow');
   });
 
   it('keeps dedicated page titles for the module routes', async () => {
@@ -56,6 +63,24 @@ describe('homepage IA split and module pages', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Orders' })).toBeInTheDocument();
     });
+  });
+
+  it('orders primary nav by product flow and marks the active route', () => {
+    const usePathnameMock = usePathname as jest.Mock;
+    usePathnameMock.mockReturnValue('/invoices');
+
+    render(<AppNav />);
+
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Dashboard',
+      'Orders',
+      'Board',
+      'Invoices',
+      'Cashflow',
+    ]);
+    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Orders' })).not.toHaveAttribute('aria-current');
   });
 
   it('mounts the board route as the full shared workspace entry', () => {
