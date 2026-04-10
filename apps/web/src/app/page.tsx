@@ -6,27 +6,27 @@ import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from './home-workspa
 
 const dashboardCards = [
   {
-    href: '/board',
-    title: 'Board',
-    description: 'Open the operations board and work with the live kanban workspace.',
-    action: 'Open board',
-  },
-  {
     href: '/orders',
     title: 'Orders',
-    description: 'Start from orders, review the current queue, and continue into planning when needed.',
+    description: 'Go here first when a new job starts and you need the order queue in view.',
     action: 'Open orders',
+  },
+  {
+    href: '/board',
+    title: 'Board',
+    description: 'Go here when an order is ready to move into planning and scheduling.',
+    action: 'Open board',
   },
   {
     href: '/invoices',
     title: 'Invoices',
-    description: 'Open the invoice module with finance summaries and invoice-focused navigation.',
+    description: 'Go here when planned work needs invoice review and finance document follow-up.',
     action: 'Open invoices',
   },
   {
     href: '/cashflow',
     title: 'Cashflow',
-    description: 'Open the cashflow module with finance overview and planning entry points.',
+    description: 'Go here when invoice follow-up needs the cashflow timeline and payment context.',
     action: 'Open cashflow',
   },
 ] as const;
@@ -61,18 +61,20 @@ export default function Home() {
         <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Planovna</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">Dashboard</h1>
         <p className="mt-3 max-w-3xl text-sm text-slate-600">
-          Use the dashboard as a lightweight hub. Open the dedicated modules below for the full
-          board and finance workspaces.
+          Move through the product in a simple flow: Orders, then Board, then Invoices, then Cashflow.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/board">
-            Continue in Board
+          <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/orders">
+            Open orders
+          </Link>
+          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
+            Open board
           </Link>
           <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
-            Open Invoices
+            Open invoices
           </Link>
           <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/cashflow">
-            Open Cashflow
+            Open cashflow
           </Link>
         </div>
       </header>

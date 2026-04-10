@@ -21,10 +21,11 @@ describe('homepage dashboard IA split', () => {
       expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('link', { name: 'Continue in Board' })).toHaveAttribute('href', '/board');
-    expect(screen.getByRole('link', { name: 'Open orders' })).toHaveAttribute('href', '/orders');
-    expect(screen.getByRole('link', { name: 'Open Invoices' })).toHaveAttribute('href', '/invoices');
-    expect(screen.getByRole('link', { name: 'Open Cashflow' })).toHaveAttribute('href', '/cashflow');
+    expect(screen.getAllByRole('link', { name: 'Open orders' })[0]).toHaveAttribute('href', '/orders');
+    expect(screen.getAllByRole('link', { name: 'Open board' })[0]).toHaveAttribute('href', '/board');
+    expect(screen.getAllByRole('link', { name: 'Open invoices' })[0]).toHaveAttribute('href', '/invoices');
+    expect(screen.getAllByRole('link', { name: 'Open cashflow' })[0]).toHaveAttribute('href', '/cashflow');
+    expect(screen.getByText('Move through the product in a simple flow: Orders, then Board, then Invoices, then Cashflow.')).toBeInTheDocument();
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
     expect(screen.queryByText('Operations board')).not.toBeInTheDocument();
   });
