@@ -252,7 +252,7 @@ export default function CashflowPage() {
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
                         Invoice-linked
                       </span>
-                      <p className="text-sm font-medium text-slate-700">Reference {item.invoiceId}</p>
+                      <p className="text-sm font-medium text-slate-700">Invoice reference: {item.invoiceId}</p>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">Date {formatDate(item.date)}</p>
                   </div>

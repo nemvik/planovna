@@ -70,7 +70,7 @@ describe('cashflow workspace v1', () => {
     expect(screen.getByText('Use invoices when you need the source finance document behind a linked cashflow item.')).toBeInTheDocument();
     expect(screen.getByText('All items')).toBeInTheDocument();
     expect(screen.getAllByText('Invoice-linked').length).toBeGreaterThan(0);
-    expect(screen.getByText('Reference inv-1')).toBeInTheDocument();
+    expect(screen.getByText('Invoice reference: inv-1')).toBeInTheDocument();
     expect(screen.getAllByText('Planned in').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Actual in').length).toBeGreaterThan(0);
   });
@@ -111,8 +111,8 @@ describe('cashflow workspace v1', () => {
     const user = userEvent.setup();
     await user.selectOptions(screen.getByLabelText('Kind'), 'ACTUAL_IN');
 
-    expect(screen.queryByText('Reference inv-1')).not.toBeInTheDocument();
-    expect(screen.getByText('Reference inv-2')).toBeInTheDocument();
+    expect(screen.queryByText('Invoice reference: inv-1')).not.toBeInTheDocument();
+    expect(screen.getByText('Invoice reference: inv-2')).toBeInTheDocument();
   });
 
   it('shows a no-results state when filters exclude every item', async () => {
