@@ -84,7 +84,8 @@ describe('invoices workspace v1', () => {
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
     expect(screen.getByText('Acme Interiors')).toBeInTheDocument();
     expect(screen.getByText('2026-1001')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Open detail' })[0]).toHaveAttribute('href', '/invoices/inv-overdue/pdf');
+    expect(screen.getAllByText('Invoice PDF document').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Open PDF' })[0]).toHaveAttribute('href', '/invoices/inv-overdue/pdf');
   });
 
   it('filters the loaded list down to matching invoices only', async () => {

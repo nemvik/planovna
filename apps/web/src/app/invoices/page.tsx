@@ -347,9 +347,9 @@ export default function InvoicesPage() {
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
-                      Open detail
+                      Open PDF
                     </Link>
-                    <span className="text-sm text-slate-500">PDF export</span>
+                    <span className="text-sm text-slate-500">Invoice PDF document</span>
                   </div>
                 </article>
               );
