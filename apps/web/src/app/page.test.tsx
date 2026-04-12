@@ -6,11 +6,18 @@ describe('homepage dashboard IA split', () => {
     window.localStorage.clear();
   });
 
-  it('shows the login workspace on the homepage before authentication', () => {
+  it('shows a public landing page on the homepage before authentication', () => {
     render(<Dashboard />);
 
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByText('Planning and finance flow for small production and operations teams.')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Register and start' })[0]).toHaveAttribute('href', '/board');
+    expect(screen.getAllByRole('link', { name: 'Login' })[0]).toHaveAttribute('href', '/board');
+    expect(screen.getByText('Orders')).toBeInTheDocument();
+    expect(screen.getByText('Board')).toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Cashflow')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
   });
 
   it('shows a lightweight dashboard with module links after authentication', async () => {
@@ -28,5 +35,6 @@ describe('homepage dashboard IA split', () => {
     expect(screen.getByText('Move through the product in a simple flow: Orders, then Board, then Invoices, then Cashflow.')).toBeInTheDocument();
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
     expect(screen.queryByText('Operations board')).not.toBeInTheDocument();
+    expect(screen.queryByText('Planning and finance flow for small production and operations teams.')).not.toBeInTheDocument();
   });
 });
