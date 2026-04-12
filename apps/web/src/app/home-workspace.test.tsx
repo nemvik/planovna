@@ -78,6 +78,18 @@ describe('extracted shared workspace harness', () => {
     expect(screen.queryByRole('link', { name: 'Open Cashflow' })).not.toBeInTheDocument();
   });
 
+  it('frames the board as the planning step between orders and finance follow-up', async () => {
+    const client = createClient();
+
+    await loadAuthenticatedWorkspace(client);
+
+    expect(
+      screen.getByText(
+        'The planning step between Orders and later finance follow-up, where operations move between backlog and loaded start-date buckets.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('renders trustworthy customer billing-address snapshot lines when 2+ non-empty lines exist', async () => {
     const client = createClient();
     client.invoice.list.query.mockResolvedValue([

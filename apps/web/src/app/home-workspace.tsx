@@ -454,7 +454,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
   cs: {
     boardTitle: 'Planovna plánovací nástěnka',
     boardIntro:
-      'Lehká plánovací nástěnka pro přesouvání operací mezi backlogem a načtenými koši podle data startu.',
+      'Plánovací krok mezi Orders a následným finance follow-upem, kde přesouváte operace mezi backlogem a koši podle data startu.',
     sessionExpired: 'Relace vypršela. Přihlaste se prosím znovu.',
     invalidCredentials: 'Neplatné přihlašovací údaje',
     registrationDuplicateEmail: 'Tento e-mail je již registrovaný. Přihlaste se prosím.',
@@ -723,7 +723,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
   en: {
     boardTitle: 'Planovna operations board',
     boardIntro:
-      'Lightweight planning board for moving operations between backlog and loaded start-date buckets.',
+      'The planning step between Orders and later finance follow-up, where operations move between backlog and loaded start-date buckets.',
     sessionExpired: 'Session expired. Please log in again.',
     invalidCredentials: 'Invalid credentials',
     registrationDuplicateEmail: 'This email is already registered. Please log in instead.',
@@ -992,7 +992,7 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
   de: {
     boardTitle: 'Planovna-Operationsboard',
     boardIntro:
-      'Leichtgewichtiges Planungsboard zum Verschieben von Vorgängen zwischen Backlog und geladenen Startdatum-Buckets.',
+      'Der Planungsschritt zwischen Orders und späterem Finance-Follow-up, in dem Vorgänge zwischen Backlog und geladenen Startdatum-Buckets verschoben werden.',
     sessionExpired: 'Sitzung abgelaufen. Bitte melden Sie sich erneut an.',
     invalidCredentials: 'Ungültige Anmeldedaten',
     registrationDuplicateEmail: 'Diese E-Mail ist bereits registriert. Bitte melden Sie sich stattdessen an.',
