@@ -67,7 +67,7 @@ describe('cashflow workspace v1', () => {
 
     expect(screen.getByRole('heading', { name: 'Cashflow' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open invoices' })).toHaveAttribute('href', '/invoices');
-    expect(screen.getByText('Use invoices when you need the source finance document behind a linked cashflow item.')).toBeInTheDocument();
+    expect(screen.getByText('Cashflow is the final finance step after invoice review. Use invoices when you need the source finance document behind a linked cashflow item.')).toBeInTheDocument();
     expect(screen.getByText('All items')).toBeInTheDocument();
     expect(screen.getAllByText('Invoice-linked').length).toBeGreaterThan(0);
     expect(screen.getByText('Invoice reference: inv-1')).toBeInTheDocument();

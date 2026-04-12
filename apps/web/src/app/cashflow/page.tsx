@@ -159,9 +159,9 @@ export default function CashflowPage() {
             <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Finance module</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Cashflow</h1>
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Review upcoming and completed cashflow items in one focused, list-first workspace.
+              Review the finance timeline after invoice work is done, with upcoming and completed cashflow items in one focused workspace.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Use invoices when you need the source finance document behind a linked cashflow item.</p>
+            <p className="mt-2 text-sm text-slate-500">Cashflow is the final finance step after invoice review. Use invoices when you need the source finance document behind a linked cashflow item.</p>
           </div>
           <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
             Open invoices
