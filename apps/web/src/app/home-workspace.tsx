@@ -3223,134 +3223,11 @@ export default function Home() {
       ) : null}
 
       {accessToken ? (
-        <section className="rounded border bg-slate-50 p-4">
-          <h2 className="text-lg font-medium">{homepageAuthCopy.recurringCashflowTitle}</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-4">
-            <label className="flex flex-col gap-1 text-sm">
-              {homepageAuthCopy.recurringCashflowLabelField}
-              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" value={recurringLabel} onChange={(event) => setRecurringLabel(event.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {homepageAuthCopy.recurringCashflowAmountField}
-              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" type="number" value={recurringAmount} onChange={(event) => setRecurringAmount(event.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {homepageAuthCopy.recurringCashflowStartDateField}
-              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" type="date" value={recurringStartDate} onChange={(event) => setRecurringStartDate(event.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {homepageAuthCopy.recurringCashflowNoteField}
-              <input className="rounded border bg-white px-2.5 py-2 text-sm text-slate-900" value={recurringNote} onChange={(event) => setRecurringNote(event.target.value)} />
-            </label>
-          </div>
-          <div className="mt-3">
-            <button className="rounded bg-slate-900 px-3 py-2 text-white" type="button" onClick={() => void onCreateRecurringRule()}>
-              {homepageAuthCopy.recurringCashflowCreateButton}
-            </button>
-          </div>
-          <div className="mt-4 space-y-2">
-            {recurringRules.length === 0 ? (
-              <p className="text-sm text-slate-600">{homepageAuthCopy.recurringCashflowEmpty}</p>
-            ) : (
-              recurringRules.map((rule) => (
-                <div key={rule.id} className="rounded border bg-white p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{rule.label}</p>
-                      <p className="text-xs text-slate-600">{rule.amount} {rule.currency} · {rule.interval} · next {rule.nextRunAt.slice(0,10)} · {rule.status}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {rule.status === 'ACTIVE' ? <button className="rounded border px-2 py-1 text-xs" type="button" onClick={() => void onTransitionRecurringRule(rule, 'pause')}>{homepageAuthCopy.recurringCashflowPauseButton}</button> : null}
-                      {rule.status === 'PAUSED' ? <button className="rounded border px-2 py-1 text-xs" type="button" onClick={() => void onTransitionRecurringRule(rule, 'resume')}>{homepageAuthCopy.recurringCashflowResumeButton}</button> : null}
-                      {rule.status !== 'STOPPED' ? <button className="rounded border px-2 py-1 text-xs" type="button" onClick={() => void onTransitionRecurringRule(rule, 'stop')}>{homepageAuthCopy.recurringCashflowStopButton}</button> : null}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      {accessToken ? (
-        <section aria-label={homepageAuthCopy.cashflowSummarySectionLabel} className="rounded border border-slate-200 bg-slate-50/70 p-4">
-          <h2 className="text-lg font-medium">{homepageAuthCopy.cashflowSnapshotTitle}</h2>
+        <section aria-label={homepageAuthCopy.cashflowSummarySectionLabel} className="rounded border border-dashed border-slate-300 bg-slate-50/60 p-4">
+          <h2 className="text-lg font-medium">Planning stays on Board</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Keep planning work on the board. Open the finance modules when you need deeper invoice or cashflow detail.
+            Board is the planning workspace. Use the dedicated finance modules only when work needs invoice review or cashflow follow-up.
           </p>
-          <div className="mt-3 grid gap-3 md:grid-cols-4">
-            <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowPlannedIn}</p>
-              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK', homepageLocale)}</p>
-            </div>
-            <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">{homepageAuthCopy.cashflowActualIn}</p>
-              <p className="text-lg font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK', homepageLocale)}</p>
-            </div>
-            <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceStatusLabel}</p>
-              <p className="text-lg font-semibold">
-                {invoiceSummary.issuedCount} {homepageAuthCopy.invoiceIssuedSuffix} / {invoiceSummary.paidCount}{' '}
-                {homepageAuthCopy.invoicePaidSuffix}
-              </p>
-              <p className="text-xs text-slate-500">
-                {invoiceSummary.totalCount} {homepageAuthCopy.invoicesLoadedSuffix}
-              </p>
-            </div>
-            <div className="rounded border bg-white p-3">
-              <p className="text-sm text-slate-500">{homepageAuthCopy.invoiceWorkspaceLabel}</p>
-              <Link className="mt-1 inline-block text-sm font-medium text-sky-700 underline" href="/invoices">
-                {homepageAuthCopy.openInvoicesWorkspaceLink}
-              </Link>
-            </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-sm text-slate-600">{homepageAuthCopy.financeSummaryHelper}</p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">{homepageAuthCopy.nextCashflowItemsLabel}</p>
-              <div className="flex items-center gap-3">
-                <Link className="text-sm font-medium text-sky-700 underline" href="/cashflow">
-                  {homepageAuthCopy.openCashflowPageLink}
-                </Link>
-                <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
-                  {homepageAuthCopy.openInvoicesPageLink}
-                </Link>
-              </div>
-            </div>
-            {cashflowSummary.nextItems.length === 0 ? (
-              <p className="mt-1 text-sm text-slate-600">{homepageAuthCopy.noCashflowItems}</p>
-            ) : (
-              <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                {cashflowSummary.nextItems.map((item) => {
-                  const invoice = invoiceSummary.byId.get(item.invoiceId);
-
-                  return (
-                    <li key={item.id}>
-                      <p>
-                        {formatDateForDisplay(item.date, homepageLocale)} —{' '}
-                        {item.kind === 'PLANNED_IN'
-                          ? homepageAuthCopy.cashflowPlannedIn
-                          : homepageAuthCopy.cashflowActualIn}{' '}
-                        — {formatMoney(item.amount, item.currency, homepageLocale)}
-                      </p>
-                      {invoice ? (
-                        <p className="text-xs text-slate-500">
-                          {homepageAuthCopy.invoiceBreakdownLabel}: {invoice.number} · net{' '}
-                          {formatMoney(invoice.amountNet, invoice.currency, homepageLocale)} · VAT{' '}
-                          {invoice.vatRatePercent.toFixed(0)}% ={' '}
-                          {formatMoney(invoice.amountVat, invoice.currency, homepageLocale)} · gross{' '}
-                          {formatMoney(invoice.amountGross, invoice.currency, homepageLocale)}
-                          {!invoice.hasBreakdown
-                            ? ` · ${homepageAuthCopy.invoiceBreakdownLegacySuffix}`
-                            : ''}
-                        </p>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded border bg-white p-4">
               <div className="flex items-center justify-between gap-3">
@@ -3360,21 +3237,8 @@ export default function Home() {
                 </Link>
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                Use the invoices module for detailed finance review. The board keeps only lightweight invoice cues for planning context.
+                Move to invoices once planned work is ready for finance review and document follow-up.
               </p>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceStatusLabel}</p>
-                  <p className="text-base font-semibold">
-                    {invoiceSummary.issuedCount} {homepageAuthCopy.invoiceIssuedSuffix} / {invoiceSummary.paidCount}{' '}
-                    {homepageAuthCopy.invoicePaidSuffix}
-                  </p>
-                </div>
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">{homepageAuthCopy.invoiceGrossTotalLabel}</p>
-                  <p className="text-base font-semibold">{formatMoney(invoiceSummary.grossTotal, 'CZK', homepageLocale)}</p>
-                </div>
-              </div>
             </div>
             <div className="rounded border bg-white p-4">
               <div className="flex items-center justify-between gap-3">
@@ -3384,21 +3248,11 @@ export default function Home() {
                 </Link>
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                Use the cashflow module for timeline review and follow-up. The board keeps just the next planning-relevant cues.
+                Move to cashflow after invoice review when you need the finance timeline and follow-up.
               </p>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">{homepageAuthCopy.cashflowPlannedIn}</p>
-                  <p className="text-base font-semibold">{formatMoney(cashflowSummary.plannedIn, 'CZK', homepageLocale)}</p>
-                </div>
-                <div className="rounded border bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">{homepageAuthCopy.cashflowActualIn}</p>
-                  <p className="text-base font-semibold">{formatMoney(cashflowSummary.actualIn, 'CZK', homepageLocale)}</p>
-                </div>
-              </div>
             </div>
           </div>
-          <div className="mt-4 hidden rounded border bg-white p-3" aria-hidden="true">
+          <div className="hidden" aria-hidden="true">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-slate-800">{homepageAuthCopy.invoiceRowsTitle}</h3>
               <Link className="text-sm font-medium text-sky-700 underline" href="/invoices">
@@ -4323,5 +4177,4 @@ export default function Home() {
     </main>
   );
 }
-
 

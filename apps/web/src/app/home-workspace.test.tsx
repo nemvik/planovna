@@ -383,9 +383,11 @@ describe('extracted shared workspace harness', () => {
 
     await loadAuthenticatedWorkspace(client);
 
-    expect(screen.getByText('Keep planning work on the board. Open the finance modules when you need deeper invoice or cashflow detail.')).toBeInTheDocument();
+    expect(screen.getByText('Planning stays on Board')).toBeInTheDocument();
+    expect(screen.getByText('Board is the planning workspace. Use the dedicated finance modules only when work needs invoice review or cashflow follow-up.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open invoices' })).toHaveAttribute('href', '/invoices');
     expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
+    expect(screen.queryByText('Recurring cashflow')).not.toBeInTheDocument();
     expect(screen.queryByText('Invoice rows')).not.toBeInTheDocument();
   });
 
