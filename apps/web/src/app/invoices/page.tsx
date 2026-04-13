@@ -237,9 +237,9 @@ export default function InvoicesPage() {
             <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Finance module</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Invoices</h1>
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Track invoice status, urgency, and customer-facing totals from one focused workspace.
+              Review invoice status and finance documents after planning is done, before the flow continues into cashflow follow-up.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Use cashflow when you need the next finance follow-up after invoice review.</p>
+            <p className="mt-2 text-sm text-slate-500">Invoices are the finance review step between planning and cashflow.</p>
           </div>
           <Link
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900"
