@@ -8,13 +8,26 @@ jest.mock('../../lib/trpc/client', () => ({
   createTrpcClient: jest.fn(),
 }));
 
+const createAccessToken = (tenantId = 'tenant-owner') => {
+  const payload = window.btoa(JSON.stringify({ tenantId })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  return `${payload}.signature`;
+};
+
 const createClient = () => ({
   invoice: {
     list: { query: jest.fn() },
+    issue: { mutate: jest.fn() },
   },
 });
 
 describe('invoices workspace v1', () => {
+  beforeAll(() => {
+    Object.defineProperty(window, 'atob', {
+      configurable: true,
+      value: (input: string) => Buffer.from(input, 'base64').toString('binary'),
+    });
+  });
+
   beforeEach(() => {
     window.localStorage.clear();
     jest.clearAllMocks();
@@ -65,7 +78,7 @@ describe('invoices workspace v1', () => {
       },
     ]);
 
-    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken());
     jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-03-24T10:00:00.000Z').getTime());
     const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
     createTrpcClientMock.mockImplementation(() => client as never);
@@ -77,8 +90,9 @@ describe('invoices workspace v1', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Invoices' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New invoice' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
-    expect(screen.getByText('Invoices are the finance review step between planning and cashflow.')).toBeInTheDocument();
+    expect(screen.getByText('Invoices stay list-first here, with cashflow as a separate next step.')).toBeInTheDocument();
     expect(screen.getByText('All invoices')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
@@ -113,7 +127,7 @@ describe('invoices workspace v1', () => {
       },
     ]);
 
-    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken());
     const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
     createTrpcClientMock.mockImplementation(() => client as never);
 
@@ -145,7 +159,7 @@ describe('invoices workspace v1', () => {
       },
     ]);
 
-    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken());
     const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
     createTrpcClientMock.mockImplementation(() => client as never);
 
@@ -161,12 +175,99 @@ describe('invoices workspace v1', () => {
     expect(screen.getByText('No invoices match the current filters.')).toBeInTheDocument();
   });
 
+  it('creates a new invoice locally and refreshes the list', async () => {
+    const client = createClient();
+    client.invoice.list.query
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'inv-created',
+          number: '2026-4001',
+          status: 'ISSUED',
+          amountGross: 121000,
+          currency: 'CZK',
+          buyerDisplayName: 'Created Customer',
+          dueAt: '2026-04-30T00:00:00.000Z',
+          pdfPath: '/invoices/inv-created/pdf',
+        },
+      ]);
+    client.invoice.issue.mutate.mockResolvedValue({ id: 'inv-created' });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-create'));
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    await user.type(screen.getByLabelText('Order ID'), 'order-4001');
+    await user.type(screen.getByLabelText('Invoice number'), '2026-4001');
+    await user.type(screen.getByLabelText('Net amount'), '100000');
+    await user.clear(screen.getByLabelText('VAT rate %'));
+    await user.type(screen.getByLabelText('VAT rate %'), '21');
+    await user.type(screen.getByLabelText('Issued at'), '2026-04-14');
+    await user.type(screen.getByLabelText('Due at'), '2026-04-30');
+    await user.click(screen.getByRole('button', { name: 'Create invoice' }));
+
+    await waitFor(() => {
+      expect(client.invoice.issue.mutate).toHaveBeenCalledWith({
+        tenantId: 'tenant-create',
+        orderId: 'order-4001',
+        number: '2026-4001',
+        currency: 'CZK',
+        amountNet: 100000,
+        vatRatePercent: 21,
+        issuedAt: '2026-04-14T00:00:00.000Z',
+        dueAt: '2026-04-30T00:00:00.000Z',
+      });
+    });
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(2);
+    });
+
+    expect(screen.queryByRole('heading', { name: 'New invoice' })).not.toBeInTheDocument();
+    expect(screen.getByText('2026-4001')).toBeInTheDocument();
+  });
+
+  it('shows a create error when issuing fails', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([]);
+    client.invoice.issue.mutate.mockRejectedValue(new Error('issue failed'));
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-create'));
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    await user.type(screen.getByLabelText('Order ID'), 'order-4002');
+    await user.type(screen.getByLabelText('Invoice number'), '2026-4002');
+    await user.type(screen.getByLabelText('Net amount'), '100000');
+    await user.click(screen.getByRole('button', { name: 'Create invoice' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invoice could not be created right now.')).toBeInTheDocument();
+    });
+  });
+
   it('shows explicit empty and error states from the current route data load', async () => {
     const emptyClient = createClient();
     emptyClient.invoice.list.query.mockResolvedValue([]);
     const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
 
-    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken());
     createTrpcClientMock.mockImplementationOnce(() => emptyClient as never);
     const { unmount } = render(<InvoicesPage />);
 

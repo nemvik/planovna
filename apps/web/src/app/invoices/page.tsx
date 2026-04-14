@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from '../home-workspace';
 import { createTrpcClient } from '../../lib/trpc/client';
 
@@ -17,8 +17,20 @@ type InvoiceSummary = {
   pdfPath: string;
 };
 
+type CreateInvoiceInput = {
+  tenantId: string;
+  orderId: string;
+  number: string;
+  currency: 'CZK' | 'EUR';
+  amountNet: number;
+  vatRatePercent: number;
+  issuedAt?: string;
+  dueAt?: string;
+};
+
 type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 type StatusFilter = 'ALL' | 'NEEDS_ATTENTION' | 'PAID' | 'DRAFT';
+type CreateState = 'idle' | 'submitting' | 'error';
 
 const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
   new Intl.NumberFormat('en-US', {
@@ -131,12 +143,59 @@ const toneClasses = {
   emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
 } as const;
 
+const emptyCreateForm = {
+  orderId: '',
+  number: '',
+  currency: 'CZK' as const,
+  amountNet: '',
+  vatRatePercent: '21',
+  issuedAt: '',
+  dueAt: '',
+};
+
+const decodeAccessTokenTenantId = (accessToken?: string) => {
+  if (!accessToken) {
+    return null;
+  }
+
+  const [encodedPayload] = accessToken.split('.');
+  if (!encodedPayload) {
+    return null;
+  }
+
+  try {
+    const base64 = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = `${base64}${'='.repeat((4 - (base64.length % 4)) % 4)}`;
+    const payload = JSON.parse(window.atob(padded)) as { tenantId?: string };
+    return typeof payload.tenantId === 'string' && payload.tenantId.length > 0 ? payload.tenantId : null;
+  } catch {
+    return null;
+  }
+};
+
+const toIsoDateTime = (value: string) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date.toISOString();
+};
+
 export default function InvoicesPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createState, setCreateState] = useState<CreateState>('idle');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
 
   useEffect(() => {
     const syncSession = () => {
@@ -158,25 +217,28 @@ export default function InvoicesPage() {
     const client = createTrpcClient(accessToken);
     let cancelled = false;
 
-    setLoadState('loading');
-    client.invoice.list
-      .query()
-      .then((nextInvoices) => {
+    const loadInvoices = async () => {
+      setLoadState('loading');
+
+      try {
+        const nextInvoices = (await client.invoice.list.query()) as InvoiceSummary[];
         if (cancelled) {
           return;
         }
 
-        setInvoices(nextInvoices as InvoiceSummary[]);
+        setInvoices(nextInvoices);
         setLoadState(nextInvoices.length === 0 ? 'empty' : 'loaded');
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) {
           return;
         }
 
         setInvoices([]);
         setLoadState('error');
-      });
+      }
+    };
+
+    void loadInvoices();
 
     return () => {
       cancelled = true;
@@ -184,6 +246,8 @@ export default function InvoicesPage() {
   }, [hasSession]);
 
   const now = new Date(Date.now());
+  const accessToken = hasSession ? window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined : undefined;
+  const tenantId = decodeAccessTokenTenantId(accessToken);
 
   const metrics = useMemo(() => {
     const all = invoices.length;
@@ -229,6 +293,58 @@ export default function InvoicesPage() {
     return <HomeWorkspace />;
   }
 
+  const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreateError(null);
+
+    if (!tenantId) {
+      setCreateState('error');
+      setCreateError('Invoice creation is not available because the tenant session could not be read.');
+      return;
+    }
+
+    const amountNet = Number(createForm.amountNet);
+    const vatRatePercent = Number(createForm.vatRatePercent);
+
+    if (!createForm.orderId.trim() || !createForm.number.trim() || !Number.isFinite(amountNet) || amountNet <= 0) {
+      setCreateState('error');
+      setCreateError('Fill in order ID, invoice number, and a positive net amount.');
+      return;
+    }
+
+    if (!Number.isFinite(vatRatePercent) || vatRatePercent < 0 || vatRatePercent > 100) {
+      setCreateState('error');
+      setCreateError('VAT rate must be between 0 and 100.');
+      return;
+    }
+
+    setCreateState('submitting');
+
+    try {
+      const client = createTrpcClient(accessToken);
+      await client.invoice.issue.mutate({
+        tenantId,
+        orderId: createForm.orderId.trim(),
+        number: createForm.number.trim(),
+        currency: createForm.currency,
+        amountNet,
+        vatRatePercent,
+        issuedAt: toIsoDateTime(createForm.issuedAt),
+        dueAt: toIsoDateTime(createForm.dueAt),
+      } satisfies CreateInvoiceInput);
+
+      const nextInvoices = (await client.invoice.list.query()) as InvoiceSummary[];
+      setInvoices(nextInvoices);
+      setLoadState(nextInvoices.length === 0 ? 'empty' : 'loaded');
+      setCreateForm(emptyCreateForm);
+      setCreateState('idle');
+      setIsCreateOpen(false);
+    } catch {
+      setCreateState('error');
+      setCreateError('Invoice could not be created right now.');
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-6xl p-6">
       <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -237,18 +353,88 @@ export default function InvoicesPage() {
             <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Finance module</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Invoices</h1>
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Review invoice status and finance documents after planning is done, before the flow continues into cashflow follow-up.
+              Create and review invoices here, then continue into cashflow when finance follow-up is needed.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Invoices are the finance review step between planning and cashflow.</p>
+            <p className="mt-2 text-sm text-slate-500">Invoices stay list-first here, with cashflow as a separate next step.</p>
           </div>
-          <Link
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900"
-            href="/cashflow"
-          >
-            Open cashflow
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+              type="button"
+              onClick={() => {
+                setIsCreateOpen((current) => !current);
+                setCreateError(null);
+                setCreateState('idle');
+              }}
+            >
+              {isCreateOpen ? 'Close new invoice' : 'New invoice'}
+            </button>
+            <Link
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900"
+              href="/cashflow"
+            >
+              Open cashflow
+            </Link>
+          </div>
         </div>
       </header>
+
+      {isCreateOpen ? (
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="New invoice form">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">New invoice</h2>
+              <p className="mt-1 text-sm text-slate-600">Use the current issue contract to create a new invoice without leaving this module.</p>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+              Local create flow
+            </span>
+          </div>
+
+          <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={handleCreateSubmit}>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Order ID
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={createForm.orderId} onChange={(event) => setCreateForm((current) => ({ ...current, orderId: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Invoice number
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={createForm.number} onChange={(event) => setCreateForm((current) => ({ ...current, number: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Currency
+              <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={createForm.currency} onChange={(event) => setCreateForm((current) => ({ ...current, currency: event.target.value as 'CZK' | 'EUR' }))}>
+                <option value="CZK">CZK</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Net amount
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" inputMode="decimal" value={createForm.amountNet} onChange={(event) => setCreateForm((current) => ({ ...current, amountNet: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              VAT rate %
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" inputMode="decimal" value={createForm.vatRatePercent} onChange={(event) => setCreateForm((current) => ({ ...current, vatRatePercent: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Issued at
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={createForm.issuedAt} onChange={(event) => setCreateForm((current) => ({ ...current, issuedAt: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Due at
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={createForm.dueAt} onChange={(event) => setCreateForm((current) => ({ ...current, dueAt: event.target.value }))} />
+            </label>
+            <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+              <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60" disabled={createState === 'submitting'} type="submit">
+                {createState === 'submitting' ? 'Creating invoice…' : 'Create invoice'}
+              </button>
+              <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => setIsCreateOpen(false)}>
+                Cancel
+              </button>
+              {createError ? <p className="text-sm text-rose-700">{createError}</p> : null}
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       <section aria-label="Invoice summary" className="mt-6 grid gap-4 md:grid-cols-5">
         {metrics.map((metric) => (
