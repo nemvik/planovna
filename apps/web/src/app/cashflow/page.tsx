@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from '../home-workspace';
 import { createTrpcClient } from '../../lib/trpc/client';
 
@@ -15,11 +15,44 @@ type CashflowItem = {
   date: string;
 };
 
+type RecurringRule = {
+  id: string;
+  tenantId: string;
+  label: string;
+  amount: number;
+  currency: 'CZK' | 'EUR';
+  interval: 'MONTHLY';
+  startDate: string;
+  nextRunAt: string;
+  note?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'STOPPED';
+  stoppedAt?: string;
+  version: number;
+};
+
+type RuleForm = {
+  label: string;
+  amount: string;
+  currency: 'CZK' | 'EUR';
+  startDate: string;
+  note: string;
+};
+
 type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
+type RulesLoadState = 'loading' | 'loaded' | 'empty' | 'error';
 type HorizonFilter = 'ALL' | 'NEXT_30_DAYS' | 'PAST_DUE';
 type KindFilter = 'ALL' | CashflowItem['kind'];
+type MutationState = 'idle' | 'submitting' | 'error';
 
-const formatMoney = (amount: number, currency: CashflowItem['currency']) =>
+const emptyRuleForm: RuleForm = {
+  label: '',
+  amount: '',
+  currency: 'CZK',
+  startDate: '',
+  note: '',
+};
+
+const formatMoney = (amount: number, currency: 'CZK' | 'EUR') =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -68,12 +101,40 @@ const kindTone = {
   ACTUAL_IN: 'border-emerald-200 bg-emerald-50 text-emerald-700',
 } as const;
 
+const statusTone = {
+  ACTIVE: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  PAUSED: 'border-amber-200 bg-amber-50 text-amber-700',
+  STOPPED: 'border-slate-200 bg-slate-50 text-slate-700',
+} as const;
+
+const toIsoDateTime = (value: string) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date.toISOString();
+};
+
 export default function CashflowPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [rulesLoadState, setRulesLoadState] = useState<RulesLoadState>('loading');
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([]);
+  const [recurringRules, setRecurringRules] = useState<RecurringRule[]>([]);
   const [horizonFilter, setHorizonFilter] = useState<HorizonFilter>('ALL');
   const [kindFilter, setKindFilter] = useState<KindFilter>('ALL');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState<RuleForm>(emptyRuleForm);
+  const [editForm, setEditForm] = useState<RuleForm>(emptyRuleForm);
+  const [createState, setCreateState] = useState<MutationState>('idle');
+  const [ruleActionState, setRuleActionState] = useState<Record<string, MutationState>>({});
+  const [rulesError, setRulesError] = useState<string | null>(null);
 
   useEffect(() => {
     const syncSession = () => {
@@ -95,19 +156,39 @@ export default function CashflowPage() {
     const client = createTrpcClient(accessToken);
     let cancelled = false;
 
-    setLoadState('loading');
-    client.cashflow.list
-      .query()
-      .then((result) => {
-        if (cancelled) return;
-        setCashflowItems(result as CashflowItem[]);
-        setLoadState(result.length === 0 ? 'empty' : 'loaded');
-      })
-      .catch(() => {
-        if (cancelled) return;
+    const loadData = async () => {
+      setLoadState('loading');
+      setRulesLoadState('loading');
+
+      try {
+        const [itemsResult, rulesResult] = await Promise.all([
+          client.cashflow.list.query(),
+          client.cashflow.listRecurringRules.query(),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextItems = itemsResult as CashflowItem[];
+        const nextRules = rulesResult as RecurringRule[];
+        setCashflowItems(nextItems);
+        setRecurringRules(nextRules);
+        setLoadState(nextItems.length === 0 ? 'empty' : 'loaded');
+        setRulesLoadState(nextRules.length === 0 ? 'empty' : 'loaded');
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
         setCashflowItems([]);
+        setRecurringRules([]);
         setLoadState('error');
-      });
+        setRulesLoadState('error');
+      }
+    };
+
+    void loadData();
 
     return () => {
       cancelled = true;
@@ -151,6 +232,121 @@ export default function CashflowPage() {
     return <HomeWorkspace />;
   }
 
+  const setActionState = (ruleId: string, state: MutationState) => {
+    setRuleActionState((current) => ({ ...current, [ruleId]: state }));
+  };
+
+  const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setRulesError(null);
+
+    const amount = Number(createForm.amount);
+    const startDate = toIsoDateTime(createForm.startDate);
+    if (!createForm.label.trim() || !Number.isFinite(amount) || amount <= 0 || !startDate) {
+      setCreateState('error');
+      setRulesError('Fill in label, positive amount, and start date.');
+      return;
+    }
+
+    setCreateState('submitting');
+
+    try {
+      const accessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined;
+      const client = createTrpcClient(accessToken);
+      const created = await client.cashflow.createRecurringRule.mutate({
+        label: createForm.label.trim(),
+        amount,
+        currency: createForm.currency,
+        interval: 'MONTHLY',
+        startDate,
+        note: createForm.note.trim() || undefined,
+      }) as RecurringRule;
+
+      setRecurringRules((current) => [...current, created]);
+      setRulesLoadState('loaded');
+      setCreateForm(emptyRuleForm);
+      setIsCreateOpen(false);
+      setCreateState('idle');
+    } catch {
+      setCreateState('error');
+      setRulesError('Recurring cashflow item could not be created right now.');
+    }
+  };
+
+  const startEditingRule = (rule: RecurringRule) => {
+    setEditingRuleId(rule.id);
+    setEditForm({
+      label: rule.label,
+      amount: String(rule.amount),
+      currency: rule.currency,
+      startDate: rule.startDate.slice(0, 10),
+      note: rule.note ?? '',
+    });
+    setRulesError(null);
+  };
+
+  const handleEditSubmit = async (event: FormEvent<HTMLFormElement>, rule: RecurringRule) => {
+    event.preventDefault();
+    setRulesError(null);
+
+    const amount = Number(editForm.amount);
+    const startDate = toIsoDateTime(editForm.startDate);
+    if (!editForm.label.trim() || !Number.isFinite(amount) || amount <= 0 || !startDate) {
+      setActionState(rule.id, 'error');
+      setRulesError('Fill in label, positive amount, and start date.');
+      return;
+    }
+
+    setActionState(rule.id, 'submitting');
+
+    try {
+      const accessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined;
+      const client = createTrpcClient(accessToken);
+      const updated = await client.cashflow.updateRecurringRule.mutate({
+        id: rule.id,
+        version: rule.version,
+        label: editForm.label.trim(),
+        amount,
+        currency: editForm.currency,
+        startDate,
+        note: editForm.note.trim() || undefined,
+      }) as RecurringRule;
+
+      setRecurringRules((current) => current.map((candidate) => (candidate.id === updated.id ? updated : candidate)));
+      setEditingRuleId(null);
+      setActionState(rule.id, 'idle');
+    } catch {
+      setActionState(rule.id, 'error');
+      setRulesError('Recurring cashflow item could not be updated right now.');
+    }
+  };
+
+  const handleRuleAction = async (rule: RecurringRule, action: 'pause' | 'resume' | 'stop') => {
+    setRulesError(null);
+    setActionState(rule.id, 'submitting');
+
+    try {
+      const accessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined;
+      const client = createTrpcClient(accessToken);
+      const mutate =
+        action === 'pause'
+          ? client.cashflow.pauseRecurringRule.mutate
+          : action === 'resume'
+            ? client.cashflow.resumeRecurringRule.mutate
+            : client.cashflow.stopRecurringRule.mutate;
+
+      const updated = await mutate({ id: rule.id, version: rule.version }) as RecurringRule;
+      setRecurringRules((current) => current.map((candidate) => (candidate.id === updated.id ? updated : candidate)));
+      if (editingRuleId === rule.id) {
+        setEditingRuleId(null);
+      }
+      setActionState(rule.id, 'idle');
+    } catch {
+      setActionState(rule.id, 'error');
+      setRulesError('Recurring cashflow action could not be saved right now.');
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-6xl p-6">
       <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -159,15 +355,167 @@ export default function CashflowPage() {
             <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Finance module</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Cashflow</h1>
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Review the finance timeline after invoice work is done, with upcoming and completed cashflow items in one focused workspace.
+              Review the finance timeline after invoice work is done, with recurring-rule operations and current cashflow items in one focused workspace.
             </p>
-            <p className="mt-2 text-sm text-slate-500">Cashflow is the final finance step after invoice review. Use invoices when you need the source finance document behind a linked cashflow item.</p>
+            <p className="mt-2 text-sm text-slate-500">Cashflow stays list-first for current items. Local operations here currently apply to recurring cashflow rules only.</p>
           </div>
-          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
-            Open invoices
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+              type="button"
+              onClick={() => {
+                setIsCreateOpen((current) => !current);
+                setCreateState('idle');
+                setRulesError(null);
+              }}
+            >
+              {isCreateOpen ? 'Close add cashflow item' : 'Add cashflow item'}
+            </button>
+            <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
+              Open invoices
+            </Link>
+          </div>
         </div>
       </header>
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Recurring cashflow rules">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Recurring cashflow rules</h2>
+            <p className="mt-1 text-sm text-slate-600">Use the local add/edit/actions flow here for recurring items. Invoice-linked cashflow rows below remain review-only.</p>
+          </div>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+            Recurring rules only
+          </span>
+        </div>
+
+        {isCreateOpen ? (
+          <form className="mt-4 grid gap-4 md:grid-cols-2" aria-label="Add cashflow item form" onSubmit={handleCreateSubmit}>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Label
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={createForm.label} onChange={(event) => setCreateForm((current) => ({ ...current, label: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Amount
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" inputMode="decimal" value={createForm.amount} onChange={(event) => setCreateForm((current) => ({ ...current, amount: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Currency
+              <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={createForm.currency} onChange={(event) => setCreateForm((current) => ({ ...current, currency: event.target.value as 'CZK' | 'EUR' }))}>
+                <option value="CZK">CZK</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Start date
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={createForm.startDate} onChange={(event) => setCreateForm((current) => ({ ...current, startDate: event.target.value }))} />
+            </label>
+            <label className="md:col-span-2 flex flex-col gap-1 text-sm text-slate-700">
+              Note
+              <textarea className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" rows={3} value={createForm.note} onChange={(event) => setCreateForm((current) => ({ ...current, note: event.target.value }))} />
+            </label>
+            <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+              <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60" disabled={createState === 'submitting'} type="submit">
+                {createState === 'submitting' ? 'Adding item…' : 'Add recurring item'}
+              </button>
+              <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => setIsCreateOpen(false)}>
+                Cancel
+              </button>
+              {rulesError ? <p className="text-sm text-rose-700">{rulesError}</p> : null}
+            </div>
+          </form>
+        ) : null}
+
+        <div className="mt-4 space-y-3">
+          {rulesLoadState === 'loading' ? <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">Loading recurring rules…</div> : null}
+          {rulesLoadState === 'error' ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Recurring rules could not be loaded right now.</div> : null}
+          {rulesLoadState === 'empty' ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">No recurring rules are available yet.</div> : null}
+          {rulesLoadState === 'loaded'
+            ? recurringRules.map((rule) => {
+                const isEditing = editingRuleId === rule.id;
+                const actionState = ruleActionState[rule.id] ?? 'idle';
+
+                return (
+                  <article key={rule.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    {isEditing ? (
+                      <form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => void handleEditSubmit(event, rule)}>
+                        <label className="flex flex-col gap-1 text-sm text-slate-700">
+                          Label
+                          <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={editForm.label} onChange={(event) => setEditForm((current) => ({ ...current, label: event.target.value }))} />
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm text-slate-700">
+                          Amount
+                          <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" inputMode="decimal" value={editForm.amount} onChange={(event) => setEditForm((current) => ({ ...current, amount: event.target.value }))} />
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm text-slate-700">
+                          Currency
+                          <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={editForm.currency} onChange={(event) => setEditForm((current) => ({ ...current, currency: event.target.value as 'CZK' | 'EUR' }))}>
+                            <option value="CZK">CZK</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm text-slate-700">
+                          Start date
+                          <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={editForm.startDate} onChange={(event) => setEditForm((current) => ({ ...current, startDate: event.target.value }))} />
+                        </label>
+                        <label className="md:col-span-2 flex flex-col gap-1 text-sm text-slate-700">
+                          Note
+                          <textarea className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" rows={3} value={editForm.note} onChange={(event) => setEditForm((current) => ({ ...current, note: event.target.value }))} />
+                        </label>
+                        <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+                          <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60" disabled={actionState === 'submitting'} type="submit">
+                            {actionState === 'submitting' ? 'Saving…' : 'Save changes'}
+                          </button>
+                          <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => setEditingRuleId(null)}>
+                            Cancel edit
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-lg font-semibold text-slate-950">{rule.label}</h3>
+                              <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone[rule.status]}`}>{rule.status}</span>
+                              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">Monthly</span>
+                            </div>
+                            <p className="mt-2 text-sm text-slate-600">Starts {formatDate(rule.startDate)}, next run {formatDate(rule.nextRunAt)}</p>
+                            {rule.note ? <p className="mt-1 text-sm text-slate-500">{rule.note}</p> : null}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Amount</p>
+                            <p className="mt-2 text-2xl font-semibold text-slate-950">{formatMoney(rule.amount, rule.currency)}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          <button className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => startEditingRule(rule)}>
+                            Edit recurring item
+                          </button>
+                          {rule.status === 'ACTIVE' ? (
+                            <button className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 disabled:opacity-60" disabled={actionState === 'submitting'} type="button" onClick={() => void handleRuleAction(rule, 'pause')}>
+                              Pause
+                            </button>
+                          ) : null}
+                          {rule.status === 'PAUSED' ? (
+                            <button className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 disabled:opacity-60" disabled={actionState === 'submitting'} type="button" onClick={() => void handleRuleAction(rule, 'resume')}>
+                              Resume
+                            </button>
+                          ) : null}
+                          {rule.status !== 'STOPPED' ? (
+                            <button className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 disabled:opacity-60" disabled={actionState === 'submitting'} type="button" onClick={() => void handleRuleAction(rule, 'stop')}>
+                              Stop
+                            </button>
+                          ) : null}
+                        </div>
+                      </>
+                    )}
+                  </article>
+                );
+              })
+            : null}
+        </div>
+      </section>
 
       <section aria-label="Cashflow summary" className="mt-6 grid gap-4 md:grid-cols-4">
         {summaryCards.map((card) => (
