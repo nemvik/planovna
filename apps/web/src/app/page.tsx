@@ -68,11 +68,11 @@ export default function Home() {
             spreadsheets, and finance notes.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/board">
-              Register and start
+            <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/register">
+              Create account
             </Link>
             <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
-              Login
+              Log in
             </Link>
           </div>
         </section>
@@ -125,11 +125,11 @@ export default function Home() {
             Create your workspace, log in, and move from planning to invoicing and cashflow in one connected product flow.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/board">
-              Register and start
+            <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/register">
+              Create account
             </Link>
             <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
-              Login
+              Log in
             </Link>
           </div>
         </section>

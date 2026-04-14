@@ -11,8 +11,8 @@ describe('homepage dashboard IA split', () => {
 
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
     expect(screen.getByText('Planning and finance flow for small production and operations teams.')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Register and start' })[0]).toHaveAttribute('href', '/board');
-    expect(screen.getAllByRole('link', { name: 'Login' })[0]).toHaveAttribute('href', '/board');
+    expect(screen.getAllByRole('link', { name: 'Create account' })[0]).toHaveAttribute('href', '/register');
+    expect(screen.getAllByRole('link', { name: 'Log in' })[0]).toHaveAttribute('href', '/board');
     expect(screen.getByText('Orders')).toBeInTheDocument();
     expect(screen.getByText('Board')).toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
