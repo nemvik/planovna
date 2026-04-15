@@ -41,6 +41,7 @@ describe('tRPC auth+invoice parity with REST lockdown (e2e)', () => {
   ) => {
     const suffix = uniqueSuffix();
     const customer = await client.customer.create.mutate({
+      tenantId: tenantKey,
       name: `Lockdown invoice customer ${tenantKey} ${suffix}`,
       email: `lockdown-invoice-${tenantKey}-${suffix}@example.test`,
     });
@@ -158,11 +159,11 @@ describe('tRPC auth+invoice parity with REST lockdown (e2e)', () => {
     const suffix = uniqueSuffix();
 
     const issued = await authClient.invoice.issue.mutate({
-      tenantId: 'tenant-b',
       orderId: order.id,
       number: `INV-TRPC-LOCK-${suffix}`,
       currency: 'CZK',
-      amountGross: 3200,
+      amountNet: 3200,
+      vatRatePercent: 21,
       dueAt: new Date('2026-04-12').toISOString(),
     });
 

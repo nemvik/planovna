@@ -19,7 +19,6 @@ type InvoiceSummary = {
 };
 
 type CreateInvoiceInput = {
-  tenantId: string;
   orderId: string;
   number: string;
   currency: 'CZK' | 'EUR';
@@ -154,26 +153,6 @@ const emptyCreateForm = {
   dueAt: '',
 };
 
-const decodeAccessTokenTenantId = (accessToken?: string) => {
-  if (!accessToken) {
-    return null;
-  }
-
-  const [encodedPayload] = accessToken.split('.');
-  if (!encodedPayload) {
-    return null;
-  }
-
-  try {
-    const base64 = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = `${base64}${'='.repeat((4 - (base64.length % 4)) % 4)}`;
-    const payload = JSON.parse(window.atob(padded)) as { tenantId?: string };
-    return typeof payload.tenantId === 'string' && payload.tenantId.length > 0 ? payload.tenantId : null;
-  } catch {
-    return null;
-  }
-};
-
 const toIsoDateTime = (value: string) => {
   if (!value) {
     return undefined;
@@ -248,7 +227,6 @@ export default function InvoicesPage() {
 
   const now = new Date(Date.now());
   const accessToken = hasSession ? window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined : undefined;
-  const tenantId = decodeAccessTokenTenantId(accessToken);
 
   const metrics = useMemo(() => {
     const all = invoices.length;
@@ -298,11 +276,6 @@ export default function InvoicesPage() {
     event.preventDefault();
     setCreateError(null);
 
-    if (!tenantId) {
-      setCreateState('error');
-      setCreateError('Invoice creation is not available because the tenant session could not be read.');
-      return;
-    }
 
     const amountNet = Number(createForm.amountNet);
     const vatRatePercent = Number(createForm.vatRatePercent);
@@ -324,7 +297,6 @@ export default function InvoicesPage() {
     try {
       const client = createTrpcClient(accessToken);
       await client.invoice.issue.mutate({
-        tenantId,
         orderId: createForm.orderId.trim(),
         number: createForm.number.trim(),
         currency: createForm.currency,

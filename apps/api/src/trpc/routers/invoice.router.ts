@@ -1,14 +1,21 @@
 import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
 import { InvoiceService } from '../../modules/invoice/invoice.service';
-import {
-  CreateInvoiceSchema,
-  MarkPaidSchema,
-} from '../../modules/invoice/dto/invoice.dto';
+import { MarkPaidSchema } from '../../modules/invoice/dto/invoice.dto';
 import { throwTrpcVersionConflict } from '../errors/version-conflict';
 import { roleProtectedProcedure, router } from '../trpc';
 
 const invoiceReadProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
 const invoiceWriteProcedure = roleProtectedProcedure(['OWNER', 'FINANCE']);
+const issueInvoiceSchema = z.object({
+  orderId: z.string().min(1),
+  number: z.string().min(1),
+  currency: z.enum(['CZK', 'EUR']),
+  amountNet: z.number().positive(),
+  vatRatePercent: z.number().min(0).max(100),
+  issuedAt: z.string().datetime().optional(),
+  dueAt: z.string().datetime().optional(),
+});
 
 export const createInvoiceRouter = (invoiceService: InvoiceService) =>
   router({
@@ -16,7 +23,7 @@ export const createInvoiceRouter = (invoiceService: InvoiceService) =>
       return await invoiceService.list(ctx.auth.tenantId);
     }),
     issue: invoiceWriteProcedure
-      .input(CreateInvoiceSchema)
+      .input(issueInvoiceSchema)
       .mutation(async ({ ctx, input }) => {
         return await invoiceService.issue(ctx.auth.tenantId, input);
       }),

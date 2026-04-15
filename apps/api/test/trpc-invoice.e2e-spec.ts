@@ -43,6 +43,7 @@ describe('tRPC invoice contracts (e2e)', () => {
   ) => {
     const suffix = uniqueSuffix();
     const customer = await client.customer.create.mutate({
+      tenantId: tenantKey,
       name: `Invoice customer ${tenantKey} ${suffix}`,
       email: `invoice-${tenantKey}-${suffix}@example.test`,
     });
@@ -106,7 +107,6 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     await expect(
       publicClient.invoice.issue.mutate({
-        tenantId: 'tenant-b',
         orderId: 'order-authz-1',
         number: 'INV-TRPC-100',
         currency: 'CZK',
@@ -138,7 +138,6 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     await expect(
       plannerClient.invoice.issue.mutate({
-        tenantId: 'tenant-a',
         orderId: 'order-authz-2',
         number: 'INV-TRPC-101',
         currency: 'CZK',
@@ -184,7 +183,6 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     await expect(
       ownerClient.invoice.issue.mutate({
-        tenantId: 'tenant-a',
         orderId: 'order-invalid-1',
         number: 'INV-TRPC-INVALID',
         currency: 'CZK',
@@ -206,7 +204,6 @@ describe('tRPC invoice contracts (e2e)', () => {
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
 
     const issued = await ownerClient.invoice.issue.mutate({
-      tenantId: 'tenant-a',
       orderId: order.id,
       number: `INV-TRPC-CONFLICT-${suffix}`,
       currency: 'CZK',
@@ -267,7 +264,6 @@ describe('tRPC invoice contracts (e2e)', () => {
     const suffix = uniqueSuffix();
 
     const issued = await tenantAOwnerClient.invoice.issue.mutate({
-      tenantId: 'tenant-b',
       orderId: order.id,
       number: `INV-TRPC-LIST-${suffix}`,
       currency: 'CZK',
@@ -319,7 +315,6 @@ describe('tRPC invoice contracts (e2e)', () => {
     const zeroVatSuffix = uniqueSuffix();
 
     const zeroVatIssued = await ownerClient.invoice.issue.mutate({
-      tenantId: 'tenant-a',
       orderId: order.id,
       number: `INV-TRPC-ZERO-${zeroVatSuffix}`,
       currency: 'CZK',
@@ -375,7 +370,6 @@ describe('tRPC invoice contracts (e2e)', () => {
     const suffix = uniqueSuffix();
 
     const issued = await ownerClient.invoice.issue.mutate({
-      tenantId: 'tenant-a',
       orderId: order.id,
       number: `INV-TRPC-PDF-${suffix}`,
       currency: 'CZK',
@@ -422,7 +416,6 @@ describe('tRPC invoice contracts (e2e)', () => {
     const suffix = uniqueSuffix();
 
     const issued = await tenantAClient.invoice.issue.mutate({
-      tenantId: 'tenant-b',
       orderId: order.id,
       number: `INV-TRPC-200-${suffix}`,
       currency: 'CZK',
@@ -438,7 +431,6 @@ describe('tRPC invoice contracts (e2e)', () => {
         invoiceId: issued.id,
         paidAt: new Date('2026-04-13').toISOString(),
         version: issued.version,
-        tenantId: 'tenant-a',
       }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
 
@@ -447,7 +439,6 @@ describe('tRPC invoice contracts (e2e)', () => {
 
     expect(aItemsAfterCrossTry.filter((x) => x.invoiceId === issued.id)).toEqual([
       expect.objectContaining({
-        tenantId: 'tenant-a',
         invoiceId: issued.id,
         kind: 'PLANNED_IN',
       }),
@@ -458,7 +449,6 @@ describe('tRPC invoice contracts (e2e)', () => {
       invoiceId: issued.id,
       paidAt: new Date('2026-04-13').toISOString(),
       version: issued.version,
-      tenantId: 'tenant-b',
     });
 
     expect(paid.status).toBe('PAID');

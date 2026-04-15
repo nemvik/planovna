@@ -6,13 +6,26 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { z } from 'zod';
 import { AuthGuard } from '../../common/auth.guard';
 import type { AuthenticatedRequest } from '../../common/auth.guard';
 import { Roles } from '../../common/roles.decorator';
 import { RolesGuard } from '../../common/roles.guard';
-import { CreateInvoiceSchema, MarkPaidSchema } from './dto/invoice.dto';
-import type { CreateInvoiceDto, MarkPaidDto } from './dto/invoice.dto';
+import { MarkPaidSchema } from './dto/invoice.dto';
+import type { MarkPaidDto } from './dto/invoice.dto';
 import { InvoiceService } from './invoice.service';
+
+const issueInvoiceSchema = z.object({
+  orderId: z.string().min(1),
+  number: z.string().min(1),
+  currency: z.enum(['CZK', 'EUR']),
+  amountNet: z.number().positive(),
+  vatRatePercent: z.number().min(0).max(100),
+  issuedAt: z.string().datetime().optional(),
+  dueAt: z.string().datetime().optional(),
+});
+
+type CreateInvoiceDto = z.infer<typeof issueInvoiceSchema>;
 
 @Controller('invoices')
 export class InvoiceController {
@@ -22,7 +35,7 @@ export class InvoiceController {
   @Roles('OWNER', 'FINANCE')
   @Post('issue')
   issue(@Req() request: AuthenticatedRequest, @Body() body: CreateInvoiceDto) {
-    const input = CreateInvoiceSchema.parse(body);
+    const input = issueInvoiceSchema.parse(body);
     return this.service.issue(request.auth.tenantId, input);
   }
 

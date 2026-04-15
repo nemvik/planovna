@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const CreateInvoiceSchema = z.object({
-  tenantId: z.string().min(1),
   orderId: z.string().min(1),
   number: z.string().min(1),
   currency: z.enum(['CZK', 'EUR']),

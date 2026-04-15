@@ -6,6 +6,7 @@ import { CreateInvoiceDto, MarkPaidDto } from './dto/invoice.dto';
 
 type Invoice = CreateInvoiceDto & {
   id: string;
+  tenantId: string;
   status: 'DRAFT' | 'ISSUED' | 'PAID';
   amountVat: number;
   amountGross: number;

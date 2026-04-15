@@ -41,6 +41,7 @@ describe('tRPC cashflow read contracts (e2e)', () => {
   ) => {
     const suffix = uniqueSuffix();
     const customer = await client.customer.create.mutate({
+      tenantId: tenantKey,
       name: `Cashflow invoice customer ${tenantKey} ${suffix}`,
       email: `cashflow-invoice-${tenantKey}-${suffix}@example.test`,
     });
@@ -232,11 +233,11 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     const suffix = uniqueSuffix();
 
     const issued = await ownerClient.invoice.issue.mutate({
-      tenantId: 'tenant-a',
       orderId: order.id,
       number: `INV-CASHFLOW-${suffix}`,
       currency: 'CZK',
-      amountGross: 4200,
+      amountNet: 4200,
+      vatRatePercent: 21,
       dueAt: new Date('2026-05-15').toISOString(),
     });
 

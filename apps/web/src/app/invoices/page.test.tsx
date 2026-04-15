@@ -215,9 +215,7 @@ describe('invoices workspace v1', () => {
     await user.click(screen.getByRole('button', { name: 'Create invoice' }));
 
     await waitFor(() => {
-      expect(client.invoice.issue.mutate).toHaveBeenCalledWith({
-        tenantId: 'tenant-create',
-        orderId: 'order-4001',
+      expect(client.invoice.issue.mutate).toHaveBeenCalledWith({        orderId: 'order-4001',
         number: '2026-4001',
         currency: 'CZK',
         amountNet: 100000,
