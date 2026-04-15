@@ -341,6 +341,8 @@ describe('extracted shared workspace harness', () => {
     await loadAuthenticatedWorkspace(client);
 
     const user = userEvent.setup();
+    expect(screen.queryByLabelText('Move to bucket')).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Expand details' })[0]);
     await user.selectOptions(screen.getAllByLabelText('Move to bucket')[0], '2026-04-07');
 
     await waitFor(() => {

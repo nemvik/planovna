@@ -448,6 +448,9 @@ type HomepageAuthLocaleStrings = {
   operationEndDateLabel: string;
   operationSaveEndButton: string;
   operationClearEndButton: string;
+  operationExpandDetailsButton: string;
+  operationCollapseDetailsButton: string;
+  operationSummaryMetaTemplate: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -719,6 +722,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationEndDateLabel: 'Datum dokončení',
     operationSaveEndButton: 'Uložit datum',
     operationClearEndButton: 'Vymazat datum',
+    operationExpandDetailsButton: 'Rozbalit detail',
+    operationCollapseDetailsButton: 'Sbalit detail',
+    operationSummaryMetaTemplate: 'Koš: {bucket} • Stav: {status}',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -988,6 +994,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationEndDateLabel: 'End date',
     operationSaveEndButton: 'Save end',
     operationClearEndButton: 'Clear end',
+    operationExpandDetailsButton: 'Expand details',
+    operationCollapseDetailsButton: 'Collapse details',
+    operationSummaryMetaTemplate: 'Bucket: {bucket} • Status: {status}',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -1257,6 +1266,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationEndDateLabel: 'Enddatum',
     operationSaveEndButton: 'Enddatum speichern',
     operationClearEndButton: 'Enddatum löschen',
+    operationExpandDetailsButton: 'Details aufklappen',
+    operationCollapseDetailsButton: 'Details einklappen',
+    operationSummaryMetaTemplate: 'Bucket: {bucket} • Status: {status}',
   },
 };
 
@@ -1614,6 +1626,7 @@ export default function Home() {
   const [boardColumnsDraft, setBoardColumnsDraft] = useState<BoardColumnConfig[]>([]);
   const [boardColumnsOpen, setBoardColumnsOpen] = useState(false);
   const [boardShortcutsOpen, setBoardShortcutsOpen] = useState(false);
+  const [expandedOperationId, setExpandedOperationId] = useState<string | null>(null);
   const [boardColumnsSaving, setBoardColumnsSaving] = useState(false);
   const [boardColumnsError, setBoardColumnsError] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
@@ -3812,7 +3825,11 @@ export default function Home() {
                             sortIndexValue.trim() !== '' &&
                             Number.isInteger(parsedSortIndex) &&
                             parsedSortIndex !== operation.sortIndex;
+                          const isExpanded = expandedOperationId === operation.id;
                           const prerequisiteSummary = formatPrerequisiteSummary(operation, homepageAuthCopy);
+                          const operationSummaryMeta = homepageAuthCopy.operationSummaryMetaTemplate
+                            .replace('{bucket}', getLocalizedBucketOptionLabel(getOperationBucketLabel(operation.startDate)))
+                            .replace('{status}', getLocalizedOperationStatusLabel(operation.status));
 
                           return (
                             <SortableOperationItem
@@ -3839,6 +3856,7 @@ export default function Home() {
                                           <div className="font-semibold leading-5 text-slate-800">
                                             {operation.code} — {operation.title}
                                           </div>
+                                          <p className="text-xs leading-5 text-slate-500">{operationSummaryMeta}</p>
                                           {prerequisiteSummary ? (
                                             <p className="text-sm leading-5 text-amber-700">{prerequisiteSummary}</p>
                                           ) : null}
@@ -3848,15 +3866,32 @@ export default function Home() {
                                         </div>
                                       </div>
                                     </div>
-                                    {operation.dependencyCount > 0 && !prerequisiteSummary ? (
-                                      <span className="inline-flex items-center rounded-full border border-amber-300/90 bg-amber-100/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-950 shadow-sm">
-                                        {homepageAuthCopy.operationBlockedByTemplate.replace(
-                                          '{count}',
-                                          String(operation.dependencyCount),
-                                        )}
-                                      </span>
-                                    ) : null}
+                                    <div className="flex items-center gap-2">
+                                      {operation.dependencyCount > 0 && !prerequisiteSummary ? (
+                                        <span className="inline-flex items-center rounded-full border border-amber-300/90 bg-amber-100/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-950 shadow-sm">
+                                          {homepageAuthCopy.operationBlockedByTemplate.replace(
+                                            '{count}',
+                                            String(operation.dependencyCount),
+                                          )}
+                                        </span>
+                                      ) : null}
+                                      <button
+                                        className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                                        type="button"
+                                        onClick={() =>
+                                          setExpandedOperationId((currentExpandedOperationId) =>
+                                            currentExpandedOperationId === operation.id ? null : operation.id,
+                                          )
+                                        }
+                                      >
+                                        {isExpanded
+                                          ? homepageAuthCopy.operationCollapseDetailsButton
+                                          : homepageAuthCopy.operationExpandDetailsButton}
+                                      </button>
+                                    </div>
                                   </div>
+                                  {isExpanded ? (
+                                    <>
                                   <form
                                     className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
                                     onSubmit={(event) => void onSaveCode(event, operation)}
@@ -4160,6 +4195,8 @@ export default function Home() {
                                       {homepageAuthCopy.operationScheduleButton}
                                     </button>
                                   </form>
+                                    </>
+                                  ) : null}
                                 </>
                               )}
                             </SortableOperationItem>
