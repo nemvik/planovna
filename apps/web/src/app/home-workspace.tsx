@@ -2815,7 +2815,7 @@ export default function Home() {
   const authOperationDisabled = loginPending || registerPending;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-8">
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 p-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{homepageAuthCopy.boardTitle}</h1>
         <p className="text-sm text-slate-600">{homepageAuthCopy.boardIntro}</p>

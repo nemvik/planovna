@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import AppShell from './app-shell';
 import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from './home-workspace';
 
 const dashboardCards = [
@@ -142,14 +143,12 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl p-6">
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Planovna</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Dashboard</h1>
-        <p className="mt-3 max-w-3xl text-sm text-slate-600">
-          Move through the product in a simple flow: Orders, then Board, then Invoices, then Cashflow.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
+    <AppShell
+      title="Dashboard"
+      description="Move through the product in a simple flow: Orders, then Board, then Invoices, then Cashflow."
+      note="Use the same signed-in shell across modules, with the current step and next step kept easy to scan."
+      actions={
+        <>
           <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/orders">
             Open orders
           </Link>
@@ -162,10 +161,10 @@ export default function Home() {
           <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/cashflow">
             Open cashflow
           </Link>
-        </div>
-      </header>
-
-      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        </>
+      }
+    >
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {dashboardCards.map((card) => (
           <article key={card.href} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
@@ -176,6 +175,6 @@ export default function Home() {
           </article>
         ))}
       </section>
-    </main>
+    </AppShell>
   );
 }

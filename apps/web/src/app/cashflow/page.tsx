@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import AppShell from '../app-shell';
 import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from '../home-workspace';
 import { createTrpcClient } from '../../lib/trpc/client';
 
@@ -348,37 +349,31 @@ export default function CashflowPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl p-6">
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Finance module</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-950">Cashflow</h1>
-            <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Review the finance timeline after invoice work is done, with recurring-rule operations and current cashflow items in one focused workspace.
-            </p>
-            <p className="mt-2 text-sm text-slate-500">Cashflow stays list-first for current items. Local operations here currently apply to recurring cashflow rules only.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
-              type="button"
-              onClick={() => {
-                setIsCreateOpen((current) => !current);
-                setCreateState('idle');
-                setRulesError(null);
-              }}
-            >
-              {isCreateOpen ? 'Close add cashflow item' : 'Add cashflow item'}
-            </button>
-            <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
-              Open invoices
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Recurring cashflow rules">
+    <AppShell
+      eyebrow="Finance module"
+      title="Cashflow"
+      description="Review the finance timeline after invoice work is done, with recurring-rule operations and current cashflow items in one focused workspace."
+      note="Cashflow stays list-first for current items. Local operations here currently apply to recurring cashflow rules only."
+      actions={
+        <>
+          <button
+            className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+            type="button"
+            onClick={() => {
+              setIsCreateOpen((current) => !current);
+              setCreateState('idle');
+              setRulesError(null);
+            }}
+          >
+            {isCreateOpen ? 'Close add cashflow item' : 'Add cashflow item'}
+          </button>
+          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
+            Open invoices
+          </Link>
+        </>
+      }
+    >
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Recurring cashflow rules">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Recurring cashflow rules</h2>
@@ -613,6 +608,6 @@ export default function CashflowPage() {
             ))
           : null}
       </section>
-    </main>
+    </AppShell>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import AppShell from '../app-shell';
 import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from '../home-workspace';
 import { createTrpcClient } from '../../lib/trpc/client';
 
@@ -134,24 +135,18 @@ export default function OrdersPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl p-6">
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Operations module</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-950">Orders</h1>
-            <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              Start from orders, review what is ready, and continue into Board planning when work needs to move forward.
-            </p>
-            <p className="mt-2 text-sm text-slate-500">Use Board when you are ready to plan or schedule the next operational step.</p>
-          </div>
-          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
-            Open Board
-          </Link>
-        </div>
-      </header>
-
-      <section aria-label="Orders summary" className="mt-6 grid gap-4 md:grid-cols-3">
+    <AppShell
+      eyebrow="Operations module"
+      title="Orders"
+      description="Start from orders, review what is ready, and continue into Board planning when work needs to move forward."
+      note="Use Board when you are ready to plan or schedule the next operational step."
+      actions={
+        <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
+          Open Board
+        </Link>
+      }
+    >
+      <section aria-label="Orders summary" className="grid gap-4 md:grid-cols-3">
         {summaryCards.map((card) => (
           <article key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.label}</p>
@@ -246,6 +241,6 @@ export default function OrdersPage() {
             ))
           : null}
       </section>
-    </main>
+    </AppShell>
   );
 }
