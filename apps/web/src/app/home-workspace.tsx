@@ -1683,6 +1683,23 @@ export default function Home() {
     () => buildBuckets(filteredOperations, boardColumns),
     [filteredOperations, boardColumns],
   );
+  const expandedOperationDependencyCandidates = useMemo(() => {
+    if (!expandedOperationId) {
+      return [] as Operation[];
+    }
+
+    const expandedOperation = operations.find((candidate) => candidate.id === expandedOperationId);
+    if (!expandedOperation) {
+      return [] as Operation[];
+    }
+
+    return operations.filter(
+      (candidateOperation) =>
+        candidateOperation.id !== expandedOperation.id &&
+        candidateOperation.startDate !== expandedOperation.startDate &&
+        !expandedOperation.prerequisiteCodes.includes(candidateOperation.code),
+    );
+  }, [expandedOperationId, operations]);
   const cashflowSummary = useMemo(() => {
     const plannedIn = cashflowItems
       .filter((item) => item.kind === 'PLANNED_IN')
@@ -4115,16 +4132,11 @@ export default function Home() {
                                           }
                                         >
                                           <option value="">—</option>
-                                          {operations
-                                            .filter((candidate) => candidate.id !== operation.id)
-                                            .filter(
-                                              (candidate) => !(operation.prerequisiteCodes ?? []).includes(candidate.code),
-                                            )
-                                            .map((candidate) => (
-                                              <option key={candidate.id} value={candidate.id}>
-                                                {candidate.code} ({candidate.title})
-                                              </option>
-                                            ))}
+                                          {expandedOperationDependencyCandidates.map((candidate) => (
+                                            <option key={candidate.id} value={candidate.id}>
+                                              {candidate.code} ({candidate.title})
+                                            </option>
+                                          ))}
                                         </select>
                                       </label>
                                       <button
