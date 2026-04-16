@@ -2420,6 +2420,31 @@ export default function Home() {
     }
   };
 
+  const reconcileReorderFailure = async (
+    previousOperations: Operation[],
+    mutationSession: number,
+    successMessage: string,
+    fallbackMessage: string,
+  ) => {
+    try {
+      await loadOperations();
+
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
+
+      setBoardMessage(successMessage);
+    } catch {
+      if (mutationSession !== operationLoadSessionRef.current) {
+        return;
+      }
+
+      setOperations(previousOperations);
+      syncOperationDrafts(previousOperations);
+      setBoardMessage(fallbackMessage);
+    }
+  };
+
   const onDragEnd = async (event: DragEndEvent) => {
     if (mutatingOperationIdRef.current !== null) {
       return;
@@ -2508,34 +2533,22 @@ export default function Home() {
         return;
       }
 
-      setOperations(previousOperations);
-      syncOperationDrafts(previousOperations);
-
       if (hasForbiddenCode(error)) {
         resetSession(homepageAuthCopy.sessionExpired);
       } else if (extractConflictData(error)) {
-        try {
-          await loadOperations();
-
-          if (mutationSession !== operationLoadSessionRef.current) {
-            return;
-          }
-
-          setBoardMessage(homepageAuthCopy.boardConflictReloaded);
-        } catch {
-          if (mutationSession !== operationLoadSessionRef.current) {
-            return;
-          }
-
-          setBoardMessage(homepageAuthCopy.boardConflictReloadFailed);
-        }
+        await reconcileReorderFailure(
+          previousOperations,
+          mutationSession,
+          homepageAuthCopy.boardConflictReloaded,
+          homepageAuthCopy.boardConflictReloadFailed,
+        );
       } else {
-        try {
-          await loadOperations();
-        } catch {
-          // keep the generic drag failure message below
-        }
-        setBoardMessage(homepageAuthCopy.operationMoveFailed);
+        await reconcileReorderFailure(
+          previousOperations,
+          mutationSession,
+          homepageAuthCopy.operationMoveFailed,
+          homepageAuthCopy.boardReloadFailedKeepLast,
+        );
       }
     } finally {
       if (mutationSession !== operationLoadSessionRef.current) {

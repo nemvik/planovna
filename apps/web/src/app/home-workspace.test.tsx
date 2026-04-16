@@ -355,6 +355,74 @@ describe('extracted shared workspace harness', () => {
     });
   });
 
+  it('reloads the board state after a reorder conflict', async () => {
+    const client = createClient();
+    const operations = [
+      {
+        id: 'op-1',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'CUT-01',
+        title: 'Cut panels',
+        status: 'READY',
+        startDate: null,
+        endDate: undefined,
+        sortIndex: 1,
+        version: 1,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+      {
+        id: 'op-2',
+        tenantId: 'tenant-a',
+        orderId: 'ord-1',
+        code: 'ASM-02',
+        title: 'Assemble frame',
+        status: 'BLOCKED',
+        blockedReason: 'Missing cut panels',
+        startDate: '2026-04-07T00:00:00.000Z',
+        endDate: undefined,
+        sortIndex: 2,
+        version: 1,
+        dependencyCount: 1,
+        prerequisiteCodes: ['CUT-01'],
+      },
+      {
+        id: 'op-3',
+        tenantId: 'tenant-a',
+        orderId: 'ord-2',
+        code: 'FIN-03',
+        title: 'Final inspection',
+        status: 'READY',
+        startDate: '2026-04-07T00:00:00.000Z',
+        endDate: undefined,
+        sortIndex: 3,
+        version: 1,
+        dependencyCount: 0,
+        prerequisiteCodes: [],
+      },
+    ];
+    client.operation.list.query.mockResolvedValue(operations);
+    client.operation.update.mutate.mockRejectedValueOnce({
+      data: { code: 'CONFLICT', conflict: { entity: 'Operation', id: 'op-1' } },
+    });
+
+    await loadAuthenticatedWorkspace(client);
+
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole('button', { name: 'Expand details' })[0]);
+    await user.selectOptions(screen.getAllByLabelText('Move to bucket')[0], '2026-04-07');
+
+    await waitFor(() => {
+      expect(client.operation.update.mutate).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(client.operation.list.query).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText('Board was out of date. Reloaded latest operations, please try again.')).toBeInTheDocument();
+  });
+
   it('keeps finance on lightweight handoffs so planning stays primary on the board', async () => {
     const client = createClient();
     client.invoice.list.query.mockResolvedValue([
