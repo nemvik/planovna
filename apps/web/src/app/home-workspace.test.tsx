@@ -344,7 +344,8 @@ describe('extracted shared workspace harness', () => {
     expect(screen.queryByLabelText('Move to bucket')).not.toBeInTheDocument();
     expect(screen.queryByText('Dependencies')).not.toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: 'Expand details' })[0]);
-    expect(screen.getByText('Dependencies')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dependencies' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Quick actions' }));
     await user.selectOptions(screen.getAllByLabelText('Move to bucket')[0], '2026-04-07');
 
     await waitFor(() => {
@@ -413,6 +414,7 @@ describe('extracted shared workspace harness', () => {
 
     const user = userEvent.setup();
     await user.click(screen.getAllByRole('button', { name: 'Expand details' })[0]);
+    await user.click(screen.getByRole('button', { name: 'Quick actions' }));
     await user.selectOptions(screen.getAllByLabelText('Move to bucket')[0], '2026-04-07');
 
     await waitFor(() => {

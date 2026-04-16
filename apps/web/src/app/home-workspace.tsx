@@ -451,6 +451,9 @@ type HomepageAuthLocaleStrings = {
   operationExpandDetailsButton: string;
   operationCollapseDetailsButton: string;
   operationSummaryMetaTemplate: string;
+  operationEditFieldsButton: string;
+  operationDependenciesButton: string;
+  operationQuickActionsButton: string;
 };
 
 const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleStrings> = {
@@ -725,6 +728,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationExpandDetailsButton: 'Rozbalit detail',
     operationCollapseDetailsButton: 'Sbalit detail',
     operationSummaryMetaTemplate: 'Koš: {bucket} • Stav: {status}',
+    operationEditFieldsButton: 'Upravit pole',
+    operationDependenciesButton: 'Závislosti',
+    operationQuickActionsButton: 'Rychlé akce',
   },
   en: {
     boardTitle: 'Planovna operations board',
@@ -997,6 +1003,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationExpandDetailsButton: 'Expand details',
     operationCollapseDetailsButton: 'Collapse details',
     operationSummaryMetaTemplate: 'Bucket: {bucket} • Status: {status}',
+    operationEditFieldsButton: 'Edit fields',
+    operationDependenciesButton: 'Dependencies',
+    operationQuickActionsButton: 'Quick actions',
   },
   de: {
     boardTitle: 'Planovna-Operationsboard',
@@ -1269,6 +1278,9 @@ const HOMEPAGE_AUTH_LOCALES: Record<'cs' | 'en' | 'de', HomepageAuthLocaleString
     operationExpandDetailsButton: 'Details aufklappen',
     operationCollapseDetailsButton: 'Details einklappen',
     operationSummaryMetaTemplate: 'Bucket: {bucket} • Status: {status}',
+    operationEditFieldsButton: 'Felder bearbeiten',
+    operationDependenciesButton: 'Abhängigkeiten',
+    operationQuickActionsButton: 'Schnellaktionen',
   },
 };
 
@@ -1627,6 +1639,9 @@ export default function Home() {
   const [boardColumnsOpen, setBoardColumnsOpen] = useState(false);
   const [boardShortcutsOpen, setBoardShortcutsOpen] = useState(false);
   const [expandedOperationId, setExpandedOperationId] = useState<string | null>(null);
+  const [expandedOperationPanel, setExpandedOperationPanel] = useState<
+    'edit' | 'dependencies' | 'actions' | null
+  >(null);
   const [boardColumnsSaving, setBoardColumnsSaving] = useState(false);
   const [boardColumnsError, setBoardColumnsError] = useState('');
   const [operationLoadState, setOperationLoadState] = useState<LoadState>('idle');
@@ -3908,11 +3923,14 @@ export default function Home() {
                                       <button
                                         className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                                         type="button"
-                                        onClick={() =>
-                                          setExpandedOperationId((currentExpandedOperationId) =>
-                                            currentExpandedOperationId === operation.id ? null : operation.id,
-                                          )
-                                        }
+                                        onClick={() => {
+                                          setExpandedOperationId((currentExpandedOperationId) => {
+                                            const nextExpandedOperationId =
+                                              currentExpandedOperationId === operation.id ? null : operation.id;
+                                            setExpandedOperationPanel(nextExpandedOperationId ? 'edit' : null);
+                                            return nextExpandedOperationId;
+                                          });
+                                        }}
                                       >
                                         {isExpanded
                                           ? homepageAuthCopy.operationCollapseDetailsButton
@@ -3922,304 +3940,110 @@ export default function Home() {
                                   </div>
                                   {isExpanded ? (
                                     <>
-                                  <form
-                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                                    onSubmit={(event) => void onSaveCode(event, operation)}
-                                  >
-                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                                      {homepageAuthCopy.operationCodeLabel}
-                                      <input
-                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        value={codeValue}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          setCodeDrafts((currentCodeDrafts) => ({
-                                            ...currentCodeDrafts,
-                                            [operation.id]: event.target.value,
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <button
-                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                      type="submit"
-                                      disabled={isOperationLocked || !canSaveCode}
-                                    >
-                                      {homepageAuthCopy.operationSaveCodeButton}
-                                    </button>
-                                  </form>
-                                  <form
-                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                                    onSubmit={(event) => void onSaveTitle(event, operation)}
-                                  >
-                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                                      {homepageAuthCopy.operationTitleLabel}
-                                      <input
-                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        value={titleValue}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          setTitleDrafts((currentTitleDrafts) => ({
-                                            ...currentTitleDrafts,
-                                            [operation.id]: event.target.value,
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <button
-                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                      type="submit"
-                                      disabled={isOperationLocked || !canSaveTitle}
-                                    >
-                                      {homepageAuthCopy.operationSaveTitleButton}
-                                    </button>
-                                  </form>
-                                  <form
-                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                                    onSubmit={(event) => void onSaveEndDate(event, operation)}
-                                  >
-                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                                      {homepageAuthCopy.operationEndDateLabel}
-                                      <input
-                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        type="date"
-                                        value={endDateValue}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          setEndDateDrafts((currentEndDateDrafts) => ({
-                                            ...currentEndDateDrafts,
-                                            [operation.id]: event.target.value,
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <button
-                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                      type="submit"
-                                      disabled={isOperationLocked || !canSaveEndDate}
-                                    >
-                                      {homepageAuthCopy.operationSaveEndButton}
-                                    </button>
-                                    {canClearEndDate ? (
-                                      <button
-                                        className="inline-flex items-center rounded border bg-white px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
-                                        type="button"
-                                        disabled={isOperationLocked}
-                                        onClick={() => void onClearEndDate(operation)}
-                                      >
-                                        {homepageAuthCopy.operationClearEndButton}
-                                      </button>
-                                    ) : null}
-                                  </form>
-                                  <form
-                                    className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2"
-                                    onSubmit={(event) => void onSaveSortIndex(event, operation)}
-                                  >
-                                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                                      {homepageAuthCopy.operationSortIndexLabel}
-                                      <input
-                                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        type="number"
-                                        inputMode="numeric"
-                                        value={sortIndexValue}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          setSortIndexDrafts((currentSortIndexDrafts) => ({
-                                            ...currentSortIndexDrafts,
-                                            [operation.id]: event.target.value,
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <button
-                                      className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                      type="submit"
-                                      disabled={isOperationLocked || !canSaveSortIndex}
-                                    >
-                                      {homepageAuthCopy.operationSaveSortButton}
-                                    </button>
-                                  </form>
-                                  {operation.blockedReason ? (
-                                    <div className="mt-3 flex items-start gap-2.5 rounded-md border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-sm text-amber-800">
-                                      <span className="min-w-0 flex-1 font-medium leading-5">
-                                        {homepageAuthCopy.operationBlockedReasonPrefix} {operation.blockedReason}
-                                      </span>
-                                      {operation.status !== 'BLOCKED' ? (
+                                      <div className="mt-3 flex flex-wrap gap-2">
                                         <button
-                                          className="rounded border border-amber-300/90 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
+                                          className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
                                           type="button"
-                                          disabled={isOperationLocked}
-                                          onClick={() => void onClearBlockedReason(operation)}
+                                          onClick={() => setExpandedOperationPanel('edit')}
                                         >
-                                          {homepageAuthCopy.operationClearReasonButton}
+                                          {homepageAuthCopy.operationEditFieldsButton}
                                         </button>
-                                      ) : null}
-                                    </div>
-                                  ) : null}
-                                  {operation.status === 'BLOCKED' ? (
-                                    <form
-                                      className="mt-3 flex items-end gap-3 rounded-md border border-amber-200/70 bg-amber-50/50 p-2.5"
-                                      onSubmit={(event) => void onSaveBlockedReason(event, operation)}
-                                    >
-                                      <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium uppercase tracking-wide text-amber-900/80">
-                                        {homepageAuthCopy.operationBlockedReasonLabel}
-                                        <input
-                                          className="rounded border border-amber-300 bg-white px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-                                          value={blockedReasonValue}
-                                          disabled={isOperationLocked}
-                                          onChange={(event) =>
-                                            setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({
-                                              ...currentBlockedReasonDrafts,
-                                              [operation.id]: event.target.value,
-                                            }))
-                                          }
-                                        />
-                                      </label>
-                                      <button
-                                        className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                        type="submit"
-                                        disabled={isOperationLocked || !canSaveBlockedReason}
-                                      >
-                                        {homepageAuthCopy.operationSaveReasonButton}
-                                      </button>
-                                      {canClearBlockedReason ? (
                                         <button
-                                          className="rounded border border-amber-300/90 bg-white px-3 py-1.5 text-sm text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
+                                          className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
                                           type="button"
-                                          disabled={isOperationLocked}
-                                          onClick={() => void onClearBlockedReason(operation)}
+                                          onClick={() => setExpandedOperationPanel('dependencies')}
                                         >
-                                          {homepageAuthCopy.operationClearReasonButton}
+                                          {homepageAuthCopy.operationDependenciesButton}
                                         </button>
+                                        <button
+                                          className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                                          type="button"
+                                          onClick={() => setExpandedOperationPanel('actions')}
+                                        >
+                                          {homepageAuthCopy.operationQuickActionsButton}
+                                        </button>
+                                      </div>
+                                      {expandedOperationPanel === 'edit' ? (
+                                        <>
+                                          <form className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2" onSubmit={(event) => void onSaveCode(event, operation)}>
+                                            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                              {homepageAuthCopy.operationCodeLabel}
+                                              <input className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" value={codeValue} disabled={isOperationLocked} onChange={(event) => setCodeDrafts((currentCodeDrafts) => ({ ...currentCodeDrafts, [operation.id]: event.target.value }))} />
+                                            </label>
+                                            <button className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50" type="submit" disabled={isOperationLocked || !canSaveCode}>{homepageAuthCopy.operationSaveCodeButton}</button>
+                                          </form>
+                                          <form className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2" onSubmit={(event) => void onSaveTitle(event, operation)}>
+                                            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                              {homepageAuthCopy.operationTitleLabel}
+                                              <input className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" value={titleValue} disabled={isOperationLocked} onChange={(event) => setTitleDrafts((currentTitleDrafts) => ({ ...currentTitleDrafts, [operation.id]: event.target.value }))} />
+                                            </label>
+                                            <button className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50" type="submit" disabled={isOperationLocked || !canSaveTitle}>{homepageAuthCopy.operationSaveTitleButton}</button>
+                                          </form>
+                                          <form className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2" onSubmit={(event) => void onSaveEndDate(event, operation)}>
+                                            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                              {homepageAuthCopy.operationEndDateLabel}
+                                              <input className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" type="date" value={endDateValue} disabled={isOperationLocked} onChange={(event) => setEndDateDrafts((currentEndDateDrafts) => ({ ...currentEndDateDrafts, [operation.id]: event.target.value }))} />
+                                            </label>
+                                            <button className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50" type="submit" disabled={isOperationLocked || !canSaveEndDate}>{homepageAuthCopy.operationSaveEndButton}</button>
+                                            {canClearEndDate ? <button className="inline-flex items-center rounded border bg-white px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50" type="button" disabled={isOperationLocked} onClick={() => void onClearEndDate(operation)}>{homepageAuthCopy.operationClearEndButton}</button> : null}
+                                          </form>
+                                          <form className="mt-3 flex items-end gap-3 rounded-md bg-slate-50/60 p-2" onSubmit={(event) => void onSaveSortIndex(event, operation)}>
+                                            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                              {homepageAuthCopy.operationSortIndexLabel}
+                                              <input className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" type="number" inputMode="numeric" value={sortIndexValue} disabled={isOperationLocked} onChange={(event) => setSortIndexDrafts((currentSortIndexDrafts) => ({ ...currentSortIndexDrafts, [operation.id]: event.target.value }))} />
+                                            </label>
+                                            <button className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50" type="submit" disabled={isOperationLocked || !canSaveSortIndex}>{homepageAuthCopy.operationSaveSortButton}</button>
+                                          </form>
+                                          {operation.blockedReason ? <div className="mt-3 flex items-start gap-2.5 rounded-md border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-sm text-amber-800"><span className="min-w-0 flex-1 font-medium leading-5">{homepageAuthCopy.operationBlockedReasonPrefix} {operation.blockedReason}</span>{operation.status !== 'BLOCKED' ? <button className="rounded border border-amber-300/90 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50" type="button" disabled={isOperationLocked} onClick={() => void onClearBlockedReason(operation)}>{homepageAuthCopy.operationClearReasonButton}</button> : null}</div> : null}
+                                          {operation.status === 'BLOCKED' ? <form className="mt-3 flex items-end gap-3 rounded-md border border-amber-200/70 bg-amber-50/50 p-2.5" onSubmit={(event) => void onSaveBlockedReason(event, operation)}><label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium uppercase tracking-wide text-amber-900/80">{homepageAuthCopy.operationBlockedReasonLabel}<input className="rounded border border-amber-300 bg-white px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300" value={blockedReasonValue} disabled={isOperationLocked} onChange={(event) => setBlockedReasonDrafts((currentBlockedReasonDrafts) => ({ ...currentBlockedReasonDrafts, [operation.id]: event.target.value }))} /></label><button className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50" type="submit" disabled={isOperationLocked || !canSaveBlockedReason}>{homepageAuthCopy.operationSaveReasonButton}</button>{canClearBlockedReason ? <button className="rounded border border-amber-300/90 bg-white px-3 py-1.5 text-sm text-amber-900 transition-colors hover:bg-amber-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50" type="button" disabled={isOperationLocked} onClick={() => void onClearBlockedReason(operation)}>{homepageAuthCopy.operationClearReasonButton}</button> : null}</form> : null}
+                                        </>
                                       ) : null}
-                                    </form>
-                                  ) : null}
-                                  <div className="mt-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2.5">
-                                    <div className="text-xs font-medium uppercase tracking-wide text-slate-600">
-                                      {homepageAuthCopy.operationDependenciesLabel}
-                                    </div>
-                                    <div className="mt-2 space-y-2">
-                                      {operation.prerequisiteCodes && operation.prerequisiteCodes.length > 0 ? (
-                                        operation.prerequisiteCodes.map((code) => (
-                                          <div key={code} className="flex items-center justify-between gap-2 rounded border bg-white px-2 py-1.5 text-sm text-slate-800">
-                                            <span>{code}</span>
-                                            <button
-                                              className="rounded border bg-white px-2 py-1 text-xs transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50"
-                                              type="button"
-                                              disabled={isOperationLocked}
-                                              onClick={() => void onRemoveDependency(operation, code)}
-                                            >
-                                              {homepageAuthCopy.operationDependencyRemoveButton}
-                                            </button>
+                                      {expandedOperationPanel === 'dependencies' ? (
+                                        <div className="mt-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-2.5">
+                                          <div className="text-xs font-medium uppercase tracking-wide text-slate-600">{homepageAuthCopy.operationDependenciesLabel}</div>
+                                          <div className="mt-2 space-y-2">
+                                            {operation.prerequisiteCodes && operation.prerequisiteCodes.length > 0 ? operation.prerequisiteCodes.map((code) => (<div key={code} className="flex items-center justify-between gap-2 rounded border bg-white px-2 py-1.5 text-sm text-slate-800"><span>{code}</span><button className="rounded border bg-white px-2 py-1 text-xs transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50" type="button" disabled={isOperationLocked} onClick={() => void onRemoveDependency(operation, code)}>{homepageAuthCopy.operationDependencyRemoveButton}</button></div>)) : <p className="text-sm text-slate-600">{homepageAuthCopy.operationDependencyNone}</p>}
                                           </div>
-                                        ))
-                                      ) : (
-                                        <p className="text-sm text-slate-600">{homepageAuthCopy.operationDependencyNone}</p>
-                                      )}
-                                    </div>
-                                    <div className="mt-3 flex items-end gap-3">
-                                      <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                                        {homepageAuthCopy.operationDependencyAddLabel}
-                                        <select
-                                          className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                          value={dependencySelections[operation.id] ?? ''}
-                                          disabled={isOperationLocked}
-                                          onChange={(event) =>
-                                            setDependencySelections((currentSelections) => ({
-                                              ...currentSelections,
-                                              [operation.id]: event.target.value,
-                                            }))
-                                          }
-                                        >
-                                          <option value="">—</option>
-                                          {expandedOperationDependencyCandidates.map((candidate) => (
-                                            <option key={candidate.id} value={candidate.id}>
-                                              {candidate.code} ({candidate.title})
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </label>
-                                      <button
-                                        className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
-                                        type="button"
-                                        disabled={isOperationLocked || !(dependencySelections[operation.id] ?? '')}
-                                        onClick={() => void onAddDependency(operation)}
-                                      >
-                                        {homepageAuthCopy.operationDependencyAddButton}
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="mt-3.5 rounded-lg border border-sky-200/80 bg-sky-50/60 p-2.5">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-sky-900/80">
-                                      {homepageAuthCopy.operationQuickActionsTitle}
-                                    </p>
-                                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                                      <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                                        {homepageAuthCopy.operationMoveToBucketLabel}
-                                        <select
-                                          className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                          value={getOperationBucketLabel(operation.startDate)}
-                                          disabled={isOperationLocked}
-                                          onChange={(event) =>
-                                            void onMoveOperation(
-                                              operation,
-                                              event.target.value as Exclude<BucketFilter, 'ALL'>,
-                                            )
-                                          }
-                                        >
-                                          {moveBucketOptions.map((moveBucket) => (
-                                            <option key={moveBucket} value={moveBucket}>
-                                              {getLocalizedBucketOptionLabel(moveBucket)}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </label>
-                                      <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                                        {homepageAuthCopy.operationCardStatusLabel}
-                                        <select
-                                          className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                          value={operation.status}
-                                          disabled={isOperationLocked}
-                                          onChange={(event) =>
-                                            void onStatusChange(operation, event.target.value as Operation['status'])
-                                          }
-                                        >
-                                          {BOARD_STATUS_VALUES.map((status) => (
-                                            <option key={status} value={status}>
-                                              {getLocalizedOperationStatusLabel(status)}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </label>
-                                    </div>
-                                  </div>
-                                  <form
-                                    className="mt-3 flex items-end gap-2.5 sm:gap-3 rounded-lg border border-slate-200/50 bg-slate-50/40 p-2 sm:p-2.5"
-                                    onSubmit={(event) => void onScheduleOperation(event, operation)}
-                                  >
-                                    <label className="flex min-w-0 flex-1 flex-col justify-end gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
-                                      {homepageAuthCopy.operationScheduleToDateLabel}
-                                      <input
-                                        className="h-9 rounded border border-slate-200/80 bg-white/95 px-2 py-1.5 text-sm font-normal text-slate-700 placeholder:normal-case placeholder:text-[12px] placeholder:leading-[1.1] placeholder:text-slate-500/[0.02] placeholder:font-normal placeholder:tracking-[0em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                                        type="date"
-                                        value={scheduledDateValue}
-                                        disabled={isOperationLocked}
-                                        onChange={(event) =>
-                                          setScheduleDates((currentScheduleDates) => ({
-                                            ...currentScheduleDates,
-                                            [operation.id]: event.target.value,
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <button
-                                      className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50"
-                                      type="submit"
-                                      disabled={isOperationLocked || !canSchedule}
-                                    >
-                                      {homepageAuthCopy.operationScheduleButton}
-                                    </button>
-                                  </form>
+                                          <div className="mt-3 flex items-end gap-3">
+                                            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                                              {homepageAuthCopy.operationDependencyAddLabel}
+                                              <select className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" value={dependencySelections[operation.id] ?? ''} disabled={isOperationLocked} onChange={(event) => setDependencySelections((currentSelections) => ({ ...currentSelections, [operation.id]: event.target.value }))}>
+                                                <option value="">—</option>
+                                                {expandedOperationDependencyCandidates.map((candidate) => (<option key={candidate.id} value={candidate.id}>{candidate.code} ({candidate.title})</option>))}
+                                              </select>
+                                            </label>
+                                            <button className="rounded border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50" type="button" disabled={isOperationLocked || !(dependencySelections[operation.id] ?? '')} onClick={() => void onAddDependency(operation)}>{homepageAuthCopy.operationDependencyAddButton}</button>
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                      {expandedOperationPanel === 'actions' ? (
+                                        <>
+                                          <div className="mt-3.5 rounded-lg border border-sky-200/80 bg-sky-50/60 p-2.5">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-sky-900/80">{homepageAuthCopy.operationQuickActionsTitle}</p>
+                                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                              <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                                {homepageAuthCopy.operationMoveToBucketLabel}
+                                                <select className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" value={getOperationBucketLabel(operation.startDate)} disabled={isOperationLocked} onChange={(event) => void onMoveOperation(operation, event.target.value as Exclude<BucketFilter, 'ALL'>)}>
+                                                  {moveBucketOptions.map((moveBucket) => (<option key={moveBucket} value={moveBucket}>{getLocalizedBucketOptionLabel(moveBucket)}</option>))}
+                                                </select>
+                                              </label>
+                                              <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                                {homepageAuthCopy.operationCardStatusLabel}
+                                                <select className="max-w-[11rem] rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" value={operation.status} disabled={isOperationLocked} onChange={(event) => void onStatusChange(operation, event.target.value as Operation['status'])}>
+                                                  {BOARD_STATUS_VALUES.map((status) => (<option key={status} value={status}>{getLocalizedOperationStatusLabel(status)}</option>))}
+                                                </select>
+                                              </label>
+                                            </div>
+                                          </div>
+                                          <form className="mt-3 flex items-end gap-2.5 sm:gap-3 rounded-lg border border-slate-200/50 bg-slate-50/40 p-2 sm:p-2.5" onSubmit={(event) => void onScheduleOperation(event, operation)}>
+                                            <label className="flex min-w-0 flex-1 flex-col justify-end gap-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
+                                              {homepageAuthCopy.operationScheduleToDateLabel}
+                                              <input className="h-9 rounded border border-slate-200/80 bg-white/95 px-2 py-1.5 text-sm font-normal text-slate-700 placeholder:normal-case placeholder:text-[12px] placeholder:leading-[1.1] placeholder:text-slate-500/[0.02] placeholder:font-normal placeholder:tracking-[0em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" type="date" value={scheduledDateValue} disabled={isOperationLocked} onChange={(event) => setScheduleDates((currentScheduleDates) => ({ ...currentScheduleDates, [operation.id]: event.target.value }))} />
+                                            </label>
+                                            <button className="h-9 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50" type="submit" disabled={isOperationLocked || !canSchedule}>{homepageAuthCopy.operationScheduleButton}</button>
+                                          </form>
+                                        </>
+                                      ) : null}
                                     </>
                                   ) : null}
                                 </>
@@ -4239,4 +4063,3 @@ export default function Home() {
     </main>
   );
 }
-
