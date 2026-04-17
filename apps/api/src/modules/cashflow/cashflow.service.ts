@@ -174,6 +174,40 @@ export class CashflowService {
     return this.transitionRecurringRule(tenantId, input, 'STOPPED');
   }
 
+  async removeRecurringRule(tenantId: string, input: RecurringCashflowRuleActionDto) {
+    if (!this.prisma) {
+      throw new Error('Recurring cashflow requires Prisma');
+    }
+
+    const existing = await this.prisma.recurringCashflowRule.findUnique({ where: { id: input.id } });
+    if (!existing || existing.tenantId !== tenantId) {
+      return null;
+    }
+    if (existing.version !== input.version) {
+      throw new Error('VERSION_CONFLICT');
+    }
+
+    const deleted = await this.prisma.recurringCashflowRule.deleteMany({
+      where: {
+        id: existing.id,
+        tenantId,
+        version: existing.version,
+      },
+    });
+
+    if (deleted.count === 0) {
+      const latest = await this.prisma.recurringCashflowRule.findUnique({ where: { id: input.id } });
+      if (!latest || latest.tenantId !== tenantId) {
+        return null;
+      }
+      if (latest.version !== input.version) {
+        throw new Error('VERSION_CONFLICT');
+      }
+    }
+
+    return { id: existing.id };
+  }
+
   private async transitionRecurringRule(
     tenantId: string,
     input: RecurringCashflowRuleActionDto,

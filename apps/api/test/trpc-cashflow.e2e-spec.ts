@@ -206,6 +206,19 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     await expect(
       tenantBClient.cashflow.pauseRecurringRule.mutate({ id: created.id, version: stopped.version }),
     ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+
+    const removed = await ownerClient.cashflow.removeRecurringRule.mutate({
+      id: created.id,
+      version: stopped.version,
+    });
+    expect(removed).toMatchObject({ id: created.id });
+
+    const afterRemove = await ownerClient.cashflow.listRecurringRules.query();
+    expect(afterRemove.some((rule) => rule.id === created.id)).toBe(false);
+
+    await expect(
+      tenantBClient.cashflow.removeRecurringRule.mutate({ id: created.id, version: stopped.version }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
   });
 
   it('reflects invoice.issue + invoice.paid lifecycle in tenant-scoped cashflow.list', async () => {

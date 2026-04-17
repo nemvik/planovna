@@ -151,6 +151,7 @@ export default function CashflowPage() {
   const [editForm, setEditForm] = useState<RuleForm>(emptyRuleForm);
   const [createState, setCreateState] = useState<MutationState>('idle');
   const [ruleActionState, setRuleActionState] = useState<Record<string, MutationState>>({});
+  const [removeRuleState, setRemoveRuleState] = useState<Record<string, MutationState>>({});
   const [rulesError, setRulesError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -251,6 +252,10 @@ export default function CashflowPage() {
 
   const setActionState = (ruleId: string, state: MutationState) => {
     setRuleActionState((current) => ({ ...current, [ruleId]: state }));
+  };
+
+  const setRemoveState = (ruleId: string, state: MutationState) => {
+    setRemoveRuleState((current) => ({ ...current, [ruleId]: state }));
   };
 
   const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -364,6 +369,29 @@ export default function CashflowPage() {
     }
   };
 
+  const handleRemoveRule = async (rule: RecurringRule) => {
+    setRulesError(null);
+    setRemoveState(rule.id, 'submitting');
+
+    try {
+      const accessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined;
+      const client = createTrpcClient(accessToken);
+      await client.cashflow.removeRecurringRule.mutate({ id: rule.id, version: rule.version });
+      setRecurringRules((current) => {
+        const next = current.filter((candidate) => candidate.id !== rule.id);
+        setRulesLoadState(next.length === 0 ? 'empty' : 'loaded');
+        return next;
+      });
+      if (editingRuleId === rule.id) {
+        setEditingRuleId(null);
+      }
+      setRemoveState(rule.id, 'idle');
+    } catch (error) {
+      setRemoveState(rule.id, 'error');
+      setRulesError(getRecurringRuleErrorMessage(error, 'Recurring rule could not be removed right now.'));
+    }
+  };
+
   return (
     <AppShell
       eyebrow="Finance module"
@@ -451,6 +479,7 @@ export default function CashflowPage() {
             ? recurringRules.map((rule) => {
                 const isEditing = editingRuleId === rule.id;
                 const actionState = ruleActionState[rule.id] ?? 'idle';
+                const removingState = removeRuleState[rule.id] ?? 'idle';
 
                 return (
                   <article key={rule.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -524,6 +553,9 @@ export default function CashflowPage() {
                               Stop
                             </button>
                           ) : null}
+                          <button className="rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-60" disabled={removingState === 'submitting'} type="button" onClick={() => void handleRemoveRule(rule)}>
+                            {removingState === 'submitting' ? 'Removing…' : 'Remove recurring item'}
+                          </button>
                         </div>
                       </>
                     )}

@@ -86,4 +86,20 @@ export const createCashflowRouter = (cashflowService: CashflowService) =>
           throw error;
         }
       }),
+    removeRecurringRule: cashflowReadProcedure
+      .input(RecurringCashflowRuleActionSchema)
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const result = await cashflowService.removeRecurringRule(ctx.auth.tenantId, input);
+          if (!result) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Recurring rule access denied' });
+          }
+          return result;
+        } catch (error) {
+          if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+            throw new TRPCError({ code: 'CONFLICT', message: 'Recurring rule version conflict' });
+          }
+          throw error;
+        }
+      }),
   });
