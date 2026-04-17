@@ -23,6 +23,8 @@ describe('InvoiceService', () => {
           number: '2026-0001',
           status: 'ISSUED',
           currency: 'CZK',
+          amountNet: decimal(826.45),
+          amountVat: decimal(173.55),
           amountGross: decimal(1000),
           issuedAt: null,
           dueAt: new Date('2026-03-31T00:00:00.000Z'),
@@ -34,11 +36,11 @@ describe('InvoiceService', () => {
     const service = new InvoiceService(cashflow as never, prisma as never);
 
     const invoice = await service.issue('t1', {
-      tenantId: 't1',
       orderId: 'o1',
       number: '2026-0001',
       currency: 'CZK',
-      amountGross: 1000,
+      amountNet: 826.45,
+      vatRatePercent: 21,
       dueAt: new Date('2026-03-31').toISOString(),
     });
 
@@ -56,6 +58,75 @@ describe('InvoiceService', () => {
       currency: 'CZK',
       date: '2026-03-31T00:00:00.000Z',
     });
+    expect(cashflow.upsertActualIn).not.toHaveBeenCalled();
+  });
+
+  it('updates allowed invoice fields without changing cashflow', async () => {
+    const cashflow = {
+      upsertPlannedIn: jest.fn(),
+      upsertActualIn: jest.fn(),
+    };
+    const prisma = {
+      invoice: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({
+            id: 'inv-update',
+            tenantId: 't1',
+            version: 3,
+          })
+          .mockResolvedValueOnce({
+            id: 'inv-update',
+            tenantId: 't1',
+            orderId: 'o1',
+            number: '2026-0002-REV',
+            status: 'ISSUED',
+            currency: 'CZK',
+            amountNet: decimal(1000),
+            amountVat: decimal(210),
+            amountGross: decimal(1210),
+            issuedAt: new Date('2026-04-12T00:00:00.000Z'),
+            dueAt: new Date('2026-05-02T00:00:00.000Z'),
+            paidAt: null,
+            version: 4,
+          }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const service = new InvoiceService(cashflow as never, prisma as never);
+
+    const updated = await service.update('t1', {
+      invoiceId: 'inv-update',
+      version: 3,
+      number: '2026-0002-REV',
+      issuedAt: '2026-04-12T00:00:00.000Z',
+      dueAt: '2026-05-02T00:00:00.000Z',
+    });
+
+    expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'inv-update',
+        tenantId: 't1',
+        version: 3,
+      },
+      data: {
+        number: '2026-0002-REV',
+        issuedAt: '2026-04-12T00:00:00.000Z',
+        dueAt: '2026-05-02T00:00:00.000Z',
+        version: {
+          increment: 1,
+        },
+      },
+    });
+    expect(updated).toMatchObject({
+      id: 'inv-update',
+      tenantId: 't1',
+      number: '2026-0002-REV',
+      version: 4,
+      issuedAt: '2026-04-12T00:00:00.000Z',
+      dueAt: '2026-05-02T00:00:00.000Z',
+    });
+    expect(cashflow.upsertPlannedIn).not.toHaveBeenCalled();
     expect(cashflow.upsertActualIn).not.toHaveBeenCalled();
   });
 
@@ -80,6 +151,8 @@ describe('InvoiceService', () => {
             number: '2026-0002',
             status: 'PAID',
             currency: 'CZK',
+            amountNet: decimal(1652.89),
+            amountVat: decimal(347.11),
             amountGross: decimal(2000),
             issuedAt: null,
             dueAt: new Date('2026-03-31T00:00:00.000Z'),

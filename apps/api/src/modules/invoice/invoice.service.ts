@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CashflowService } from '../cashflow/cashflow.service';
-import { CreateInvoiceDto, MarkPaidDto } from './dto/invoice.dto';
+import { CreateInvoiceDto, MarkPaidDto, UpdateInvoiceDto } from './dto/invoice.dto';
 
 type Invoice = CreateInvoiceDto & {
   id: string;
@@ -117,6 +117,81 @@ export class InvoiceService {
     });
 
     return row;
+  }
+
+  async update(actorTenantId: string, input: UpdateInvoiceDto) {
+    const existing = await this.prisma.invoice.findUnique({
+      where: { id: input.invoiceId },
+      select: {
+        id: true,
+        tenantId: true,
+        version: true,
+      },
+    });
+
+    if (!existing || existing.tenantId !== actorTenantId) {
+      return null;
+    }
+
+    assertVersion('Invoice', existing.id, input.version, existing.version);
+
+    const updated = await this.prisma.invoice.updateMany({
+      where: {
+        id: existing.id,
+        tenantId: existing.tenantId,
+        version: existing.version,
+      },
+      data: {
+        ...(input.number !== undefined ? { number: input.number } : {}),
+        ...(input.issuedAt !== undefined ? { issuedAt: input.issuedAt } : {}),
+        ...(input.dueAt !== undefined ? { dueAt: input.dueAt } : {}),
+        version: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      const latest = await this.prisma.invoice.findUnique({
+        where: { id: input.invoiceId },
+        select: {
+          id: true,
+          tenantId: true,
+          version: true,
+        },
+      });
+
+      if (!latest || latest.tenantId !== actorTenantId) {
+        return null;
+      }
+
+      assertVersion('Invoice', latest.id, input.version, latest.version);
+    }
+
+    const row = await this.prisma.invoice.findUnique({
+      where: { id: input.invoiceId },
+      select: {
+        id: true,
+        tenantId: true,
+        orderId: true,
+        number: true,
+        status: true,
+        currency: true,
+        amountNet: true,
+        amountVat: true,
+        amountGross: true,
+        issuedAt: true,
+        dueAt: true,
+        paidAt: true,
+        version: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return this.toInvoiceRecord(row);
   }
 
   async markPaid(actorTenantId: string, input: MarkPaidDto) {

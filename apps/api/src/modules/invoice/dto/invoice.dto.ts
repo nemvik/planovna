@@ -17,5 +17,19 @@ export const MarkPaidSchema = z.object({
   tenantId: z.string().min(1).optional(),
 });
 
+export const UpdateInvoiceSchema = z
+  .object({
+    invoiceId: z.string().min(1),
+    version: z.number().int().positive(),
+    number: z.string().min(1).optional(),
+    issuedAt: z.string().datetime().optional(),
+    dueAt: z.string().datetime().optional(),
+  })
+  .refine(
+    (value) => value.number !== undefined || value.issuedAt !== undefined || value.dueAt !== undefined,
+    { message: 'At least one editable invoice field must be provided.' },
+  );
+
 export type CreateInvoiceDto = z.infer<typeof CreateInvoiceSchema>;
 export type MarkPaidDto = z.infer<typeof MarkPaidSchema>;
+export type UpdateInvoiceDto = z.infer<typeof UpdateInvoiceSchema>;

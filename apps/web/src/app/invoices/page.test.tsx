@@ -18,6 +18,7 @@ const createClient = () => ({
     list: { query: jest.fn() },
     issue: { mutate: jest.fn() },
     paid: { mutate: jest.fn() },
+    update: { mutate: jest.fn() },
   },
 });
 
@@ -399,6 +400,106 @@ describe('invoices workspace v1', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Mark paid' })).toBeInTheDocument();
+  });
+
+  it('updates an invoice locally from the row edit form', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-6001',
+        number: '2026-6001',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Delta Studio',
+        issuedAt: '2026-04-10T00:00:00.000Z',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-6001/pdf',
+        version: 3,
+      },
+    ]);
+    client.invoice.update.mutate.mockResolvedValue({
+      id: 'inv-6001',
+      number: '2026-6001-REV',
+      status: 'ISSUED',
+      amountGross: 121000,
+      currency: 'CZK',
+      buyerDisplayName: 'Delta Studio',
+      issuedAt: '2026-04-12T00:00:00.000Z',
+      dueAt: '2026-05-02T00:00:00.000Z',
+      pdfPath: '/invoices/inv-6001/pdf',
+      version: 4,
+    });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-update'));
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Edit invoice' }));
+    await user.clear(screen.getByLabelText('Invoice number'));
+    await user.type(screen.getByLabelText('Invoice number'), '2026-6001-REV');
+    await user.clear(screen.getByLabelText('Issued at'));
+    await user.type(screen.getByLabelText('Issued at'), '2026-04-12');
+    await user.clear(screen.getByLabelText('Due at'));
+    await user.type(screen.getByLabelText('Due at'), '2026-05-02');
+    await user.click(screen.getByRole('button', { name: 'Save invoice' }));
+
+    await waitFor(() => {
+      expect(client.invoice.update.mutate).toHaveBeenCalledWith({
+        invoiceId: 'inv-6001',
+        version: 3,
+        number: '2026-6001-REV',
+        issuedAt: '2026-04-12T00:00:00.000Z',
+        dueAt: '2026-05-02T00:00:00.000Z',
+      });
+    });
+
+    expect(screen.getByText('2026-6001-REV')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save invoice' })).not.toBeInTheDocument();
+  });
+
+  it('shows a conflict-specific retry message when invoice update is out of date', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-6002',
+        number: '2026-6002',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Echo Works',
+        issuedAt: '2026-04-10T00:00:00.000Z',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-6002/pdf',
+        version: 5,
+      },
+    ]);
+    client.invoice.update.mutate.mockRejectedValue({ data: { code: 'CONFLICT' } });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-update'));
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Edit invoice' }));
+    await user.click(screen.getByRole('button', { name: 'Save invoice' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invoice was out of date. Refresh and try saving it again.')).toBeInTheDocument();
+    });
   });
 
   it('shows explicit empty and error states from the current route data load', async () => {

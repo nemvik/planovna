@@ -13,6 +13,7 @@ type InvoiceSummary = {
   amountGross: number;
   currency: 'CZK' | 'EUR';
   buyerDisplayName?: string;
+  issuedAt?: string;
   dueAt?: string;
   paidAt?: string;
   pdfPath: string;
@@ -33,6 +34,7 @@ type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 type StatusFilter = 'ALL' | 'NEEDS_ATTENTION' | 'PAID' | 'DRAFT';
 type CreateState = 'idle' | 'submitting' | 'error';
 type MarkPaidState = 'idle' | 'submitting' | 'error';
+type UpdateState = 'idle' | 'submitting' | 'error';
 
 const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
   new Intl.NumberFormat('en-US', {
@@ -184,6 +186,22 @@ const getMarkPaidErrorMessage = (error: unknown) => {
   return 'Invoice could not be marked paid right now.';
 };
 
+const getUpdateInvoiceErrorMessage = (error: unknown) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'data' in error &&
+    typeof error.data === 'object' &&
+    error.data !== null &&
+    'code' in error.data &&
+    error.data.code === 'CONFLICT'
+  ) {
+    return 'Invoice was out of date. Refresh and try saving it again.';
+  }
+
+  return 'Invoice could not be updated right now.';
+};
+
 export default function InvoicesPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -196,6 +214,12 @@ export default function InvoicesPage() {
   const [createForm, setCreateForm] = useState(emptyCreateForm);
   const [markPaidStateByInvoiceId, setMarkPaidStateByInvoiceId] = useState<Record<string, MarkPaidState>>({});
   const [markPaidErrorByInvoiceId, setMarkPaidErrorByInvoiceId] = useState<Record<string, string | null>>({});
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [updateStateByInvoiceId, setUpdateStateByInvoiceId] = useState<Record<string, UpdateState>>({});
+  const [updateErrorByInvoiceId, setUpdateErrorByInvoiceId] = useState<Record<string, string | null>>({});
+  const [invoiceNumberDrafts, setInvoiceNumberDrafts] = useState<Record<string, string>>({});
+  const [invoiceIssuedAtDrafts, setInvoiceIssuedAtDrafts] = useState<Record<string, string>>({});
+  const [invoiceDueAtDrafts, setInvoiceDueAtDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const syncSession = () => {
@@ -334,6 +358,55 @@ export default function InvoicesPage() {
     } catch {
       setCreateState('error');
       setCreateError('Invoice could not be created right now.');
+    }
+  };
+
+  const startEditingInvoice = (invoice: InvoiceSummary) => {
+    setEditingInvoiceId(invoice.id);
+    setUpdateErrorByInvoiceId((current) => ({ ...current, [invoice.id]: null }));
+    setUpdateStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'idle' }));
+    setInvoiceNumberDrafts((current) => ({ ...current, [invoice.id]: invoice.number }));
+    setInvoiceIssuedAtDrafts((current) => ({ ...current, [invoice.id]: invoice.issuedAt ? invoice.issuedAt.slice(0, 10) : '' }));
+    setInvoiceDueAtDrafts((current) => ({ ...current, [invoice.id]: invoice.dueAt ? invoice.dueAt.slice(0, 10) : '' }));
+  };
+
+  const handleUpdateInvoice = async (event: FormEvent<HTMLFormElement>, invoice: InvoiceSummary) => {
+    event.preventDefault();
+    const number = (invoiceNumberDrafts[invoice.id] ?? '').trim();
+    const issuedAt = toIsoDateTime(invoiceIssuedAtDrafts[invoice.id] ?? '');
+    const dueAt = toIsoDateTime(invoiceDueAtDrafts[invoice.id] ?? '');
+
+    if (!number || !issuedAt || !dueAt) {
+      setUpdateStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'error' }));
+      setUpdateErrorByInvoiceId((current) => ({
+        ...current,
+        [invoice.id]: 'Fill in invoice number, issued date, and due date.',
+      }));
+      return;
+    }
+
+    setUpdateStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'submitting' }));
+    setUpdateErrorByInvoiceId((current) => ({ ...current, [invoice.id]: null }));
+
+    try {
+      const client = createTrpcClient(accessToken);
+      const updated = (await client.invoice.update.mutate({
+        invoiceId: invoice.id,
+        version: invoice.version,
+        number,
+        issuedAt,
+        dueAt,
+      })) as InvoiceSummary;
+
+      setInvoices((current) => current.map((candidate) => (candidate.id === updated.id ? updated : candidate)));
+      setUpdateStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'idle' }));
+      setEditingInvoiceId((current) => (current === invoice.id ? null : current));
+    } catch (error) {
+      setUpdateStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'error' }));
+      setUpdateErrorByInvoiceId((current) => ({
+        ...current,
+        [invoice.id]: getUpdateInvoiceErrorMessage(error),
+      }));
     }
   };
 
@@ -519,6 +592,9 @@ export default function InvoicesPage() {
               const urgency = getUrgency(invoice, now);
               const markPaidState = markPaidStateByInvoiceId[invoice.id] ?? 'idle';
               const markPaidError = markPaidErrorByInvoiceId[invoice.id];
+              const updateState = updateStateByInvoiceId[invoice.id] ?? 'idle';
+              const updateError = updateErrorByInvoiceId[invoice.id];
+              const isEditing = editingInvoiceId === invoice.id;
               const canMarkPaid = invoice.status !== 'PAID';
               return (
                 <article key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -537,6 +613,7 @@ export default function InvoicesPage() {
                       </div>
                       <p className="mt-2 text-sm font-medium text-slate-700">{getCustomerLabel(invoice)}</p>
                       <p className="mt-1 text-sm text-slate-500">{urgency.label}</p>
+                      <p className="mt-1 text-sm text-slate-500">Issued {formatDate(invoice.issuedAt)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs uppercase tracking-wide text-slate-500">Total gross</p>
@@ -546,7 +623,41 @@ export default function InvoicesPage() {
                       <p className="mt-1 text-sm text-slate-500">Due {formatDate(invoice.dueAt)}</p>
                     </div>
                   </div>
+                  {isEditing ? (
+                    <form className="mt-4 grid gap-4 md:grid-cols-3" onSubmit={(event) => void handleUpdateInvoice(event, invoice)}>
+                      <label className="flex flex-col gap-1 text-sm text-slate-700">
+                        Invoice number
+                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={invoiceNumberDrafts[invoice.id] ?? ''} onChange={(event) => setInvoiceNumberDrafts((current) => ({ ...current, [invoice.id]: event.target.value }))} />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm text-slate-700">
+                        Issued at
+                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={invoiceIssuedAtDrafts[invoice.id] ?? ''} onChange={(event) => setInvoiceIssuedAtDrafts((current) => ({ ...current, [invoice.id]: event.target.value }))} />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm text-slate-700">
+                        Due at
+                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={invoiceDueAtDrafts[invoice.id] ?? ''} onChange={(event) => setInvoiceDueAtDrafts((current) => ({ ...current, [invoice.id]: event.target.value }))} />
+                      </label>
+                      <div className="md:col-span-3 flex flex-wrap items-center gap-3">
+                        <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60" type="submit" disabled={updateState === 'submitting'}>
+                          {updateState === 'submitting' ? 'Saving invoice…' : 'Save invoice'}
+                        </button>
+                        <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => setEditingInvoiceId((current) => (current === invoice.id ? null : current))}>
+                          Cancel edit
+                        </button>
+                        {updateError ? <span className="text-sm text-rose-700">{updateError}</span> : null}
+                      </div>
+                    </form>
+                  ) : null}
                   <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {!isEditing ? (
+                      <button
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900"
+                        type="button"
+                        onClick={() => startEditingInvoice(invoice)}
+                      >
+                        Edit invoice
+                      </button>
+                    ) : null}
                     {canMarkPaid ? (
                       <>
                         <button
