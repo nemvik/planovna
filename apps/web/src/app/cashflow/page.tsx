@@ -121,6 +121,22 @@ const toIsoDateTime = (value: string) => {
   return date.toISOString();
 };
 
+const getRecurringRuleErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'data' in error &&
+    typeof error.data === 'object' &&
+    error.data !== null &&
+    'code' in error.data &&
+    error.data.code === 'CONFLICT'
+  ) {
+    return 'Recurring rule was out of date. Refresh and try again.';
+  }
+
+  return fallback;
+};
+
 export default function CashflowPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -268,9 +284,9 @@ export default function CashflowPage() {
       setCreateForm(emptyRuleForm);
       setIsCreateOpen(false);
       setCreateState('idle');
-    } catch {
+    } catch (error) {
       setCreateState('error');
-      setRulesError('Recurring cashflow item could not be created right now.');
+      setRulesError(getRecurringRuleErrorMessage(error, 'Recurring cashflow item could not be created right now.'));
     }
   };
 
@@ -316,9 +332,9 @@ export default function CashflowPage() {
       setRecurringRules((current) => current.map((candidate) => (candidate.id === updated.id ? updated : candidate)));
       setEditingRuleId(null);
       setActionState(rule.id, 'idle');
-    } catch {
+    } catch (error) {
       setActionState(rule.id, 'error');
-      setRulesError('Recurring cashflow item could not be updated right now.');
+      setRulesError(getRecurringRuleErrorMessage(error, 'Recurring cashflow item could not be updated right now.'));
     }
   };
 
@@ -342,9 +358,9 @@ export default function CashflowPage() {
         setEditingRuleId(null);
       }
       setActionState(rule.id, 'idle');
-    } catch {
+    } catch (error) {
       setActionState(rule.id, 'error');
-      setRulesError('Recurring cashflow action could not be saved right now.');
+      setRulesError(getRecurringRuleErrorMessage(error, 'Recurring cashflow action could not be saved right now.'));
     }
   };
 
@@ -383,6 +399,12 @@ export default function CashflowPage() {
             Recurring rules only
           </span>
         </div>
+
+        {rulesError && !isCreateOpen ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {rulesError}
+          </div>
+        ) : null}
 
         {isCreateOpen ? (
           <form className="mt-4 grid gap-4 md:grid-cols-2" aria-label="Add cashflow item form" onSubmit={handleCreateSubmit}>

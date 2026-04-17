@@ -271,6 +271,85 @@ describe('cashflow workspace v1', () => {
     expect(screen.getByText('STOPPED')).toBeInTheDocument();
   });
 
+  it('shows a conflict-specific retry message when recurring rule update is out of date', async () => {
+    const client = createClient();
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.cashflow.listRecurringRules.query.mockResolvedValue([
+      {
+        id: 'rule-1',
+        tenantId: 'tenant-a',
+        label: 'Studio rent',
+        amount: 450000,
+        currency: 'CZK',
+        interval: 'MONTHLY',
+        startDate: '2026-04-01T00:00:00.000Z',
+        nextRunAt: '2026-04-01T00:00:00.000Z',
+        note: 'Recurring rent',
+        status: 'ACTIVE',
+        version: 1,
+      },
+    ]);
+    client.cashflow.updateRecurringRule.mutate.mockRejectedValue({ data: { code: 'CONFLICT' } });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<CashflowPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Studio rent')).toBeInTheDocument();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Edit recurring item' }));
+    await user.clear(screen.getByLabelText('Label'));
+    await user.type(screen.getByLabelText('Label'), 'Studio rent updated');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Recurring rule was out of date. Refresh and try again.')).toBeInTheDocument();
+    });
+  });
+
+  it('shows a conflict-specific retry message when recurring rule action is out of date', async () => {
+    const client = createClient();
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.cashflow.listRecurringRules.query.mockResolvedValue([
+      {
+        id: 'rule-1',
+        tenantId: 'tenant-a',
+        label: 'Studio rent',
+        amount: 450000,
+        currency: 'CZK',
+        interval: 'MONTHLY',
+        startDate: '2026-04-01T00:00:00.000Z',
+        nextRunAt: '2026-04-01T00:00:00.000Z',
+        note: 'Recurring rent',
+        status: 'ACTIVE',
+        version: 1,
+      },
+    ]);
+    client.cashflow.pauseRecurringRule.mutate.mockRejectedValue({ data: { code: 'CONFLICT' } });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<CashflowPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Studio rent')).toBeInTheDocument();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Pause' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Recurring rule was out of date. Refresh and try again.')).toBeInTheDocument();
+    });
+  });
+
   it('filters the loaded list by kind', async () => {
     const client = createClient();
     client.cashflow.list.query.mockResolvedValue([
