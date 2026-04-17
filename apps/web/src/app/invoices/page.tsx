@@ -168,6 +168,22 @@ const toIsoDateTime = (value: string) => {
   return date.toISOString();
 };
 
+const getMarkPaidErrorMessage = (error: unknown) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'data' in error &&
+    typeof error.data === 'object' &&
+    error.data !== null &&
+    'code' in error.data &&
+    error.data.code === 'CONFLICT'
+  ) {
+    return 'Invoice was out of date. Refresh and try marking it paid again.';
+  }
+
+  return 'Invoice could not be marked paid right now.';
+};
+
 export default function InvoicesPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -338,11 +354,11 @@ export default function InvoicesPage() {
         current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
       );
       setMarkPaidStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'idle' }));
-    } catch {
+    } catch (error) {
       setMarkPaidStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'error' }));
       setMarkPaidErrorByInvoiceId((current) => ({
         ...current,
-        [invoice.id]: 'Invoice could not be marked paid right now.',
+        [invoice.id]: getMarkPaidErrorMessage(error),
       }));
     }
   };

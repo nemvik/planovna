@@ -361,6 +361,46 @@ describe('invoices workspace v1', () => {
     expect(screen.getByRole('button', { name: 'Mark paid' })).toBeInTheDocument();
   });
 
+  it('shows a conflict-specific retry message when mark paid is out of date', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-5003',
+        number: '2026-5003',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Gamma Works',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-5003/pdf',
+        version: 7,
+      },
+    ]);
+    client.invoice.paid.mutate.mockRejectedValue({
+      data: { code: 'CONFLICT' },
+    });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-paid'));
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-04-17T06:07:00.000Z').getTime());
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Mark paid' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invoice was out of date. Refresh and try marking it paid again.')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Mark paid' })).toBeInTheDocument();
+  });
+
   it('shows explicit empty and error states from the current route data load', async () => {
     const emptyClient = createClient();
     emptyClient.invoice.list.query.mockResolvedValue([]);
