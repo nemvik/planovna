@@ -9,7 +9,7 @@ import { createTrpcClient } from '../../lib/trpc/client';
 type InvoiceSummary = {
   id: string;
   number: string;
-  status: 'DRAFT' | 'ISSUED' | 'PAID';
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
   amountGross: number;
   currency: 'CZK' | 'EUR';
   buyerDisplayName?: string;
@@ -31,10 +31,11 @@ type CreateInvoiceInput = {
 };
 
 type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
-type StatusFilter = 'ALL' | 'NEEDS_ATTENTION' | 'PAID' | 'DRAFT';
+type StatusFilter = 'ALL' | 'NEEDS_ATTENTION' | 'PAID' | 'DRAFT' | 'CANCELLED';
 type CreateState = 'idle' | 'submitting' | 'error';
 type MarkPaidState = 'idle' | 'submitting' | 'error';
 type UpdateState = 'idle' | 'submitting' | 'error';
+type CancelState = 'idle' | 'submitting' | 'error';
 
 const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
   new Intl.NumberFormat('en-US', {
@@ -84,6 +85,15 @@ const getUrgency = (invoice: InvoiceSummary, now: Date) => {
       tone: 'slate' as const,
       label: 'Draft invoice',
       badge: 'Draft',
+      needsAttention: false,
+    };
+  }
+
+  if (invoice.status === 'CANCELLED') {
+    return {
+      tone: 'slate' as const,
+      label: 'Cancelled invoice',
+      badge: 'Cancelled',
       needsAttention: false,
     };
   }
@@ -202,6 +212,22 @@ const getUpdateInvoiceErrorMessage = (error: unknown) => {
   return 'Invoice could not be updated right now.';
 };
 
+const getCancelInvoiceErrorMessage = (error: unknown) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'data' in error &&
+    typeof error.data === 'object' &&
+    error.data !== null &&
+    'code' in error.data &&
+    error.data.code === 'CONFLICT'
+  ) {
+    return 'Invoice was out of date. Refresh and try cancelling it again.';
+  }
+
+  return 'Invoice could not be cancelled right now.';
+};
+
 export default function InvoicesPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -217,6 +243,8 @@ export default function InvoicesPage() {
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [updateStateByInvoiceId, setUpdateStateByInvoiceId] = useState<Record<string, UpdateState>>({});
   const [updateErrorByInvoiceId, setUpdateErrorByInvoiceId] = useState<Record<string, string | null>>({});
+  const [cancelStateByInvoiceId, setCancelStateByInvoiceId] = useState<Record<string, CancelState>>({});
+  const [cancelErrorByInvoiceId, setCancelErrorByInvoiceId] = useState<Record<string, string | null>>({});
   const [invoiceNumberDrafts, setInvoiceNumberDrafts] = useState<Record<string, string>>({});
   const [invoiceIssuedAtDrafts, setInvoiceIssuedAtDrafts] = useState<Record<string, string>>({});
   const [invoiceDueAtDrafts, setInvoiceDueAtDrafts] = useState<Record<string, string>>({});
@@ -285,6 +313,7 @@ export default function InvoicesPage() {
       { label: 'Overdue', value: overdue },
       { label: 'Paid', value: paid },
       { label: 'Drafts', value: drafts },
+      { label: 'Cancelled', value: invoices.filter((invoice) => invoice.status === 'CANCELLED').length },
     ];
   }, [invoices, now]);
 
@@ -302,6 +331,7 @@ export default function InvoicesPage() {
         statusFilter === 'ALL' ||
         (statusFilter === 'PAID' && invoice.status === 'PAID') ||
         (statusFilter === 'DRAFT' && invoice.status === 'DRAFT') ||
+        (statusFilter === 'CANCELLED' && invoice.status === 'CANCELLED') ||
         (statusFilter === 'NEEDS_ATTENTION' && urgency.needsAttention);
 
       return matchesSearch && matchesStatus;
@@ -406,6 +436,28 @@ export default function InvoicesPage() {
       setUpdateErrorByInvoiceId((current) => ({
         ...current,
         [invoice.id]: getUpdateInvoiceErrorMessage(error),
+      }));
+    }
+  };
+
+  const handleCancelInvoice = async (invoice: InvoiceSummary) => {
+    setCancelStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'submitting' }));
+    setCancelErrorByInvoiceId((current) => ({ ...current, [invoice.id]: null }));
+
+    try {
+      const client = createTrpcClient(accessToken);
+      const updated = (await client.invoice.cancel.mutate({
+        invoiceId: invoice.id,
+        version: invoice.version,
+      })) as InvoiceSummary;
+
+      setInvoices((current) => current.map((candidate) => (candidate.id === updated.id ? updated : candidate)));
+      setCancelStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'idle' }));
+    } catch (error) {
+      setCancelStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'error' }));
+      setCancelErrorByInvoiceId((current) => ({
+        ...current,
+        [invoice.id]: getCancelInvoiceErrorMessage(error),
       }));
     }
   };
@@ -553,6 +605,7 @@ export default function InvoicesPage() {
                 <option value="NEEDS_ATTENTION">Needs attention</option>
                 <option value="PAID">Paid</option>
                 <option value="DRAFT">Drafts</option>
+                <option value="CANCELLED">Cancelled</option>
               </select>
             </label>
           </div>
@@ -592,10 +645,13 @@ export default function InvoicesPage() {
               const urgency = getUrgency(invoice, now);
               const markPaidState = markPaidStateByInvoiceId[invoice.id] ?? 'idle';
               const markPaidError = markPaidErrorByInvoiceId[invoice.id];
+              const cancelState = cancelStateByInvoiceId[invoice.id] ?? 'idle';
+              const cancelError = cancelErrorByInvoiceId[invoice.id];
               const updateState = updateStateByInvoiceId[invoice.id] ?? 'idle';
               const updateError = updateErrorByInvoiceId[invoice.id];
               const isEditing = editingInvoiceId === invoice.id;
-              const canMarkPaid = invoice.status !== 'PAID';
+              const canMarkPaid = invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
+              const canCancel = invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
               return (
                 <article key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -657,6 +713,19 @@ export default function InvoicesPage() {
                       >
                         Edit invoice
                       </button>
+                    ) : null}
+                    {canCancel ? (
+                      <>
+                        <button
+                          className="rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-60"
+                          type="button"
+                          disabled={cancelState === 'submitting'}
+                          onClick={() => void handleCancelInvoice(invoice)}
+                        >
+                          {cancelState === 'submitting' ? 'Cancelling invoice…' : 'Cancel invoice'}
+                        </button>
+                        {cancelError ? <span className="text-sm text-rose-700">{cancelError}</span> : null}
+                      </>
                     ) : null}
                     {canMarkPaid ? (
                       <>

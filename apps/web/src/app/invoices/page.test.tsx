@@ -19,6 +19,7 @@ const createClient = () => ({
     issue: { mutate: jest.fn() },
     paid: { mutate: jest.fn() },
     update: { mutate: jest.fn() },
+    cancel: { mutate: jest.fn() },
   },
 });
 
@@ -99,6 +100,7 @@ describe('invoices workspace v1', () => {
     expect(screen.getByRole('link', { name: 'Open cashflow' })).toHaveAttribute('href', '/cashflow');
     expect(screen.getByText('Invoices stay list-first here, with cashflow as a separate next step.')).toBeInTheDocument();
     expect(screen.getByText('All invoices')).toBeInTheDocument();
+    expect(screen.getAllByText('Cancelled').length).toBeGreaterThan(0);
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
     expect(screen.getByText('Acme Interiors')).toBeInTheDocument();
@@ -499,6 +501,96 @@ describe('invoices workspace v1', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Invoice was out of date. Refresh and try saving it again.')).toBeInTheDocument();
+    });
+  });
+
+  it('cancels an invoice locally and keeps it visible without mark paid affordance', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-7001',
+        number: '2026-7001',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Foxtrot Studio',
+        issuedAt: '2026-04-10T00:00:00.000Z',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-7001/pdf',
+        version: 2,
+      },
+    ]);
+    client.invoice.cancel.mutate.mockResolvedValue({
+      id: 'inv-7001',
+      number: '2026-7001',
+      status: 'CANCELLED',
+      amountGross: 121000,
+      currency: 'CZK',
+      buyerDisplayName: 'Foxtrot Studio',
+      issuedAt: '2026-04-10T00:00:00.000Z',
+      dueAt: '2026-04-30T00:00:00.000Z',
+      pdfPath: '/invoices/inv-7001/pdf',
+      version: 3,
+    });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-cancel'));
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Cancel invoice' }));
+
+    await waitFor(() => {
+      expect(client.invoice.cancel.mutate).toHaveBeenCalledWith({
+        invoiceId: 'inv-7001',
+        version: 2,
+      });
+    });
+
+    expect(screen.getByText('CANCELLED')).toBeInTheDocument();
+    expect(screen.getAllByText('Cancelled').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Mark paid' })).not.toBeInTheDocument();
+  });
+
+  it('shows a conflict-specific retry message when invoice cancel is out of date', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-7002',
+        number: '2026-7002',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Golf Works',
+        issuedAt: '2026-04-10T00:00:00.000Z',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-7002/pdf',
+        version: 5,
+      },
+    ]);
+    client.invoice.cancel.mutate.mockRejectedValue({ data: { code: 'CONFLICT' } });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-cancel'));
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Cancel invoice' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invoice was out of date. Refresh and try cancelling it again.')).toBeInTheDocument();
     });
   });
 

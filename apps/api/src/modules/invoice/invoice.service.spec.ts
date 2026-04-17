@@ -130,6 +130,95 @@ describe('InvoiceService', () => {
     expect(cashflow.upsertActualIn).not.toHaveBeenCalled();
   });
 
+  it('cancels a non-paid invoice without touching cashflow', async () => {
+    const cashflow = {
+      upsertPlannedIn: jest.fn(),
+      upsertActualIn: jest.fn(),
+    };
+    const prisma = {
+      invoice: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({
+            id: 'inv-cancel',
+            tenantId: 't1',
+            version: 2,
+            status: 'ISSUED',
+          })
+          .mockResolvedValueOnce({
+            id: 'inv-cancel',
+            tenantId: 't1',
+            orderId: 'o1',
+            number: '2026-0003',
+            status: 'CANCELLED',
+            currency: 'CZK',
+            amountNet: decimal(1000),
+            amountVat: decimal(210),
+            amountGross: decimal(1210),
+            issuedAt: new Date('2026-04-12T00:00:00.000Z'),
+            dueAt: new Date('2026-05-02T00:00:00.000Z'),
+            paidAt: null,
+            version: 3,
+          }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const service = new InvoiceService(cashflow as never, prisma as never);
+
+    const cancelled = await service.cancel('t1', {
+      invoiceId: 'inv-cancel',
+      version: 2,
+    });
+
+    expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'inv-cancel',
+        tenantId: 't1',
+        version: 2,
+      },
+      data: {
+        status: 'CANCELLED',
+        version: {
+          increment: 1,
+        },
+      },
+    });
+    expect(cancelled).toMatchObject({
+      id: 'inv-cancel',
+      status: 'CANCELLED',
+      version: 3,
+    });
+    expect(cashflow.upsertPlannedIn).not.toHaveBeenCalled();
+    expect(cashflow.upsertActualIn).not.toHaveBeenCalled();
+  });
+
+  it('does not cancel a paid invoice', async () => {
+    const cashflow = {
+      upsertPlannedIn: jest.fn(),
+      upsertActualIn: jest.fn(),
+    };
+    const prisma = {
+      invoice: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'inv-paid',
+          tenantId: 't1',
+          version: 2,
+          status: 'PAID',
+        }),
+        updateMany: jest.fn(),
+      },
+    };
+    const service = new InvoiceService(cashflow as never, prisma as never);
+
+    const cancelled = await service.cancel('t1', {
+      invoiceId: 'inv-paid',
+      version: 2,
+    });
+
+    expect(cancelled).toBeNull();
+    expect(prisma.invoice.updateMany).not.toHaveBeenCalled();
+  });
+
   it('creates actual cashflow on markPaid', async () => {
     const cashflow = {
       upsertPlannedIn: jest.fn(),

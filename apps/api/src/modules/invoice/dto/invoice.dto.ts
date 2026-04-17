@@ -30,6 +30,12 @@ export const UpdateInvoiceSchema = z
     { message: 'At least one editable invoice field must be provided.' },
   );
 
+export const CancelInvoiceSchema = z.object({
+  invoiceId: z.string().min(1),
+  version: z.number().int().positive(),
+});
+
 export type CreateInvoiceDto = z.infer<typeof CreateInvoiceSchema>;
 export type MarkPaidDto = z.infer<typeof MarkPaidSchema>;
 export type UpdateInvoiceDto = z.infer<typeof UpdateInvoiceSchema>;
+export type CancelInvoiceDto = z.infer<typeof CancelInvoiceSchema>;

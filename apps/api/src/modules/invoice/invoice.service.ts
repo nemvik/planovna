@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CashflowService } from '../cashflow/cashflow.service';
-import { CreateInvoiceDto, MarkPaidDto, UpdateInvoiceDto } from './dto/invoice.dto';
+import { CancelInvoiceDto, CreateInvoiceDto, MarkPaidDto, UpdateInvoiceDto } from './dto/invoice.dto';
 
 type Invoice = CreateInvoiceDto & {
   id: string;
   tenantId: string;
-  status: 'DRAFT' | 'ISSUED' | 'PAID';
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
   amountVat: number;
   amountGross: number;
   hasBreakdown: boolean;
@@ -26,7 +26,7 @@ type PrismaInvoiceRow = {
   tenantId: string;
   orderId: string;
   number: string;
-  status: 'DRAFT' | 'ISSUED' | 'PAID';
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
   currency: string;
   amountNet: {
     toNumber(): number;
@@ -194,6 +194,84 @@ export class InvoiceService {
     return this.toInvoiceRecord(row);
   }
 
+  async cancel(actorTenantId: string, input: CancelInvoiceDto) {
+    const existing = await this.prisma.invoice.findUnique({
+      where: { id: input.invoiceId },
+      select: {
+        id: true,
+        tenantId: true,
+        version: true,
+        status: true,
+      },
+    });
+
+    if (!existing || existing.tenantId !== actorTenantId) {
+      return null;
+    }
+
+    if (existing.status === 'PAID') {
+      return null;
+    }
+
+    assertVersion('Invoice', existing.id, input.version, existing.version);
+
+    const updated = await this.prisma.invoice.updateMany({
+      where: {
+        id: existing.id,
+        tenantId: existing.tenantId,
+        version: existing.version,
+      },
+      data: {
+        status: 'CANCELLED',
+        version: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      const latest = await this.prisma.invoice.findUnique({
+        where: { id: input.invoiceId },
+        select: {
+          id: true,
+          tenantId: true,
+          version: true,
+        },
+      });
+
+      if (!latest || latest.tenantId !== actorTenantId) {
+        return null;
+      }
+
+      assertVersion('Invoice', latest.id, input.version, latest.version);
+    }
+
+    const row = await this.prisma.invoice.findUnique({
+      where: { id: input.invoiceId },
+      select: {
+        id: true,
+        tenantId: true,
+        orderId: true,
+        number: true,
+        status: true,
+        currency: true,
+        amountNet: true,
+        amountVat: true,
+        amountGross: true,
+        issuedAt: true,
+        dueAt: true,
+        paidAt: true,
+        version: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return this.toInvoiceRecord(row);
+  }
+
   async markPaid(actorTenantId: string, input: MarkPaidDto) {
     const existing = await this.prisma.invoice.findUnique({
       where: { id: input.invoiceId },
@@ -201,10 +279,15 @@ export class InvoiceService {
         id: true,
         tenantId: true,
         version: true,
+        status: true,
       },
     });
 
     if (!existing || existing.tenantId !== actorTenantId) {
+      return null;
+    }
+
+    if (existing.status === 'CANCELLED') {
       return null;
     }
 

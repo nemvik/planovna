@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { InvoiceService } from '../../modules/invoice/invoice.service';
-import { MarkPaidSchema, UpdateInvoiceSchema } from '../../modules/invoice/dto/invoice.dto';
+import { CancelInvoiceSchema, MarkPaidSchema, UpdateInvoiceSchema } from '../../modules/invoice/dto/invoice.dto';
 import { throwTrpcVersionConflict } from '../errors/version-conflict';
 import { roleProtectedProcedure, router } from '../trpc';
 
@@ -49,6 +49,23 @@ export const createInvoiceRouter = (invoiceService: InvoiceService) =>
       .mutation(async ({ ctx, input }) => {
         try {
           const result = await invoiceService.update(ctx.auth.tenantId, input);
+          if (!result) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Invoice access denied',
+            });
+          }
+
+          return result;
+        } catch (error) {
+          throwTrpcVersionConflict(error);
+        }
+      }),
+    cancel: invoiceWriteProcedure
+      .input(CancelInvoiceSchema)
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const result = await invoiceService.cancel(ctx.auth.tenantId, input);
           if (!result) {
             throw new TRPCError({
               code: 'FORBIDDEN',
