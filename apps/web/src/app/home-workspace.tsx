@@ -3927,7 +3927,7 @@ export default function Home() {
                                           setExpandedOperationId((currentExpandedOperationId) => {
                                             const nextExpandedOperationId =
                                               currentExpandedOperationId === operation.id ? null : operation.id;
-                                            setExpandedOperationPanel(nextExpandedOperationId ? 'edit' : null);
+                                            setExpandedOperationPanel(null);
                                             return nextExpandedOperationId;
                                           });
                                         }}
