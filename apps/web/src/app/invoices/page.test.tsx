@@ -17,6 +17,7 @@ const createClient = () => ({
   invoice: {
     list: { query: jest.fn() },
     issue: { mutate: jest.fn() },
+    paid: { mutate: jest.fn() },
   },
 });
 
@@ -56,6 +57,7 @@ describe('invoices workspace v1', () => {
         buyerDisplayName: 'Acme Interiors',
         dueAt: '2026-03-20T00:00:00.000Z',
         pdfPath: '/invoices/inv-overdue/pdf',
+        version: 1,
       },
       {
         id: 'inv-paid',
@@ -67,6 +69,7 @@ describe('invoices workspace v1', () => {
         dueAt: '2026-03-25T00:00:00.000Z',
         paidAt: '2026-03-24T00:00:00.000Z',
         pdfPath: '/invoices/inv-paid/pdf',
+        version: 2,
       },
       {
         id: 'inv-draft',
@@ -75,6 +78,7 @@ describe('invoices workspace v1', () => {
         amountGross: 50000,
         currency: 'CZK',
         pdfPath: '/invoices/inv-draft/pdf',
+        version: 3,
       },
     ]);
 
@@ -114,6 +118,7 @@ describe('invoices workspace v1', () => {
         buyerDisplayName: 'Acme Interiors',
         dueAt: '2026-03-20T00:00:00.000Z',
         pdfPath: '/invoices/inv-a/pdf',
+        version: 1,
       },
       {
         id: 'inv-b',
@@ -124,6 +129,7 @@ describe('invoices workspace v1', () => {
         buyerDisplayName: 'Beta Studio',
         paidAt: '2026-03-21T00:00:00.000Z',
         pdfPath: '/invoices/inv-b/pdf',
+        version: 2,
       },
     ]);
 
@@ -156,6 +162,7 @@ describe('invoices workspace v1', () => {
         buyerDisplayName: 'Beta Studio',
         paidAt: '2026-03-21T00:00:00.000Z',
         pdfPath: '/invoices/inv-a/pdf',
+        version: 1,
       },
     ]);
 
@@ -189,6 +196,7 @@ describe('invoices workspace v1', () => {
           buyerDisplayName: 'Created Customer',
           dueAt: '2026-04-30T00:00:00.000Z',
           pdfPath: '/invoices/inv-created/pdf',
+          version: 1,
         },
       ]);
     client.invoice.issue.mutate.mockResolvedValue({ id: 'inv-created' });
@@ -258,6 +266,99 @@ describe('invoices workspace v1', () => {
     await waitFor(() => {
       expect(screen.getByText('Invoice could not be created right now.')).toBeInTheDocument();
     });
+  });
+
+  it('marks an issued invoice as paid locally', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-5001',
+        number: '2026-5001',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Acme Interiors',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-5001/pdf',
+        version: 4,
+      },
+    ]);
+    client.invoice.paid.mutate.mockResolvedValue({
+      id: 'inv-5001',
+      number: '2026-5001',
+      status: 'PAID',
+      amountGross: 121000,
+      currency: 'CZK',
+      buyerDisplayName: 'Acme Interiors',
+      dueAt: '2026-04-30T00:00:00.000Z',
+      paidAt: '2026-04-17T06:07:00.000Z',
+      pdfPath: '/invoices/inv-5001/pdf',
+      version: 5,
+    });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-paid'));
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-04-17T06:07:00.000Z').getTime());
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Mark paid' }));
+
+    await waitFor(() => {
+      expect(client.invoice.paid.mutate).toHaveBeenCalledWith({
+        invoiceId: 'inv-5001',
+        paidAt: '2026-04-17T06:07:00.000Z',
+        version: 4,
+      });
+    });
+
+    expect(screen.queryByRole('button', { name: 'Mark paid' })).not.toBeInTheDocument();
+    expect(screen.getByText('PAID')).toBeInTheDocument();
+    expect(screen.getByText('Paid 17 Apr 2026')).toBeInTheDocument();
+  });
+
+  it('shows a local error when mark paid fails', async () => {
+    const client = createClient();
+    client.invoice.list.query.mockResolvedValue([
+      {
+        id: 'inv-5002',
+        number: '2026-5002',
+        status: 'ISSUED',
+        amountGross: 121000,
+        currency: 'CZK',
+        buyerDisplayName: 'Beta Studio',
+        dueAt: '2026-04-30T00:00:00.000Z',
+        pdfPath: '/invoices/inv-5002/pdf',
+        version: 2,
+      },
+    ]);
+    client.invoice.paid.mutate.mockRejectedValue(new Error('paid failed'));
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, createAccessToken('tenant-paid'));
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-04-17T06:07:00.000Z').getTime());
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(client.invoice.list.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Mark paid' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invoice could not be marked paid right now.')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Mark paid' })).toBeInTheDocument();
   });
 
   it('shows explicit empty and error states from the current route data load', async () => {

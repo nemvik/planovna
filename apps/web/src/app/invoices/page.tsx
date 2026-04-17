@@ -16,6 +16,7 @@ type InvoiceSummary = {
   dueAt?: string;
   paidAt?: string;
   pdfPath: string;
+  version: number;
 };
 
 type CreateInvoiceInput = {
@@ -31,6 +32,7 @@ type CreateInvoiceInput = {
 type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 type StatusFilter = 'ALL' | 'NEEDS_ATTENTION' | 'PAID' | 'DRAFT';
 type CreateState = 'idle' | 'submitting' | 'error';
+type MarkPaidState = 'idle' | 'submitting' | 'error';
 
 const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
   new Intl.NumberFormat('en-US', {
@@ -176,6 +178,8 @@ export default function InvoicesPage() {
   const [createState, setCreateState] = useState<CreateState>('idle');
   const [createError, setCreateError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [markPaidStateByInvoiceId, setMarkPaidStateByInvoiceId] = useState<Record<string, MarkPaidState>>({});
+  const [markPaidErrorByInvoiceId, setMarkPaidErrorByInvoiceId] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     const syncSession = () => {
@@ -276,7 +280,6 @@ export default function InvoicesPage() {
     event.preventDefault();
     setCreateError(null);
 
-
     const amountNet = Number(createForm.amountNet);
     const vatRatePercent = Number(createForm.vatRatePercent);
 
@@ -315,6 +318,32 @@ export default function InvoicesPage() {
     } catch {
       setCreateState('error');
       setCreateError('Invoice could not be created right now.');
+    }
+  };
+
+  const handleMarkPaid = async (invoice: InvoiceSummary) => {
+    setMarkPaidStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'submitting' }));
+    setMarkPaidErrorByInvoiceId((current) => ({ ...current, [invoice.id]: null }));
+
+    try {
+      const client = createTrpcClient(accessToken);
+      const paidAt = new Date(Date.now()).toISOString();
+      const updated = (await client.invoice.paid.mutate({
+        invoiceId: invoice.id,
+        paidAt,
+        version: invoice.version,
+      })) as InvoiceSummary;
+
+      setInvoices((current) =>
+        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+      );
+      setMarkPaidStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'idle' }));
+    } catch {
+      setMarkPaidStateByInvoiceId((current) => ({ ...current, [invoice.id]: 'error' }));
+      setMarkPaidErrorByInvoiceId((current) => ({
+        ...current,
+        [invoice.id]: 'Invoice could not be marked paid right now.',
+      }));
     }
   };
 
@@ -472,6 +501,9 @@ export default function InvoicesPage() {
         {loadState === 'loaded'
           ? filteredInvoices.map((invoice) => {
               const urgency = getUrgency(invoice, now);
+              const markPaidState = markPaidStateByInvoiceId[invoice.id] ?? 'idle';
+              const markPaidError = markPaidErrorByInvoiceId[invoice.id];
+              const canMarkPaid = invoice.status !== 'PAID';
               return (
                 <article key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -499,6 +531,19 @@ export default function InvoicesPage() {
                     </div>
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {canMarkPaid ? (
+                      <>
+                        <button
+                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 disabled:opacity-60"
+                          type="button"
+                          disabled={markPaidState === 'submitting'}
+                          onClick={() => void handleMarkPaid(invoice)}
+                        >
+                          {markPaidState === 'submitting' ? 'Marking paid…' : 'Mark paid'}
+                        </button>
+                        {markPaidError ? <span className="text-sm text-rose-700">{markPaidError}</span> : null}
+                      </>
+                    ) : null}
                     <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
                       Open PDF
                     </Link>
