@@ -5,20 +5,13 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import AppShell from '../app-shell';
 import HomeWorkspace, { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY } from '../home-workspace';
 import { createTrpcClient } from '../../lib/trpc/client';
-
-type InvoiceSummary = {
-  id: string;
-  number: string;
-  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
-  amountGross: number;
-  currency: 'CZK' | 'EUR';
-  buyerDisplayName?: string;
-  issuedAt?: string;
-  dueAt?: string;
-  paidAt?: string;
-  pdfPath: string;
-  version: number;
-};
+import {
+  formatDate,
+  formatMoney,
+  getCustomerLabel,
+  getUrgency,
+  InvoiceSummary,
+} from './invoice-detail-shared';
 
 type CreateInvoiceInput = {
   orderId: string;
@@ -36,118 +29,6 @@ type CreateState = 'idle' | 'submitting' | 'error';
 type MarkPaidState = 'idle' | 'submitting' | 'error';
 type UpdateState = 'idle' | 'submitting' | 'error';
 type CancelState = 'idle' | 'submitting' | 'error';
-
-const formatMoney = (amount: number, currency: InvoiceSummary['currency']) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
-
-const formatDate = (value?: string) => {
-  if (!value) {
-    return 'No due date';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'No due date';
-  }
-
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
-};
-
-const getCustomerLabel = (invoice: InvoiceSummary) => {
-  if (invoice.buyerDisplayName && invoice.buyerDisplayName.trim().length > 0) {
-    return invoice.buyerDisplayName;
-  }
-
-  return 'Customer name is not available.';
-};
-
-const getUrgency = (invoice: InvoiceSummary, now: Date) => {
-  if (invoice.status === 'PAID') {
-    return {
-      tone: 'emerald' as const,
-      label: invoice.paidAt ? `Paid ${formatDate(invoice.paidAt)}` : 'Paid',
-      badge: 'Paid',
-      needsAttention: false,
-    };
-  }
-
-  if (invoice.status === 'DRAFT') {
-    return {
-      tone: 'slate' as const,
-      label: 'Draft invoice',
-      badge: 'Draft',
-      needsAttention: false,
-    };
-  }
-
-  if (invoice.status === 'CANCELLED') {
-    return {
-      tone: 'slate' as const,
-      label: 'Cancelled invoice',
-      badge: 'Cancelled',
-      needsAttention: false,
-    };
-  }
-
-  if (!invoice.dueAt) {
-    return {
-      tone: 'amber' as const,
-      label: 'Due date is not available',
-      badge: 'Unpaid',
-      needsAttention: true,
-    };
-  }
-
-  const dueDate = new Date(invoice.dueAt);
-  if (Number.isNaN(dueDate.getTime())) {
-    return {
-      tone: 'amber' as const,
-      label: 'Due date is not available',
-      badge: 'Unpaid',
-      needsAttention: true,
-    };
-  }
-
-  const nowAtMidnight = new Date(now);
-  nowAtMidnight.setHours(0, 0, 0, 0);
-  const dueAtMidnight = new Date(dueDate);
-  dueAtMidnight.setHours(0, 0, 0, 0);
-  const daysUntilDue = Math.round((dueAtMidnight.getTime() - nowAtMidnight.getTime()) / 86400000);
-
-  if (daysUntilDue < 0) {
-    return {
-      tone: 'rose' as const,
-      label: `${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? '' : 's'} overdue`,
-      badge: 'Overdue',
-      needsAttention: true,
-    };
-  }
-
-  if (daysUntilDue === 0) {
-    return {
-      tone: 'amber' as const,
-      label: 'Due today',
-      badge: 'Due today',
-      needsAttention: true,
-    };
-  }
-
-  return {
-    tone: 'sky' as const,
-    label: `Due ${formatDate(invoice.dueAt)}`,
-    badge: 'Issued',
-    needsAttention: false,
-  };
-};
 
 const toneClasses = {
   slate: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -740,6 +621,10 @@ export default function InvoicesPage() {
                         {markPaidError ? <span className="text-sm text-rose-700">{markPaidError}</span> : null}
                       </>
                     ) : null}
+                    <Link className="text-sm font-medium text-sky-700 underline" href={`/invoices/${invoice.id}`}>
+                      Open details
+                    </Link>
+                    <span className="text-sm text-slate-500">Read-only invoice detail</span>
                     <Link className="text-sm font-medium text-sky-700 underline" href={invoice.pdfPath}>
                       Open PDF
                     </Link>

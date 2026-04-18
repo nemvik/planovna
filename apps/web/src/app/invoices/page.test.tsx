@@ -16,6 +16,7 @@ const createAccessToken = (tenantId = 'tenant-owner') => {
 const createClient = () => ({
   invoice: {
     list: { query: jest.fn() },
+    getById: { query: jest.fn() },
     issue: { mutate: jest.fn() },
     paid: { mutate: jest.fn() },
     update: { mutate: jest.fn() },
@@ -105,6 +106,8 @@ describe('invoices workspace v1', () => {
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
     expect(screen.getByText('Acme Interiors')).toBeInTheDocument();
     expect(screen.getByText('2026-1001')).toBeInTheDocument();
+    expect(screen.getAllByText('Read-only invoice detail').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Open details' })[0]).toHaveAttribute('href', '/invoices/inv-overdue');
     expect(screen.getAllByText('Invoice PDF document').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Open PDF' })[0]).toHaveAttribute('href', '/invoices/inv-overdue/pdf');
   });

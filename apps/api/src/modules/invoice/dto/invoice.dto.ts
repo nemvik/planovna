@@ -17,6 +17,10 @@ export const MarkPaidSchema = z.object({
   tenantId: z.string().min(1).optional(),
 });
 
+export const GetInvoiceByIdSchema = z.object({
+  invoiceId: z.string().min(1),
+});
+
 export const UpdateInvoiceSchema = z
   .object({
     invoiceId: z.string().min(1),
@@ -36,6 +40,7 @@ export const CancelInvoiceSchema = z.object({
 });
 
 export type CreateInvoiceDto = z.infer<typeof CreateInvoiceSchema>;
+export type GetInvoiceByIdDto = z.infer<typeof GetInvoiceByIdSchema>;
 export type MarkPaidDto = z.infer<typeof MarkPaidSchema>;
 export type UpdateInvoiceDto = z.infer<typeof UpdateInvoiceSchema>;
 export type CancelInvoiceDto = z.infer<typeof CancelInvoiceSchema>;

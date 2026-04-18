@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { assertVersion } from '../../common/optimistic-lock/assert-version';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CashflowService } from '../cashflow/cashflow.service';
-import { CancelInvoiceDto, CreateInvoiceDto, MarkPaidDto, UpdateInvoiceDto } from './dto/invoice.dto';
+import { CancelInvoiceDto, CreateInvoiceDto, GetInvoiceByIdDto, MarkPaidDto, UpdateInvoiceDto } from './dto/invoice.dto';
 
 type Invoice = CreateInvoiceDto & {
   id: string;
@@ -19,6 +19,20 @@ type Invoice = CreateInvoiceDto & {
 type InvoicePdfExport = {
   fileName: string;
   content: Buffer;
+};
+
+type InvoiceDetailRecord = {
+  id: string;
+  number: string;
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED';
+  amountGross: number;
+  currency: 'CZK' | 'EUR';
+  buyerDisplayName?: string;
+  issuedAt?: string;
+  dueAt?: string;
+  paidAt?: string;
+  pdfPath: string;
+  version: number;
 };
 
 type PrismaInvoiceRow = {
@@ -41,6 +55,11 @@ type PrismaInvoiceRow = {
   dueAt: Date | null;
   paidAt: Date | null;
   version: number;
+  order?: {
+    customer?: {
+      name: string;
+    } | null;
+  } | null;
 };
 
 @Injectable()
@@ -72,6 +91,42 @@ export class InvoiceService {
     });
 
     return persisted.map((invoice) => this.toInvoiceRecord(invoice));
+  }
+
+  async getById(actorTenantId: string, input: GetInvoiceByIdDto): Promise<InvoiceDetailRecord | null> {
+    const row = await this.prisma.invoice.findUnique({
+      where: { id: input.invoiceId },
+      select: {
+        id: true,
+        tenantId: true,
+        orderId: true,
+        number: true,
+        status: true,
+        currency: true,
+        amountNet: true,
+        amountVat: true,
+        amountGross: true,
+        issuedAt: true,
+        dueAt: true,
+        paidAt: true,
+        version: true,
+        order: {
+          select: {
+            customer: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!row || row.tenantId !== actorTenantId) {
+      return null;
+    }
+
+    return this.toInvoiceDetailRecord(row);
   }
 
   async issue(actorTenantId: string, input: CreateInvoiceDto) {
@@ -427,6 +482,22 @@ export class InvoiceService {
 
   private toInvoicePdfPath(invoiceId: string): string {
     return `/invoices/${encodeURIComponent(invoiceId)}/pdf`;
+  }
+
+  private toInvoiceDetailRecord(row: PrismaInvoiceRow): InvoiceDetailRecord {
+    return {
+      id: row.id,
+      number: row.number,
+      status: row.status,
+      amountGross: Number(row.amountGross.toNumber().toFixed(2)),
+      currency: row.currency as 'CZK' | 'EUR',
+      buyerDisplayName: row.order?.customer?.name,
+      issuedAt: row.issuedAt?.toISOString(),
+      dueAt: row.dueAt?.toISOString(),
+      paidAt: row.paidAt?.toISOString(),
+      pdfPath: this.toInvoicePdfPath(row.id),
+      version: row.version,
+    };
   }
 
   private computeInvoiceBreakdown(amountNet: number, vatRatePercent: number) {

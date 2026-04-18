@@ -303,6 +303,63 @@ describe('tRPC invoice contracts (e2e)', () => {
     expect(tenantBAfterPaid.some((invoice) => invoice.id === issued.id)).toBe(false);
   });
 
+  it('supports auth-scoped invoice.getById for same-tenant reads and blocks wrong-tenant or missing invoice access', async () => {
+    const tenantAOwnerLogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantAFinanceLogin = await authService.login({
+      email: 'finance@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+    const tenantBOwnerLogin = await authService.login({
+      email: 'owner@tenant-b.local',
+      password: 'tenant-b-pass',
+    });
+
+    expect(tenantAOwnerLogin).not.toBeNull();
+    expect(tenantAFinanceLogin).not.toBeNull();
+    expect(tenantBOwnerLogin).not.toBeNull();
+
+    const tenantAOwnerClient = createClient(tenantAOwnerLogin!.accessToken);
+    const tenantAFinanceClient = createClient(tenantAFinanceLogin!.accessToken);
+    const tenantBOwnerClient = createClient(tenantBOwnerLogin!.accessToken);
+    const order = await createInvoiceOrder(tenantAOwnerClient, 'tenant-a');
+    const suffix = uniqueSuffix();
+
+    const issued = await tenantAOwnerClient.invoice.issue.mutate({
+      orderId: order.id,
+      number: `INV-TRPC-DETAIL-${suffix}`,
+      currency: 'CZK',
+      amountNet: 1000,
+      vatRatePercent: 21,
+      issuedAt: new Date('2026-04-10').toISOString(),
+      dueAt: new Date('2026-04-20').toISOString(),
+    });
+
+    const detail = await tenantAFinanceClient.invoice.getById.query({ invoiceId: issued.id });
+    expect(detail).toMatchObject({
+      id: issued.id,
+      number: issued.number,
+      status: 'ISSUED',
+      amountGross: 1210,
+      currency: 'CZK',
+      buyerDisplayName: expect.any(String),
+      issuedAt: new Date('2026-04-10').toISOString(),
+      dueAt: new Date('2026-04-20').toISOString(),
+      pdfPath: `/invoices/${issued.id}/pdf`,
+      version: issued.version,
+    });
+
+    await expect(
+      tenantBOwnerClient.invoice.getById.query({ invoiceId: issued.id }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+
+    await expect(
+      tenantAFinanceClient.invoice.getById.query({ invoiceId: 'invoice-does-not-exist' }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
+  });
+
   it('supports explicit 0% VAT and safe legacy breakdown fallback in invoice responses', async () => {
     const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',
