@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  CreateManualCashflowItemDto,
   CreateRecurringCashflowRuleDto,
   RecurringCashflowRuleActionDto,
   UpdateRecurringCashflowRuleDto,
@@ -11,7 +12,7 @@ export type CashflowKind = 'PLANNED_IN' | 'ACTUAL_IN';
 export type CashflowItem = {
   id: string;
   tenantId: string;
-  invoiceId: string;
+  invoiceId: string | null;
   kind: CashflowKind;
   amount: number;
   currency: 'CZK' | 'EUR';
@@ -110,6 +111,34 @@ export class CashflowService {
     });
 
     return rows.map((row) => this.toRecurringRule(row));
+  }
+
+  async createManualItem(tenantId: string, input: CreateManualCashflowItemDto) {
+    if (!this.prisma) {
+      throw new Error('Cashflow requires Prisma');
+    }
+
+    const row = await this.prisma.cashflowItem.create({
+      data: {
+        tenantId,
+        invoiceId: null,
+        kind: input.kind,
+        amount: input.amount,
+        currency: input.currency,
+        date: input.date,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        invoiceId: true,
+        kind: true,
+        amount: true,
+        currency: true,
+        date: true,
+      },
+    });
+
+    return this.toCashflowItem(row);
   }
 
   async createRecurringRule(tenantId: string, input: CreateRecurringCashflowRuleDto) {
@@ -322,13 +351,13 @@ export class CashflowService {
   private toCashflowItemOrThrow(row: PrismaCashflowRow): CashflowItem {
     const item = this.toCashflowItem(row);
     if (!item) {
-      throw new Error(`Cashflow item ${row.id} is missing invoiceId`);
+      throw new Error(`Cashflow item ${row.id} has invalid kind`);
     }
     return item;
   }
 
   private toCashflowItem(row: PrismaCashflowRow): CashflowItem | null {
-    if (!row.invoiceId || !this.isCashflowKind(row.kind)) {
+    if (!this.isCashflowKind(row.kind)) {
       return null;
     }
 

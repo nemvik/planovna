@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { CashflowService } from '../../modules/cashflow/cashflow.service';
 import {
+  CreateManualCashflowItemSchema,
   CreateRecurringCashflowRuleSchema,
   RecurringCashflowRuleActionSchema,
   UpdateRecurringCashflowRuleSchema,
@@ -17,6 +18,11 @@ export const createCashflowRouter = (cashflowService: CashflowService) =>
     listRecurringRules: cashflowReadProcedure.query(({ ctx }) => {
       return cashflowService.listRecurringRules(ctx.auth.tenantId);
     }),
+    createManualItem: cashflowReadProcedure
+      .input(CreateManualCashflowItemSchema)
+      .mutation(({ ctx, input }) => {
+        return cashflowService.createManualItem(ctx.auth.tenantId, input);
+      }),
     createRecurringRule: cashflowReadProcedure
       .input(CreateRecurringCashflowRuleSchema)
       .mutation(({ ctx, input }) => {

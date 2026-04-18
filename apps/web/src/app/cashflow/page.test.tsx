@@ -12,6 +12,7 @@ const createClient = () => ({
   cashflow: {
     list: { query: jest.fn() },
     listRecurringRules: { query: jest.fn() },
+    createManualItem: { mutate: jest.fn() },
     createRecurringRule: { mutate: jest.fn() },
     updateRecurringRule: { mutate: jest.fn() },
     pauseRecurringRule: { mutate: jest.fn() },
@@ -101,6 +102,51 @@ describe('cashflow workspace v1', () => {
     expect(screen.getAllByText('Actual in').length).toBeGreaterThan(0);
   });
 
+  it('creates a manual cashflow item locally', async () => {
+    const client = createClient();
+    client.cashflow.list.query.mockResolvedValue([]);
+    client.cashflow.listRecurringRules.query.mockResolvedValue([]);
+    client.cashflow.createManualItem.mutate.mockResolvedValue({
+      id: 'cf-manual-1',
+      tenantId: 'tenant-a',
+      invoiceId: null,
+      kind: 'ACTUAL_IN',
+      amount: 99000,
+      currency: 'CZK',
+      date: '2026-04-20T00:00:00.000Z',
+    });
+
+    window.localStorage.setItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY, 'token-owner');
+    const createTrpcClientMock = createTrpcClient as jest.MockedFunction<typeof createTrpcClient>;
+    createTrpcClientMock.mockImplementation(() => client as never);
+
+    render(<CashflowPage />);
+
+    await waitFor(() => {
+      expect(client.cashflow.list.query).toHaveBeenCalledTimes(1);
+      expect(client.cashflow.listRecurringRules.query).toHaveBeenCalledTimes(1);
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Add cashflow item' }));
+    await user.selectOptions(screen.getByLabelText('Direction'), 'ACTUAL_IN');
+    await user.type(screen.getByLabelText('Amount'), '99000');
+    await user.type(screen.getByLabelText('Date'), '2026-04-20');
+    await user.click(screen.getByRole('button', { name: 'Add cashflow item' }));
+
+    await waitFor(() => {
+      expect(client.cashflow.createManualItem.mutate).toHaveBeenCalledWith({
+        kind: 'ACTUAL_IN',
+        amount: 99000,
+        currency: 'CZK',
+        date: '2026-04-20T00:00:00.000Z',
+      });
+    });
+
+    expect(screen.getByText('Manual cashflow item')).toBeInTheDocument();
+    expect(screen.getByText('Manual item')).toBeInTheDocument();
+  });
+
   it('creates a recurring cashflow rule locally', async () => {
     const client = createClient();
     client.cashflow.list.query.mockResolvedValue([]);
@@ -131,7 +177,7 @@ describe('cashflow workspace v1', () => {
     });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Add cashflow item' }));
+    await user.click(screen.getByRole('button', { name: 'Add recurring item' }));
     await user.type(screen.getByLabelText('Label'), 'Membership');
     await user.type(screen.getByLabelText('Amount'), '99000');
     await user.type(screen.getByLabelText('Start date'), '2026-04-20');

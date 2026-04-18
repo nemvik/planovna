@@ -139,6 +139,33 @@ describe('tRPC cashflow read contracts (e2e)', () => {
     );
   });
 
+  it('creates manual cashflow items without invoice linkage', async () => {
+    const ownerLogin = await authService.login({
+      email: 'owner@tenant-a.local',
+      password: 'tenant-a-pass',
+    });
+
+    expect(ownerLogin).not.toBeNull();
+
+    const ownerClient = createClient(ownerLogin!.accessToken);
+    const manual = await ownerClient.cashflow.createManualItem.mutate({
+      kind: 'PLANNED_IN',
+      amount: 15000,
+      currency: 'CZK',
+      date: new Date('2026-04-20T00:00:00.000Z').toISOString(),
+    });
+
+    expect(manual).toMatchObject({
+      kind: 'PLANNED_IN',
+      amount: 15000,
+      currency: 'CZK',
+      invoiceId: null,
+    });
+
+    const listed = await ownerClient.cashflow.list.query();
+    expect(listed.some((item) => item.id === manual.id && item.invoiceId === null)).toBe(true);
+  });
+
   it('creates, updates, and transitions recurring cashflow rules with tenant scoping', async () => {
     const ownerLogin = await authService.login({
       email: 'owner@tenant-a.local',

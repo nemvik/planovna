@@ -9,7 +9,7 @@ import { createTrpcClient } from '../../lib/trpc/client';
 type CashflowItem = {
   id: string;
   tenantId: string;
-  invoiceId: string;
+  invoiceId: string | null;
   kind: 'PLANNED_IN' | 'ACTUAL_IN';
   amount: number;
   currency: 'CZK' | 'EUR';
@@ -39,6 +39,13 @@ type RuleForm = {
   note: string;
 };
 
+type ManualItemForm = {
+  kind: CashflowItem['kind'];
+  amount: string;
+  currency: 'CZK' | 'EUR';
+  date: string;
+};
+
 type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 type RulesLoadState = 'loading' | 'loaded' | 'empty' | 'error';
 type HorizonFilter = 'ALL' | 'NEXT_30_DAYS' | 'PAST_DUE';
@@ -51,6 +58,13 @@ const emptyRuleForm: RuleForm = {
   currency: 'CZK',
   startDate: '',
   note: '',
+};
+
+const emptyManualItemForm: ManualItemForm = {
+  kind: 'PLANNED_IN',
+  amount: '',
+  currency: 'CZK',
+  date: '',
 };
 
 const formatMoney = (amount: number, currency: 'CZK' | 'EUR') =>
@@ -146,7 +160,9 @@ export default function CashflowPage() {
   const [horizonFilter, setHorizonFilter] = useState<HorizonFilter>('ALL');
   const [kindFilter, setKindFilter] = useState<KindFilter>('ALL');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isRecurringCreateOpen, setIsRecurringCreateOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [manualItemForm, setManualItemForm] = useState<ManualItemForm>(emptyManualItemForm);
   const [createForm, setCreateForm] = useState<RuleForm>(emptyRuleForm);
   const [editForm, setEditForm] = useState<RuleForm>(emptyRuleForm);
   const [createState, setCreateState] = useState<MutationState>('idle');
@@ -262,6 +278,41 @@ export default function CashflowPage() {
     event.preventDefault();
     setRulesError(null);
 
+    const amount = Number(manualItemForm.amount);
+    const date = toIsoDateTime(manualItemForm.date);
+    if (!Number.isFinite(amount) || amount <= 0 || !date) {
+      setCreateState('error');
+      setRulesError('Fill in direction, positive amount, currency, and date.');
+      return;
+    }
+
+    setCreateState('submitting');
+
+    try {
+      const accessToken = window.localStorage.getItem(HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY) ?? undefined;
+      const client = createTrpcClient(accessToken);
+      const created = await client.cashflow.createManualItem.mutate({
+        kind: manualItemForm.kind,
+        amount,
+        currency: manualItemForm.currency,
+        date,
+      }) as CashflowItem;
+
+      setCashflowItems((current) => [...current, created]);
+      setLoadState('loaded');
+      setManualItemForm(emptyManualItemForm);
+      setIsCreateOpen(false);
+      setCreateState('idle');
+    } catch (error) {
+      setCreateState('error');
+      setRulesError(getRecurringRuleErrorMessage(error, 'Cashflow item could not be created right now.'));
+    }
+  };
+
+  const handleRecurringCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setRulesError(null);
+
     const amount = Number(createForm.amount);
     const startDate = toIsoDateTime(createForm.startDate);
     if (!createForm.label.trim() || !Number.isFinite(amount) || amount <= 0 || !startDate) {
@@ -287,7 +338,7 @@ export default function CashflowPage() {
       setRecurringRules((current) => [...current, created]);
       setRulesLoadState('loaded');
       setCreateForm(emptyRuleForm);
-      setIsCreateOpen(false);
+      setIsRecurringCreateOpen(false);
       setCreateState('idle');
     } catch (error) {
       setCreateState('error');
@@ -437,6 +488,52 @@ export default function CashflowPage() {
         {isCreateOpen ? (
           <form className="mt-4 grid gap-4 md:grid-cols-2" aria-label="Add cashflow item form" onSubmit={handleCreateSubmit}>
             <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Direction
+              <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={manualItemForm.kind} onChange={(event) => setManualItemForm((current) => ({ ...current, kind: event.target.value as CashflowItem['kind'] }))}>
+                <option value="PLANNED_IN">Planned in</option>
+                <option value="ACTUAL_IN">Actual in</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Amount
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" inputMode="decimal" value={manualItemForm.amount} onChange={(event) => setManualItemForm((current) => ({ ...current, amount: event.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Currency
+              <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={manualItemForm.currency} onChange={(event) => setManualItemForm((current) => ({ ...current, currency: event.target.value as 'CZK' | 'EUR' }))}>
+                <option value="CZK">CZK</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
+              Date
+              <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" type="date" value={manualItemForm.date} onChange={(event) => setManualItemForm((current) => ({ ...current, date: event.target.value }))} />
+            </label>
+            <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+              <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60" disabled={createState === 'submitting'} type="submit">
+                {createState === 'submitting' ? 'Adding cashflow item…' : 'Add cashflow item'}
+              </button>
+              <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => setIsCreateOpen(false)}>
+                Cancel
+              </button>
+              {rulesError ? <p className="text-sm text-rose-700">{rulesError}</p> : null}
+            </div>
+          </form>
+        ) : null}
+
+        <div className="mt-4 flex items-center gap-3">
+          <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => {
+            setIsRecurringCreateOpen((current) => !current);
+            setRulesError(null);
+            setCreateState('idle');
+          }}>
+            {isRecurringCreateOpen ? 'Close recurring item' : 'Add recurring item'}
+          </button>
+        </div>
+
+        {isRecurringCreateOpen ? (
+          <form className="mt-4 grid gap-4 md:grid-cols-2" aria-label="Add recurring cashflow item form" onSubmit={handleRecurringCreateSubmit}>
+            <label className="flex flex-col gap-1 text-sm text-slate-700">
               Label
               <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" value={createForm.label} onChange={(event) => setCreateForm((current) => ({ ...current, label: event.target.value }))} />
             </label>
@@ -461,10 +558,7 @@ export default function CashflowPage() {
             </label>
             <div className="md:col-span-2 flex flex-wrap items-center gap-3">
               <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60" disabled={createState === 'submitting'} type="submit">
-                {createState === 'submitting' ? 'Adding item…' : 'Add recurring item'}
-              </button>
-              <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" type="button" onClick={() => setIsCreateOpen(false)}>
-                Cancel
+                {createState === 'submitting' ? 'Adding recurring item…' : 'Add recurring item'}
               </button>
               {rulesError ? <p className="text-sm text-rose-700">{rulesError}</p> : null}
             </div>
@@ -647,9 +741,9 @@ export default function CashflowPage() {
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
-                        Invoice-linked
+                        {item.invoiceId ? 'Invoice-linked' : 'Manual item'}
                       </span>
-                      <p className="text-sm font-medium text-slate-700">Invoice reference: {item.invoiceId}</p>
+                      <p className="text-sm font-medium text-slate-700">{item.invoiceId ? `Invoice reference: ${item.invoiceId}` : 'Manual cashflow item'}</p>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">Date {formatDate(item.date)}</p>
                   </div>
