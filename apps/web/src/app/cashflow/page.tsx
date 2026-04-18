@@ -468,7 +468,7 @@ export default function CashflowPage() {
         </>
       }
     >
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Recurring cashflow rules">
+      <section className="rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.3)]" aria-label="Recurring cashflow rules">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Recurring cashflow rules</h2>
@@ -576,7 +576,7 @@ export default function CashflowPage() {
                 const removingState = removeRuleState[rule.id] ?? 'idle';
 
                 return (
-                  <article key={rule.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <article key={rule.id} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
                     {isEditing ? (
                       <form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => void handleEditSubmit(event, rule)}>
                         <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -662,14 +662,14 @@ export default function CashflowPage() {
 
       <section aria-label="Cashflow summary" className="mt-6 grid gap-4 md:grid-cols-4">
         {summaryCards.map((card) => (
-          <article key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article key={card.label} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.label}</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
           </article>
         ))}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="mt-6 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="grid gap-3 md:grid-cols-2 md:flex-1">
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -703,32 +703,32 @@ export default function CashflowPage() {
 
       <section aria-label="Cashflow list" className="mt-6 space-y-3">
         {loadState === 'loading' ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
             Loading cashflow items…
           </div>
         ) : null}
 
         {loadState === 'error' ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-sm">
+          <div className="rounded-[1.75rem] border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-[0_18px_48px_-28px_rgba(244,63,94,0.24)]">
             Cashflow could not be loaded right now.
           </div>
         ) : null}
 
         {loadState === 'empty' ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.18)]">
             No cashflow items are available yet.
           </div>
         ) : null}
 
         {loadState === 'loaded' && filteredItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.18)]">
             No cashflow items match the current filters.
           </div>
         ) : null}
 
         {loadState === 'loaded'
           ? filteredItems.map((item) => (
-              <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article key={item.id} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.3)]">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">

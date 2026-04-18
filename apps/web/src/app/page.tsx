@@ -9,27 +9,33 @@ const dashboardCards = [
   {
     href: '/orders',
     title: 'Orders',
-    description: 'Go here first when a new job starts and you need the order queue in view.',
+    description: 'Start with incoming work and keep the queue visible before anything moves into planning.',
     action: 'Open orders',
   },
   {
     href: '/board',
     title: 'Board',
-    description: 'Go here when an order is ready to move into planning and scheduling.',
+    description: 'Move prepared work into planning and scheduling when the next operational step is clear.',
     action: 'Open board',
   },
   {
     href: '/invoices',
     title: 'Invoices',
-    description: 'Go here when planned work needs invoice review and finance document follow-up.',
+    description: 'Review invoice status, update finance details, and keep billing follow-up readable.',
     action: 'Open invoices',
   },
   {
     href: '/cashflow',
     title: 'Cashflow',
-    description: 'Go here when invoice follow-up needs the cashflow timeline and payment context.',
+    description: 'Track the finance timeline after invoicing, from planned incoming cash to actual payments.',
     action: 'Open cashflow',
   },
+] as const;
+
+const flowHighlights = [
+  'Orders frame the operational queue and priority.',
+  'Board stays the planning handoff once work is ready.',
+  'Invoices and Cashflow keep finance follow-up visible without losing context.',
 ] as const;
 
 export { HOMEPAGE_ACCESS_TOKEN_STORAGE_KEY };
@@ -149,31 +155,45 @@ export default function Home() {
       note="Use the same signed-in shell across modules, with the current step and next step kept easy to scan."
       actions={
         <>
-          <Link className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white" href="/orders">
+          <Link className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm" href="/orders">
             Open orders
           </Link>
-          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
+          <Link className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-900" href="/board">
             Open board
           </Link>
-          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/invoices">
+          <Link className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-900" href="/invoices">
             Open invoices
           </Link>
-          <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/cashflow">
+          <Link className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-900" href="/cashflow">
             Open cashflow
           </Link>
         </>
       }
     >
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {dashboardCards.map((card) => (
-          <article key={card.href} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
-            <p className="mt-2 text-sm text-slate-600">{card.description}</p>
-            <Link className="mt-4 inline-flex rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900" href={card.href}>
-              {card.action}
-            </Link>
-          </article>
-        ))}
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-4 md:grid-cols-2">
+          {dashboardCards.map((card) => (
+            <article key={card.href} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.3)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">Module</p>
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">{card.title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{card.description}</p>
+              <Link className="mt-5 inline-flex rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-900" href={card.href}>
+                {card.action}
+              </Link>
+            </article>
+          ))}
+        </div>
+        <aside className="rounded-[1.75rem] border border-slate-200/80 bg-slate-950 p-6 text-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.55)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">Flow focus</p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight">One product flow, four readable stops.</h2>
+          <div className="mt-6 space-y-3">
+            {flowHighlights.map((item) => (
+              <div key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-slate-200">
+                {item}
+              </div>
+            ))}
+          </div>
+        </aside>
       </section>
     </AppShell>
   );

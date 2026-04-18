@@ -517,7 +517,7 @@ export default function InvoicesPage() {
       }
     >
       {isCreateOpen ? (
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="New invoice form">
+        <section className="mt-6 rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.3)]" aria-label="New invoice form">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">New invoice</h2>
@@ -575,14 +575,14 @@ export default function InvoicesPage() {
 
       <section aria-label="Invoice summary" className="mt-6 grid gap-4 md:grid-cols-5">
         {metrics.map((metric) => (
-          <article key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article key={metric.label} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{metric.label}</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{metric.value}</p>
           </article>
         ))}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="mt-6 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:flex-1">
             <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -617,25 +617,25 @@ export default function InvoicesPage() {
 
       <section className="mt-6 space-y-3" aria-label="Invoice list">
         {loadState === 'loading' ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.24)]">
             Loading invoices…
           </div>
         ) : null}
 
         {loadState === 'error' ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-sm">
+          <div className="rounded-[1.75rem] border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-[0_18px_48px_-28px_rgba(244,63,94,0.24)]">
             Invoices could not be loaded right now.
           </div>
         ) : null}
 
         {loadState === 'empty' ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.18)]">
             No invoices are available yet.
           </div>
         ) : null}
 
         {loadState === 'loaded' && filteredInvoices.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.18)]">
             No invoices match the current filters.
           </div>
         ) : null}
@@ -653,7 +653,7 @@ export default function InvoicesPage() {
               const canMarkPaid = invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
               const canCancel = invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
               return (
-                <article key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <article key={invoice.id} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.3)]">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">

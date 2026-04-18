@@ -138,39 +138,39 @@ export default function OrdersPage() {
     <AppShell
       eyebrow="Operations module"
       title="Orders"
-      description="Start from orders, review what is ready, and continue into Board planning when work needs to move forward."
+      description="Start from orders, clear what matters next, and hand work forward into Board planning with less friction and stronger visibility."
       note="Use Board when you are ready to plan or schedule the next operational step."
       actions={
-        <Link className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900" href="/board">
+        <Link className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm" href="/board">
           Open Board
         </Link>
       }
     >
       <section aria-label="Orders summary" className="grid gap-4 md:grid-cols-3">
         {summaryCards.map((card) => (
-          <article key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
+          <article key={card.label} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.35)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{card.label}</p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{card.value}</p>
           </article>
         ))}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:flex-1">
-            <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <section className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.28)]">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:flex-1">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
               Search orders
               <input
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="rounded-xl border border-slate-300 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900"
                 placeholder="Search by code, title, or notes"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-slate-700">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
               Status
               <select
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="rounded-xl border border-slate-300 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
@@ -183,57 +183,59 @@ export default function OrdersPage() {
               </select>
             </label>
           </div>
-          <p className="text-sm text-slate-500">{filteredOrders.length} of {orders.length} orders shown</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+            <span className="font-medium text-slate-900">{filteredOrders.length}</span> of {orders.length} orders shown
+          </div>
         </div>
       </section>
 
-      <section className="mt-6 space-y-3" aria-label="Orders list">
+      <section className="space-y-4" aria-label="Orders list">
         {loadState === 'loading' ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.28)]">
             Loading orders…
           </div>
         ) : null}
 
         {loadState === 'error' ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-sm">
+          <div className="rounded-[1.75rem] border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-[0_18px_48px_-28px_rgba(244,63,94,0.25)]">
             Orders could not be loaded right now.
           </div>
         ) : null}
 
         {loadState === 'empty' ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.18)]">
             <p className="font-medium text-slate-900">No orders are available yet.</p>
             <p className="mt-2">When a new order is ready to be planned, continue on Board.</p>
           </div>
         ) : null}
 
         {loadState === 'loaded' && filteredOrders.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.18)]">
             No orders match the current filters.
           </div>
         ) : null}
 
         {loadState === 'loaded'
           ? filteredOrders.map((order) => (
-              <article key={order.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
+              <article key={order.id} className="rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.3)]">
+                <div className="flex flex-wrap items-start justify-between gap-5">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-semibold text-slate-950">{order.code}</h2>
-                      <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusTone(order.status)}`}>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-semibold tracking-tight text-slate-950">{order.code}</h2>
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${getStatusTone(order.status)}`}>
                         {order.status}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm font-medium text-slate-700">{order.title}</p>
-                    {order.notes ? <p className="mt-1 text-sm text-slate-500">{order.notes}</p> : null}
+                    <p className="mt-3 text-base font-medium text-slate-800">{order.title}</p>
+                    {order.notes ? <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{order.notes}</p> : null}
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Due date</p>
+                  <div className="min-w-[11rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Due date</p>
                     <p className="mt-2 text-base font-semibold text-slate-950">{formatDate(order.dueDate)}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <Link className="text-sm font-medium text-sky-700 underline" href="/board">
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+                  <Link className="inline-flex rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm" href="/board">
                     Continue planning on Board
                   </Link>
                 </div>
